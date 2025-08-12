@@ -1,4 +1,3 @@
-// src/app/api/variants/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
@@ -9,10 +8,11 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const variant = await prisma.productVariant.findUnique({
+  const variant = await prisma.variant.findUnique({
     where: { id },
     include: {
       product: true,
+      images: true,
       inventory: { include: { size: true } },
     },
   });
@@ -35,29 +35,32 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
-    const { name, description, ...variantData } = body;
+    // Разделяем поля варианта и возможные правки продукта
+    const { name, description, ...v } = body as {
+      color?: string;
+      images?: { url: string; order?: number }[]; // для upsert ниже не используем; см. заметку
+      price?: number | string;
+      oldPrice?: number | string | null;
+      discountPercentage?: number | string | null;
+      isFeatured?: boolean;
+      // правки продукта:
+      name?: string;
+      description?: string;
+    };
 
-    const updated = await prisma.productVariant.update({
+    const updated = await prisma.variant.update({
       where: { id },
       data: {
-        ...(variantData.color !== undefined && { color: variantData.color }),
-        ...(variantData.images !== undefined && { images: variantData.images }),
-        ...(variantData.price !== undefined && {
-          price: Number(variantData.price),
+        ...(v.color !== undefined && { color: v.color }),
+        ...(v.price !== undefined && { price: Number(v.price) }),
+        ...(v.oldPrice !== undefined && {
+          oldPrice: v.oldPrice === null ? null : Number(v.oldPrice),
         }),
-        ...(variantData.oldPrice !== undefined && {
-          oldPrice:
-            variantData.oldPrice === null ? null : Number(variantData.oldPrice),
-        }),
-        ...(variantData.discountPercentage !== undefined && {
+        ...(v.discountPercentage !== undefined && {
           discountPercentage:
-            variantData.discountPercentage === null
-              ? null
-              : Number(variantData.discountPercentage),
+            v.discountPercentage === null ? null : Number(v.discountPercentage),
         }),
-        ...(variantData.isFeatured !== undefined && {
-          isFeatured: variantData.isFeatured,
-        }),
+        ...(v.isFeatured !== undefined && { isFeatured: v.isFeatured }),
         ...(name !== undefined || description !== undefined
           ? {
               product: {
@@ -68,6 +71,11 @@ export async function PUT(
               },
             }
           : {}),
+      },
+      include: {
+        product: true,
+        images: true,
+        inventory: { include: { size: true } },
       },
     });
 
@@ -87,7 +95,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    await prisma.productVariant.delete({ where: { id } });
+    await prisma.variant.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
     console.error('Ошибка при удалении варианта:', e);
