@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background-primary: #FFFFFF;
+    --text-primary: #272727;
+    --brand-lilac-color: #6B80C5;
+    --brand-lilac-light-color: #C1D0FF;
+    --heart-red: #D32F2F;
+    --feedback-error-color: #E06F6F;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    height: 100%;
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--background-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    /* Наше ключевое правило для плавности на границах скролла */
+    overscroll-behavior-y: contain;
+  }
+
+  .content-hidden {
+    opacity: 0;
+    pointer-events: none;
+    user-select: none;
+    transition: opacity 0.3s ease;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    -ms-hyphens: auto;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance; 
+  }
+
+  h1 {
+    font-size: clamp(2rem, 6vw + 1rem, 6rem);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    font-weight: 900;
+  }
+
+  h2 {
+    font-size: clamp(1.75rem, 4vw + 0.5rem, 3.75rem);
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-weight: 800;
+  }
+
+  h3 {
+    font-size: clamp(1.3rem, 3vw + 0.5rem, 2.5rem);
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  h4, h5, h6 {
+    font-weight: 600;
+  }
+
+  p {
+    font-size: clamp(1rem, 0.8vw + 0.5rem, 1.125rem);
+    line-height: 1.6;
+    font-weight: 400;
+  }
+
+  button {
+    font-size: clamp(1rem, 0.8vw + 0.5rem, 1.125rem);
+    line-height: 1;
+    font-weight: 700;
+  }
+}
+
+.logo-brand-color {
+  color: var(--brand-lilac-color);
+  transition: color 0.2s ease-in-out;
+}
+
+.logo-brand-color:active {
+  color: var(--brand-lilac-light-color);
+}
+
+@media (min-width: 1024px) {
+  .logo-brand-color:hover {
+    color: var(--brand-lilac-light-color);
+  }
+}
+
+@keyframes fade-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.animate-fade-pulse {
+  animation: fade-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  min-width: 320px;
+  width: 100%;
+}
+
+img, video, iframe, canvas, object, svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+.product-gallery-container .swiper-styled-pagination-bullet {
+  width: 15px;
+  height: 2px;
+  border-radius: 2px;
+}
+.product-gallery-container .swiper-styled-pagination-bullet.swiper-styled-pagination-bullet_active {
+  width: 20px !important;
+}
+
+.thumbs-swiper .swiper-slide-thumb-active {
+  background-color: #272727; 
+  padding: 1.5px;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+}
+
+.thumbs-swiper .swiper-slide-thumb-active .thumbnail-wrapper {
+  border-radius: 6.5px;
+}
+
+.thumbs-swiper .swiper-slide:not(.swiper-slide-thumb-active) {
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in-out;
+}
+
+.thumbs-swiper .swiper-slide:hover {
+  opacity: 1;
+}
