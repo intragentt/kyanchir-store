@@ -1,114 +1,96 @@
-// Местоположение: src/app/api/products/[id]/route.ts
-// ПЕРЕИМЕНОВАТЬ ПАПКУ: Этот файл теперь должен лежать в /api/variants/[id]/route.ts
-
-import { NextResponse } from 'next/server';
+// src/app/api/variants/[id]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-/**
- * GET-хендлер для получения ОДНОГО ВАРИАНТА по его ID (артикулу)
- */
+// GET /api/variants/[id]
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }, // id здесь - это артикул варианта
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+
+  const variant = await prisma.productVariant.findUnique({
+    where: { id },
+    include: {
+      product: true,
+      inventory: { include: { size: true } },
+    },
+  });
+
+  if (!variant) {
+    return new NextResponse(
+      JSON.stringify({ message: `Вариант ${id} не найден` }),
+      { status: 404 },
+    );
+  }
+  return NextResponse.json(variant);
+}
+
+// PUT /api/variants/[id]
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = params;
-    const variant = await prisma.productVariant.findUnique({
+    const { id } = await params;
+    const body = await req.json();
+
+    const { name, description, ...variantData } = body;
+
+    const updated = await prisma.productVariant.update({
       where: { id },
-      include: {
-        product: true, // Включаем информацию о родительском продукте
-        inventory: {
-          // Включаем информацию об остатках
-          include: {
-            size: true, // ... и о размерах
-          },
-        },
+      data: {
+        ...(variantData.color !== undefined && { color: variantData.color }),
+        ...(variantData.images !== undefined && { images: variantData.images }),
+        ...(variantData.price !== undefined && {
+          price: Number(variantData.price),
+        }),
+        ...(variantData.oldPrice !== undefined && {
+          oldPrice:
+            variantData.oldPrice === null ? null : Number(variantData.oldPrice),
+        }),
+        ...(variantData.discountPercentage !== undefined && {
+          discountPercentage:
+            variantData.discountPercentage === null
+              ? null
+              : Number(variantData.discountPercentage),
+        }),
+        ...(variantData.isFeatured !== undefined && {
+          isFeatured: variantData.isFeatured,
+        }),
+        ...(name !== undefined || description !== undefined
+          ? {
+              product: {
+                update: {
+                  ...(name !== undefined && { name }),
+                  ...(description !== undefined && { description }),
+                },
+              },
+            }
+          : {}),
       },
     });
 
-    if (!variant) {
-      return new NextResponse(
-        JSON.stringify({ message: `Вариант с артикулом ${id} не найден` }),
-        { status: 404 },
-      );
-    }
-
-    return NextResponse.json(variant);
-  } catch (error) {
-    console.error(`Ошибка при получении варианта ${params.id}:`, error);
-    return new NextResponse(JSON.stringify({ message: 'Ошибка на сервере' }), {
+    return NextResponse.json(updated);
+  } catch (e) {
+    console.error('Ошибка при обновлении варианта:', e);
+    return new NextResponse('Ошибка на сервере при обновлении', {
       status: 500,
     });
   }
 }
 
-/**
- * PUT-хендлер для ОБНОВЛЕНИЯ ВАРИАНТА по его ID (артикулу)
- */
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } },
-) {
-  try {
-    const { id } = params;
-    const body = await request.json();
-
-    // Отделяем данные для продукта и для варианта
-    const { name, description, ...variantData } = body;
-
-    const updatedVariant = await prisma.productVariant.update({
-      where: { id },
-      data: {
-        price: Number(variantData.price),
-        oldPrice: variantData.oldPrice ? Number(variantData.oldPrice) : null,
-        images: variantData.images,
-        color: variantData.color,
-        isFeatured: variantData.isFeatured,
-        discountPercentage: variantData.discountPercentage
-          ? Number(variantData.discountPercentage)
-          : null,
-        // Обновляем также и родительский продукт, если пришли его данные
-        product: {
-          update: {
-            name: name,
-            description: description,
-          },
-        },
-      },
-    });
-
-    return NextResponse.json(updatedVariant);
-  } catch (error) {
-    console.error(`Ошибка при обновлении варианта ${params.id}:`, error);
-    return new NextResponse(
-      JSON.stringify({ message: 'Ошибка на сервере при обновлении' }),
-      { status: 500 },
-    );
-  }
-}
-
-/**
- * DELETE-хендлер для УДАЛЕНИЯ ВАРИАНТА по его ID (артикулу)
- */
+// DELETE /api/variants/[id]
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } },
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = params;
-
-    await prisma.productVariant.delete({
-      where: { id },
-    });
-
-    // В будущем можно добавить логику: если это был последний вариант, удалить и сам продукт.
-
-    return new NextResponse(null, { status: 204 }); // Успешное удаление
-  } catch (error) {
-    console.error(`Ошибка при удалении варианта ${params.id}:`, error);
-    return new NextResponse(
-      JSON.stringify({ message: 'Ошибка на сервере при удалении' }),
-      { status: 500 },
-    );
+    const { id } = await params;
+    await prisma.productVariant.delete({ where: { id } });
+    return new NextResponse(null, { status: 204 });
+  } catch (e) {
+    console.error('Ошибка при удалении варианта:', e);
+    return new NextResponse('Ошибка на сервере при удалении', { status: 500 });
   }
 }
