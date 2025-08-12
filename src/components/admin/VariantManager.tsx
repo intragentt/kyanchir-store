@@ -1,20 +1,22 @@
-// Местоположение: src/components/admin/VariantManager.tsx
+// src/components/admin/VariantManager.tsx
 'use client';
 
 import { useState } from 'react';
-import { ProductVariant } from '@prisma/client';
+import { Variant } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { formatPrice } from '@/utils/formatPrice';
-// VVV--- ИСПРАВЛЕНИЕ: ДОБАВЛЕН ЭТОТ ИМПОРТ ---VVV
 import Link from 'next/link';
+import { formatPrice } from '@/utils/formatPrice';
+
+// Вариант с подгруженными изображениями (url нужен для превью)
+type VariantWithImages = Variant & { images: { url: string }[] };
 
 interface VariantManagerProps {
-  initialVariants: ProductVariant[];
+  initialVariants: VariantWithImages[];
   productId: string;
 }
 
-// --- Компонент для загрузки фото ---
+/* -------------------- ImageUploader -------------------- */
 function ImageUploader({
   onUploadSuccess,
   isUploading,
@@ -36,20 +38,15 @@ function ImageUploader({
 
     try {
       const CLOUD_NAME = 'dknswd0u8';
-      const response = await fetch(
+      const res = await fetch(
         `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-        {
-          method: 'POST',
-          body: formData,
-        },
+        { method: 'POST', body: formData },
       );
-
-      if (!response.ok) throw new Error('Ошибка загрузки изображения');
-
-      const data = await response.json();
+      if (!res.ok) throw new Error('Ошибка загрузки изображения');
+      const data = await res.json();
       onUploadSuccess(data.secure_url);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
       alert('Не удалось загрузить изображение.');
     } finally {
       setIsUploading(false);
@@ -76,7 +73,7 @@ function ImageUploader({
   );
 }
 
-// --- Форма добавления нового варианта ---
+/* -------------------- AddVariantForm -------------------- */
 function AddVariantForm({
   productId,
   onVariantAdded,
@@ -94,8 +91,8 @@ function AddVariantForm({
     setImageUrls((prev) => [...prev, url]);
   };
 
-  const removeImage = (indexToRemove: number) => {
-    setImageUrls((prev) => prev.filter((_, index) => index !== indexToRemove));
+  const removeImage = (idx: number) => {
+    setImageUrls((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,20 +103,15 @@ function AddVariantForm({
     }
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/variants', {
+      const res = await fetch('/api/variants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: productId,
-          color: color,
-          price: price,
-          images: imageUrls,
-        }),
+        body: JSON.stringify({ productId, color, price, images: imageUrls }),
       });
-      if (!response.ok) throw new Error('Ошибка при создании варианта');
+      if (!res.ok) throw new Error('Ошибка при создании варианта');
       onVariantAdded();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : 'Неизвестная ошибка');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Неизвестная ошибка');
     } finally {
       setIsSubmitting(false);
     }
@@ -148,6 +140,7 @@ function AddVariantForm({
           className="block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
         />
       </div>
+
       <div>
         <label className="mb-2 block text-sm font-medium text-gray-700">
           Изображения (минимум 2)
@@ -178,6 +171,7 @@ function AddVariantForm({
           />
         </div>
       </div>
+
       <div className="flex justify-end">
         <button
           type="submit"
@@ -191,7 +185,7 @@ function AddVariantForm({
   );
 }
 
-// --- Основной компонент-менеджер ---
+/* -------------------- VariantManager -------------------- */
 export default function VariantManager({
   initialVariants,
   productId,
@@ -206,34 +200,38 @@ export default function VariantManager({
 
   return (
     <div className="space-y-4">
-      {initialVariants.map((variant) => (
-        <div
-          key={variant.id}
-          className="flex items-center justify-between rounded-md border bg-white p-4"
-        >
-          <div className="flex items-center gap-4">
-            <Image
-              src={variant.images[0] || '/placeholder.png'}
-              alt={variant.color || ''}
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded bg-gray-100 object-cover"
-            />
-            <div>
-              <p className="font-medium">{variant.color}</p>
-              <p className="text-sm text-gray-500">
-                {formatPrice(variant.price)?.value} ₽
-              </p>
-            </div>
-          </div>
-          <Link
-            href={`/admin/variants/${variant.id}/edit`}
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-900"
+      {initialVariants.map((variant) => {
+        const thumb = variant.images[0]?.url || '/placeholder.png';
+        return (
+          <div
+            key={variant.id}
+            className="flex items-center justify-between rounded-md border bg-white p-4"
           >
-            Редактировать
-          </Link>
-        </div>
-      ))}
+            <div className="flex items-center gap-4">
+              <Image
+                src={thumb}
+                alt={variant.color || ''}
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded bg-gray-100 object-cover"
+              />
+              <div>
+                <p className="font-medium">{variant.color}</p>
+                <p className="text-sm text-gray-500">
+                  {formatPrice(variant.price)?.value} ₽
+                </p>
+              </div>
+            </div>
+            <Link
+              href={`/admin/variants/${variant.id}/edit`}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-900"
+            >
+              Редактировать
+            </Link>
+          </div>
+        );
+      })}
+
       {initialVariants.length === 0 && (
         <div className="rounded-md border-2 border-dashed border-gray-300 p-6 text-center">
           <p className="text-sm text-gray-500">
@@ -241,6 +239,7 @@ export default function VariantManager({
           </p>
         </div>
       )}
+
       {showAddForm ? (
         <AddVariantForm
           productId={productId}
