@@ -16,7 +16,7 @@ export type ProductWithDetails = Prisma.ProductGetPayload<{
         images: true;
         inventory: {
           include: {
-            size: true,
+            size: true;
           };
         };
       };
@@ -28,13 +28,14 @@ export type ProductWithDetails = Prisma.ProductGetPayload<{
 }>;
 
 interface EditProductPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-// ИЗМЕНЕНИЕ: Мы извлекаем { id } прямо из params в сигнатуре функции
 export default async function EditProductPage({
-  params: { id },
+  params,
 }: EditProductPageProps) {
+  const { id } = await params;
+
   const [product, allSizes, allCategories] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
