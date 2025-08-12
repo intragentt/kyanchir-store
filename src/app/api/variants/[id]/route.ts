@@ -12,14 +12,14 @@ export async function GET(
     where: { id },
     include: {
       product: true,
-      images: true,
       inventory: { include: { size: true } },
+      images: true,
     },
   });
 
   if (!variant) {
-    return new NextResponse(
-      JSON.stringify({ message: `Вариант ${id} не найден` }),
+    return NextResponse.json(
+      { message: `Вариант ${id} не найден` },
       { status: 404 },
     );
   }
@@ -35,32 +35,30 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
-    // Разделяем поля варианта и возможные правки продукта
-    const { name, description, ...v } = body as {
-      color?: string;
-      images?: { url: string; order?: number }[]; // для upsert ниже не используем; см. заметку
-      price?: number | string;
-      oldPrice?: number | string | null;
-      discountPercentage?: number | string | null;
-      isFeatured?: boolean;
-      // правки продукта:
-      name?: string;
-      description?: string;
-    };
+    const { name, description, ...variantData } = body;
 
     const updated = await prisma.variant.update({
       where: { id },
       data: {
-        ...(v.color !== undefined && { color: v.color }),
-        ...(v.price !== undefined && { price: Number(v.price) }),
-        ...(v.oldPrice !== undefined && {
-          oldPrice: v.oldPrice === null ? null : Number(v.oldPrice),
+        ...(variantData.color !== undefined && { color: variantData.color }),
+        ...(variantData.price !== undefined && {
+          price: Number(variantData.price),
         }),
-        ...(v.discountPercentage !== undefined && {
+        ...(variantData.oldPrice !== undefined && {
+          oldPrice:
+            variantData.oldPrice === null ? null : Number(variantData.oldPrice),
+        }),
+        ...(variantData.discountPercentage !== undefined && {
           discountPercentage:
-            v.discountPercentage === null ? null : Number(v.discountPercentage),
+            variantData.discountPercentage === null
+              ? null
+              : Number(variantData.discountPercentage),
         }),
-        ...(v.isFeatured !== undefined && { isFeatured: v.isFeatured }),
+        ...(variantData.isFeatured !== undefined && {
+          isFeatured: !!variantData.isFeatured,
+        }),
+        // Обновление изображений/инвентаря обычно делают отдельными роутами,
+        // но если присылаешь массив images целиком — нужно сначала удалить/пересоздать.
         ...(name !== undefined || description !== undefined
           ? {
               product: {
@@ -71,11 +69,6 @@ export async function PUT(
               },
             }
           : {}),
-      },
-      include: {
-        product: true,
-        images: true,
-        inventory: { include: { size: true } },
       },
     });
 
