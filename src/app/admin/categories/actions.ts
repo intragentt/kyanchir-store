@@ -16,19 +16,23 @@ export async function createCategory(name: string, parentId: string | null) {
   revalidatePath(pathToRevalidate);
 }
 
-export async function updateCategory(id: string, name: string) {
-  if (!name || name.trim() === '')
+export async function updateCategory(
+  id: string,
+  data: { name?: string; color?: string },
+) {
+  if (data.name !== undefined && data.name.trim() === '') {
     return { error: 'Название не может быть пустым.' };
-  await prisma.category.update({ where: { id }, data: { name: name.trim() } });
+  }
+  await prisma.category.update({ where: { id }, data });
   revalidatePath(pathToRevalidate);
 }
 
 export async function deleteCategory(id: string) {
   await prisma.$transaction(async (tx) => {
-    await tx.category.updateMany({
-      where: { parentId: id },
-      data: { parentId: null },
-    });
+    const children = await tx.category.findMany({ where: { parentId: id } });
+    for (const child of children) {
+      await deleteCategory(child.id);
+    }
     await tx.category.delete({ where: { id } });
   });
   revalidatePath(pathToRevalidate);
@@ -42,14 +46,57 @@ export async function createTag(name: string) {
   revalidatePath(pathToRevalidate);
 }
 
-export async function updateTag(id: string, name: string) {
-  if (!name || name.trim() === '')
+export async function updateTag(
+  id: string,
+  data: { name?: string; color?: string },
+) {
+  if (data.name !== undefined && data.name.trim() === '') {
     return { error: 'Название не может быть пустым.' };
-  await prisma.tag.update({ where: { id }, data: { name: name.trim() } });
+  }
+  await prisma.tag.update({ where: { id }, data });
   revalidatePath(pathToRevalidate);
 }
 
 export async function deleteTag(id: string) {
   await prisma.tag.delete({ where: { id } });
   revalidatePath(pathToRevalidate);
+}
+
+// --- НОВАЯ СУПЕР-ФУНКЦИЯ ДЛЯ СОХРАНЕНИЯ ВСЕХ ИЗМЕНЕНИЙ ---
+export async function saveAllClassifications(
+  categories: {
+    id: string;
+    name: string;
+    color: string | null;
+    parentId: string | null;
+    order: number;
+  }[],
+  tags: { id: string; name: string; color: string | null; order: number }[],
+) {
+  await prisma.$transaction([
+    ...categories.map((cat) =>
+      prisma.category.update({
+        where: { id: cat.id },
+        data: {
+          name: cat.name,
+          color: cat.color,
+          parentId: cat.parentId,
+          order: cat.order,
+        },
+      }),
+    ),
+    ...tags.map((tag) =>
+      prisma.tag.update({
+        where: { id: tag.id },
+        data: {
+          name: tag.name,
+          color: tag.color,
+          order: tag.order,
+        },
+      }),
+    ),
+  ]);
+
+  revalidatePath(pathToRevalidate);
+  revalidatePath('/admin/dashboard');
 }

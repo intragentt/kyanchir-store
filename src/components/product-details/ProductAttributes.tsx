@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 
-// ... компонент ChevronIcon без изменений ...
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -19,7 +18,6 @@ const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   </svg>
 );
 
-// VVV--- НОВЫЙ КОМПОНЕНТ ДЛЯ КРАСИВОГО ОТОБРАЖЕНИЯ СОСТАВА ---VVV
 interface CompositionItem {
   material: string;
   percentage: string;
@@ -28,22 +26,24 @@ interface CompositionItem {
 const CompositionDisplay = ({ jsonValue }: { jsonValue: string }) => {
   try {
     const items: CompositionItem[] = JSON.parse(jsonValue);
-    // Проверяем, что это массив и он не пустой
     if (!Array.isArray(items) || items.length === 0)
       return <span>{jsonValue}</span>;
 
     return (
-      <div>
+      <div className="space-y-1">
         {items.map(
           (item, index) =>
-            // Отображаем только если есть и материал, и процент
             item.material &&
             item.percentage && (
-              <div key={index} className="flex justify-between">
-                <span className="font-body text-base text-gray-800">
+              <div
+                key={index}
+                className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-2"
+              >
+                <span className="font-body text-base font-medium text-[#272727]">
                   {item.material}
                 </span>
-                <span className="font-body text-base font-semibold text-gray-800">
+                <span className="border-b border-dotted border-gray-400"></span>
+                <span className="font-body text-base font-medium text-[#272727]">
                   {item.percentage}%
                 </span>
               </div>
@@ -52,9 +52,8 @@ const CompositionDisplay = ({ jsonValue }: { jsonValue: string }) => {
       </div>
     );
   } catch (e) {
-    // Если это невалидный JSON, просто возвращаем исходную строку
     return (
-      <span className="font-body text-base font-semibold whitespace-pre-line text-gray-800">
+      <span className="font-body text-base font-medium whitespace-pre-line text-[#272727]">
         {jsonValue}
       </span>
     );
@@ -82,6 +81,18 @@ export default function ProductAttributes({
     (attr) => attr.key !== 'Описание' && attr.key !== 'Артикул',
   );
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлена логика сортировки атрибутов ---
+  const desiredOrder = ['Цвет', 'Состав, %', 'Уход'];
+  const sortedAttributes = [...hiddenAttributes].sort((a, b) => {
+    let indexA = desiredOrder.indexOf(a.key);
+    let indexB = desiredOrder.indexOf(b.key);
+    // Если атрибута нет в нашем списке, отправляем его в конец
+    if (indexA === -1) indexA = Infinity;
+    if (indexB === -1) indexB = Infinity;
+    return indexA - indexB;
+  });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   if (!attributes || attributes.length === 0) {
     return null;
   }
@@ -95,7 +106,8 @@ export default function ProductAttributes({
             className="font-body flex items-center gap-x-2 py-4 text-left text-base font-semibold text-gray-800"
           >
             <span>О товаре</span>
-            <ChevronIcon isOpen={isOpen} />
+            {/* --- ИЗМЕНЕНИЕ: Теперь стрелка указывает вправо, а не вниз --- */}
+            <ChevronIcon isOpen={!isOpen} />
           </button>
 
           <div
@@ -103,16 +115,16 @@ export default function ProductAttributes({
           >
             <div className="min-h-0">
               <div className="space-y-4 pb-4">
-                {hiddenAttributes.map((attr) => (
+                {/* --- ИЗМЕНЕНИЕ: Используем отсортированный массив --- */}
+                {sortedAttributes.map((attr) => (
                   <div key={attr.id}>
-                    <p className="font-body text-sm text-gray-500">
+                    <p className="font-body text-base font-semibold text-gray-500">
                       {attr.key}
                     </p>
-                    {/* VVV--- НАША "УМНАЯ" ЛОГИКА ---VVV */}
                     {attr.key === 'Состав, %' ? (
                       <CompositionDisplay jsonValue={attr.value} />
                     ) : (
-                      <p className="font-body text-base font-semibold whitespace-pre-line text-gray-800">
+                      <p className="font-body text-base font-medium whitespace-pre-line text-[#272727]">
                         {attr.value}
                       </p>
                     )}
@@ -127,16 +139,20 @@ export default function ProductAttributes({
       <div className="space-y-4 py-4">
         {description && (
           <div>
-            <p className="font-body text-sm text-gray-500">{description.key}</p>
-            <p className="font-body text-base font-semibold text-gray-800">
+            <p className="font-body text-base font-semibold text-gray-500">
+              {description.key}
+            </p>
+            <p className="font-body text-base font-medium text-[#272727]">
               {description.value}
             </p>
           </div>
         )}
         {article && (
           <div>
-            <p className="font-body text-sm text-gray-500">{article.key}</p>
-            <p className="font-body text-base font-semibold text-gray-800">
+            <p className="font-body text-base font-semibold text-gray-500">
+              {article.key}
+            </p>
+            <p className="font-body text-base font-medium text-[#272727]">
               {article.value}
             </p>
           </div>

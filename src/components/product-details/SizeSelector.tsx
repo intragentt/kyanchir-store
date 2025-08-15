@@ -2,6 +2,7 @@
 'use client';
 
 import LowStockBadge from './LowStockBadge';
+import HeartIcon from '../icons/HeartIcon'; // Предполагаем, что иконка существует по этому пути
 
 interface InventoryItem {
   size: { id: string; value: string };
@@ -21,11 +22,19 @@ export default function SizeSelector({
   selectedSize,
   onSelectSize,
 }: SizeSelectorProps) {
+  const handleWishlistClick = (sizeValue: string) => {
+    console.log(
+      `Пользователь хочет получить уведомление о поступлении размера: ${sizeValue}`,
+    );
+  };
+
   return (
     <div>
-      <div className="font-body text-base font-semibold text-gray-500">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Начертание изменено на font-medium --- */}
+      <div className="font-body text-base font-medium text-gray-500">
         Выберите размер
       </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className="mt-4 flex flex-wrap gap-4">
         {inventory.map(({ size, stock }) => {
           const isSelected = selectedSize === size.value;
@@ -34,13 +43,22 @@ export default function SizeSelector({
 
           return (
             <div key={size.id} className="relative pt-3">
-              {isLowStock && <LowStockBadge stock={stock} />}
+              {isOutOfStock ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleWishlistClick(size.value);
+                  }}
+                  className="absolute -right-2 top-0 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-gray-600 transition hover:bg-gray-300"
+                  aria-label="Сообщить о поступлении"
+                >
+                  <HeartIcon className="h-4 w-4" />
+                </button>
+              ) : isLowStock ? (
+                <LowStockBadge stock={stock} />
+              ) : null}
 
-              {/* 
-                ИЗМЕНЕНИЕ: Мы заменили жесткие размеры на 'clamp()'.
-                Теперь и размер кнопок, и размер шрифта будут плавно меняться
-                в зависимости от ширины экрана, оставаясь в заданных пределах.
-              */}
               <button
                 onClick={() => onSelectSize(size.value)}
                 disabled={isOutOfStock}

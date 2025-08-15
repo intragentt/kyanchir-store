@@ -2,17 +2,36 @@
 'use client';
 
 import { formatPrice } from '@/utils/formatPrice';
+import ShortLogo from '../icons/ShortLogo';
 
 interface ProductHeaderProps {
   name: string;
   price: number;
   oldPrice?: number | null;
+  bonusPoints?: number | null;
 }
+
+const BonusPointsBadge = ({
+  points,
+}: {
+  points: number | null | undefined;
+}) => {
+  if (!points || points <= 0) return null;
+  return (
+    <div className="ml-4 inline-flex flex-shrink-0 items-center gap-x-1.5 rounded-md bg-[#6B80C5]/10 px-2 py-1 text-sm font-bold text-[#6B80C5]">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убран пробел между "+" и числом --- */}
+      <span>+{points}</span>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+      <ShortLogo className="h-3.5 w-3.5" />
+    </div>
+  );
+};
 
 export default function ProductHeader({
   name,
   price,
   oldPrice,
+  bonusPoints,
 }: ProductHeaderProps) {
   const hasDiscount = oldPrice && oldPrice > price;
   const discountPercent = hasDiscount
@@ -24,11 +43,12 @@ export default function ProductHeader({
 
   return (
     <div className="font-body text-text-primary text-base font-semibold">
-      <div className="mb-[10px]">{name}</div>
+      <div className="flex items-start justify-between">
+        <div className="text-lg">{name}</div>
+        <BonusPointsBadge points={bonusPoints} />
+      </div>
 
-      {/* VVV--- ИЗМЕНЕНИЕ: Оборачиваем все в flex-контейнер с justify-between ---VVV */}
-      <div className="flex items-center justify-between">
-        {/* Левая часть: основная и старая цена */}
+      <div className="mt-2 flex items-center justify-between">
         <div className="flex items-center gap-x-3">
           <span>{formattedPrice?.value} RUB</span>
           {hasDiscount && formattedOldPrice && (
@@ -39,9 +59,8 @@ export default function ProductHeader({
           )}
         </div>
 
-        {/* Правая часть: бейдж со скидкой (появится только если есть скидка) */}
         {hasDiscount && (
-          <span className="rounded-md bg-[#E06F6F] px-2 py-0.5 text-sm text-white">
+          <span className="rounded-md bg-[#E06F6F] px-2 py-1 text-sm font-semibold text-white">
             -{discountPercent}%
           </span>
         )}

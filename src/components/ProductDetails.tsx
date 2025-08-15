@@ -1,8 +1,7 @@
 // Местоположение: src/components/ProductDetails.tsx
 'use client';
 
-// --- ИЗМЕНЕНИЕ: `useEffect` и `useRef` здесь больше не нужны ---
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Prisma } from '@prisma/client';
 import MobileProductGallery from './product-details/MobileProductGallery';
 import DesktopProductGallery from './product-details/DesktopProductGallery';
@@ -11,10 +10,70 @@ import AddToCartButton from './product-details/AddToCartButton';
 import SizeSelector from './product-details/SizeSelector';
 import SizeChart from './product-details/SizeChart';
 import ProductAttributes from './product-details/ProductAttributes';
-// Возвращаем импорт вашего оригинального BottomSheet
 import BottomSheet from '@/components/ui/BottomSheet';
 import SizeGuideContent from './product-details/SizeGuideContent';
 import DesktopActionButtons from './product-details/DesktopActionButtons';
+
+const CountdownTimer = ({
+  expiryDate,
+}: {
+  expiryDate: Date | null | undefined;
+}) => {
+  const calculateTimeLeft = () => {
+    if (!expiryDate) return null;
+    const difference = +new Date(expiryDate) - +new Date();
+    let timeLeft: { [key: string]: number } = {};
+    if (difference > 0) {
+      timeLeft = {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      };
+    }
+    return timeLeft;
+  };
+
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+
+  useEffect(() => {
+    if (!expiryDate) return;
+    const timer = setTimeout(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+    return () => clearTimeout(timer);
+  });
+
+  if (!timeLeft || Object.keys(timeLeft).length === 0) return null;
+
+  const timerComponents = Object.entries(timeLeft)
+    .map(([interval, value]) => {
+      if (value < 0) return null;
+      if (interval === 'days' && value === 0) return null;
+      return (
+        <span key={interval} className="font-mono text-base font-medium">
+          {String(value).padStart(2, '0')}
+        </span>
+      );
+    })
+    .filter(Boolean)
+    .reduce((prev: any, curr: any, index: number) => {
+      if (!prev) return [curr];
+      return [
+        ...prev,
+        <span key={`sep-${index}`} className="opacity-50">
+          :
+        </span>,
+        curr,
+      ];
+    }, null);
+
+  return (
+    <div className="inline-flex items-center gap-x-1 rounded-md bg-[#272727] px-2.5 py-1.5 text-white">
+      {timerComponents}
+    </div>
+  );
+};
 
 type ProductWithDetails = Prisma.ProductGetPayload<{
   include: {
@@ -47,38 +106,55 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     );
   };
 
-  // --- ИЗМЕНЕНИЕ: Весь useEffect для блокировки скролла отсюда УДАЛЕН ---
-  // Теперь за это полностью отвечает компонент BottomSheet.
-
   if (!product || !selectedVariant) {
     return <h2>Товар не найден.</h2>;
   }
 
-  const ProductInfoBlock = () => (
-    <>
-      <ProductHeader
-        name={product.name}
-        price={selectedVariant.price}
-        oldPrice={selectedVariant.oldPrice}
-      />
-      <div className="mt-[15px]">
-        <AddToCartButton />
-      </div>
-      <div className="mt-6">
-        <SizeSelector
-          inventory={selectedVariant.inventory}
-          selectedSize={selectedSize}
-          onSelectSize={handleSelectSize}
+  const ProductInfoBlock = () => {
+    const shouldShowTimer =
+      selectedVariant.discountExpiresAt &&
+      +new Date(selectedVariant.discountExpiresAt) - +new Date() > 0;
+
+    return (
+      <>
+        <ProductHeader
+          name={product.name}
+          price={selectedVariant.price}
+          oldPrice={selectedVariant.oldPrice}
+          bonusPoints={selectedVariant.bonusPoints}
         />
-      </div>
-      <div className="mt-4">
-        <SizeChart onClick={() => setIsSizeChartOpen(true)} />
-      </div>
-      <div>
-        <ProductAttributes attributes={product.attributes} />
-      </div>
-    </>
-  );
+
+        {shouldShowTimer && (
+          <div className="mt-4 flex items-center gap-x-2">
+            <CountdownTimer expiryDate={selectedVariant.discountExpiresAt} />
+            <span className="text-sm font-medium text-gray-600">
+              до конца акции
+            </span>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <AddToCartButton />
+        </div>
+
+        <div className="mt-6">
+          <SizeSelector
+            inventory={selectedVariant.inventory}
+            selectedSize={selectedSize}
+            onSelectSize={handleSelectSize}
+          />
+        </div>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Отступ увеличен (mt-2 -> mt-3) --- */}
+        <div className="mt-3">
+          <SizeChart onClick={() => setIsSizeChartOpen(true)} />
+        </div>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+        <div className="mt-4">
+          <ProductAttributes attributes={product.attributes} />
+        </div>
+      </>
+    );
+  };
 
   return (
     <>
@@ -113,7 +189,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         </main>
       </div>
 
-      {/* Вызов вашего оригинального BottomSheet, который теперь работает правильно */}
       <BottomSheet
         isOpen={isSizeChartOpen}
         onClose={() => setIsSizeChartOpen(false)}

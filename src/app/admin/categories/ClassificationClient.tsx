@@ -1,133 +1,180 @@
 // Местоположение: src/app/admin/categories/ClassificationClient.tsx
 'use client';
 
-import { useState, useTransition, useRef, useEffect } from 'react';
-import { Category, Tag } from '@prisma/client';
+import { useState, useTransition, useRef, useEffect, useCallback } from 'react';
+import type { Category, Tag } from '@prisma/client';
 import {
   createCategory,
-  updateCategory,
   deleteCategory,
   createTag,
-  updateTag,
   deleteTag,
+  saveAllClassifications, // Импортируем нашу новую "супер-функцию"
 } from './actions';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  OnDragEndResponder,
+} from '@hello-pangea/dnd';
 
-// --- Компонент для инлайнового добавления категории ---
-const AddCategoryForm = ({
-  parentId,
+// --- Типы ---
+type CategoryWithChildren = Category & { children: CategoryWithChildren[] };
+type Item = { id: string; name: string; color: string | null };
+
+// --- Иконки ---
+const DragHandleIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg
+    {...props}
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <circle cx="10" cy="6" r="1.5" fill="currentColor" />
+    <circle cx="10" cy="12" r="1.5" fill="currentColor" />
+    <circle cx="10" cy="18" r="1.5" fill="currentColor" />
+    <circle cx="14" cy="6" r="1.5" fill="currentColor" />
+    <circle cx="14" cy="12" r="1.5" fill="currentColor" />
+    <circle cx="14" cy="18" r="1.5" fill="currentColor" />
+  </svg>
+);
+
+// --- Компоненты UI ---
+const ColorPicker = ({
+  color,
+  onSave,
+}: {
+  color: string | null;
+  onSave: (color: string) => void;
+}) => (
+  <div
+    className="relative h-5 w-5 rounded-full"
+    style={{ backgroundColor: color || '#E5E7EB' }}
+  >
+    <input
+      type="color"
+      value={color || '#E5E7EB'}
+      onChange={(e) => onSave(e.target.value)}
+      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+    />
+  </div>
+);
+
+const AddItemForm = ({
   onSave,
   onCancel,
   isPending,
+  parentId = null,
 }: {
-  parentId: string | null;
   onSave: (name: string, parentId: string | null) => void;
   onCancel: () => void;
   isPending: boolean;
+  parentId?: string | null;
 }) => {
   const [name, setName] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
-
   useEffect(() => {
-    setTimeout(() => inputRef.current?.focus(), 0);
+    inputRef.current?.focus();
   }, []);
-
   const handleSubmit = () => {
-    if (name.trim()) {
-      onSave(name.trim(), parentId);
-    }
+    if (name.trim()) onSave(name.trim(), parentId);
   };
-
   return (
-    <div className="flex items-center gap-2 py-2">
+    <form action={handleSubmit} className="flex items-center gap-2 py-2">
       <input
         ref={inputRef}
         value={name}
         onChange={(e) => setName(e.target.value)}
-        onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
         placeholder="Название..."
         className="w-full rounded-md border px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500"
         disabled={isPending}
       />
       <button
-        onClick={handleSubmit}
+        type="submit"
         disabled={isPending}
-        className="rounded-md bg-indigo-600 px-3 py-1 text-sm text-white hover:bg-indigo-500"
+        className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-sm text-white hover:bg-indigo-500"
       >
         ✓
       </button>
       <button
+        type="button"
         onClick={onCancel}
-        className="rounded-md bg-gray-200 px-3 py-1 text-sm text-gray-700 hover:bg-gray-300"
+        className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-200 text-sm text-gray-700 hover:bg-gray-300"
       >
         ×
       </button>
-    </div>
+    </form>
   );
 };
 
-// --- Компонент для элемента списка (с редактированием) ---
-const ListItem = ({
+const ItemRow = ({
   item,
   onUpdate,
   onDelete,
   isPending,
   isSystem = false,
   children,
+  level = 0,
 }: {
-  item: { id: string; name: string };
-  onUpdate: (id: string, name: string) => void;
+  item: Item & { parentId?: string | null; order?: number };
+  onUpdate: (id: string, data: Partial<Item>) => void;
   onDelete: (id: string) => void;
   isPending: boolean;
   isSystem?: boolean;
   children?: React.ReactNode;
+  level?: number;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(item.name);
+  const levelClasses = [
+    'font-semibold',
+    'font-normal',
+    'font-normal text-gray-600',
+  ];
 
   const handleSave = () => {
-    if (name.trim() !== '' && name.trim() !== item.name) {
-      onUpdate(item.id, name.trim());
-    }
+    if (name.trim() && name.trim() !== item.name)
+      onUpdate(item.id, { name: name.trim() });
     setIsEditing(false);
   };
 
   return (
-    <div className="flex items-center justify-between border-b py-2">
-      {isEditing ? (
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-          className="w-full rounded-md border px-1 py-0.5 focus:ring-1 focus:ring-indigo-500"
-          autoFocus
-          disabled={isPending}
+    <div
+      className="group flex items-center justify-between border-b py-1.5"
+      onDoubleClick={() => !isSystem && setIsEditing(true)}
+    >
+      <div className="flex flex-grow items-center gap-2">
+        <ColorPicker
+          color={item.color}
+          onSave={(color) => onUpdate(item.id, { color })}
         />
-      ) : (
-        <>
-          <span className="flex-grow">{item.name}</span>
-          <div className="ml-4 flex flex-shrink-0 items-center gap-x-4">
-            {children}
-            {!isSystem && (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="text-sm font-semibold text-indigo-600 hover:text-indigo-800"
-              >
-                Редактировать
-              </button>
-            )}
-            {!isSystem && (
-              <button
-                onClick={() => onDelete(item.id)}
-                disabled={isPending}
-                className="text-sm font-semibold text-red-500 hover:text-red-700 disabled:opacity-50"
-              >
-                Удалить
-              </button>
-            )}
-          </div>
-        </>
-      )}
+        {isEditing ? (
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            className="w-full rounded-md border px-2 py-1 text-sm"
+            autoFocus
+            disabled={isPending}
+          />
+        ) : (
+          <span className={`text-sm ${levelClasses[level]}`}>{item.name}</span>
+        )}
+      </div>
+      <div className="flex items-center gap-x-3 text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100">
+        {children}
+        {!isSystem && (
+          <button
+            onClick={() => onDelete(item.id)}
+            disabled={isPending}
+            className="text-red-500 hover:text-red-700"
+          >
+            Удалить
+          </button>
+        )}
+      </div>
     </div>
   );
 };
@@ -141,90 +188,152 @@ export function ClassificationClient({
   initialTags: Tag[];
 }) {
   const [isPending, startTransition] = useTransition();
+  const [categories, setCategories] = useState<CategoryWithChildren[]>([]);
+  const [tags, setTags] = useState(initialTags);
   const [addingToParent, setAddingToParent] = useState<string | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
-  const handleCreateCategory = (name: string, parentId: string | null) => {
+  const buildTree = useCallback(
+    (
+      cats: Category[],
+      parentId: string | null = null,
+    ): CategoryWithChildren[] => {
+      return cats
+        .filter((c) => c.parentId === parentId)
+        .sort((a, b) => a.order - b.order)
+        .map((category) => ({
+          ...category,
+          children: buildTree(cats, category.id),
+        }));
+    },
+    [],
+  );
+
+  useEffect(() => {
+    setCategories(buildTree(initialCategories));
+    setTags(initialTags.sort((a, b) => a.order - b.order));
+  }, [initialCategories, initialTags, buildTree]);
+
+  const handleCreateCategory = (name: string, parentId: string | null) =>
     startTransition(() => {
       createCategory(name, parentId);
       setAddingToParent(null);
     });
-  };
-
-  const handleUpdateCategory = (id: string, name: string) => {
-    startTransition(() => {
-      updateCategory(id, name);
-    });
-  };
-
-  const handleDeleteCategory = (id: string) => {
+  const handleDeleteCategory = (id: string) =>
     startTransition(() => {
       deleteCategory(id);
     });
-  };
-
-  const handleCreateTag = (formData: FormData) => {
-    const nameInput = (formData as any).get('name');
-    if (nameInput) {
-      startTransition(() => {
-        createTag(nameInput);
-      });
-      const form = document.getElementById('new-tag-form') as HTMLFormElement;
-      form?.reset();
-    }
-  };
-
-  const handleUpdateTag = (id: string, name: string) => {
+  const handleCreateTag = (name: string) =>
     startTransition(() => {
-      updateTag(id, name);
+      createTag(name);
     });
-  };
-
-  const handleDeleteTag = (id: string) => {
+  const handleDeleteTag = (id: string) =>
     startTransition(() => {
       deleteTag(id);
     });
+
+  const updateItem = <T extends { id: string }>(
+    items: T[],
+    setItems: React.Dispatch<React.SetStateAction<T[]>>,
+    id: string,
+    data: Partial<T>,
+  ) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, ...data } : item)),
+    );
+    setIsDirty(true);
   };
 
-  const buildCategoryTree = (
-    categories: Category[],
-    parentId: string | null = null,
-  ): (Category & { children: any[] })[] => {
-    return categories
-      .filter((category) => category.parentId === parentId)
-      .map((category) => ({
-        ...category,
-        children: buildCategoryTree(categories, category.id),
-      }));
-  };
-  const categoryRoots = buildCategoryTree(initialCategories);
+  const onDragEnd: OnDragEndResponder = (result) => {
+    const { source, destination, draggableId, type } = result;
+    if (!destination) return;
+    setIsDirty(true);
 
-  // --- Новый компонент для рекурсивного отображения дерева ---
+    if (type === 'TAGS') {
+      const newTags = Array.from(tags);
+      const [moved] = newTags.splice(source.index, 1);
+      newTags.splice(destination.index, 0, moved);
+      setTags(newTags);
+    }
+  };
+
+  const handleSaveAll = () => {
+    const flatten = (items: CategoryWithChildren[]): Category[] =>
+      items.flatMap((item) => [
+        { ...item, children: undefined },
+        ...flatten(item.children),
+      ]);
+    const flatCategories = flatten(categories);
+
+    startTransition(() => {
+      saveAllClassifications(
+        flatCategories.map((c, i) => ({ ...c, order: i })), // Пересчитываем порядок при сохранении
+        tags.map((t, i) => ({ ...t, order: i })),
+      );
+      setIsDirty(false);
+    });
+  };
+
+  const systemTags = ['скидка', 'новинка'];
+
   const CategoryTree = ({
-    categories,
+    items,
+    level = 0,
   }: {
-    categories: (Category & { children: any[] })[];
+    items: CategoryWithChildren[];
+    level?: number;
   }) => (
     <>
-      {categories.map((cat) => (
-        <div key={cat.id} className="border-l border-gray-200 pl-6">
-          <ListItem
-            item={cat}
-            onUpdate={handleUpdateCategory}
-            onDelete={handleDeleteCategory}
-            isPending={isPending}
-          >
-            {cat.children.length < 3 && ( // Ограничение на 3 уровня вложенности
-              <button
-                onClick={() => setAddingToParent(cat.id)}
-                className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+      {items.map((cat, index) => (
+        <div key={cat.id} className="relative pl-4">
+          <div className="absolute top-0 left-0 h-full w-4 border-l border-gray-200"></div>
+          <div className="absolute top-1/2 left-0 h-1/2 w-4 border-b border-gray-200"></div>
+
+          <Draggable key={cat.id} draggableId={cat.id} index={index}>
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.draggableProps}
+                className="flex items-center gap-1"
               >
-                +
-              </button>
+                <div
+                  {...provided.dragHandleProps}
+                  className="cursor-grab text-gray-300 hover:text-gray-500"
+                >
+                  <DragHandleIcon />
+                </div>
+                <div className="flex-grow">
+                  <ItemRow
+                    item={cat}
+                    onUpdate={(id, data) =>
+                      updateItem(
+                        initialCategories as any,
+                        setCategories as any,
+                        id,
+                        data,
+                      )
+                    }
+                    onDelete={handleDeleteCategory}
+                    isPending={isPending}
+                    level={level}
+                  >
+                    {level < 2 && (
+                      <button
+                        onClick={() => setAddingToParent(cat.id)}
+                        className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+                      >
+                        +
+                      </button>
+                    )}
+                  </ItemRow>
+                </div>
+              </div>
             )}
-          </ListItem>
+          </Draggable>
+
           {addingToParent === cat.id && (
-            <div className="border-l border-gray-200 pl-6">
-              <AddCategoryForm
+            <div className="pl-12">
+              <AddItemForm
                 parentId={cat.id}
                 onSave={handleCreateCategory}
                 onCancel={() => setAddingToParent(null)}
@@ -233,114 +342,176 @@ export function ClassificationClient({
             </div>
           )}
           {cat.children.length > 0 && (
-            <CategoryTree categories={cat.children} />
+            <CategoryTree items={cat.children} level={level + 1} />
           )}
         </div>
       ))}
     </>
   );
 
-  const systemTags = ['скидка', 'новинка'];
-
   return (
-    <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
-      {/* Категории */}
-      <section>
-        <div className="mb-4 text-lg font-semibold text-gray-800">
-          Категории
-        </div>
-        <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
-          <div className="mb-2 font-medium">Добавить новый тип</div>
-          {addingToParent === 'root' ? (
-            <AddCategoryForm
-              parentId={null}
-              onSave={handleCreateCategory}
-              onCancel={() => setAddingToParent(null)}
-              isPending={isPending}
-            />
-          ) : (
-            <button
-              onClick={() => setAddingToParent('root')}
-              className="w-full rounded-md border border-dashed bg-gray-50 py-2 text-sm text-gray-600 hover:bg-gray-100"
-            >
-              + Создать новую категорию верхнего уровня (Тип)
-            </button>
-          )}
-        </div>
-        <div className="text-md mb-2 font-semibold">Существующие категории</div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          {categoryRoots.map((root) => (
-            <div key={root.id}>
-              <ListItem
-                item={root}
-                onUpdate={handleUpdateCategory}
-                onDelete={handleDeleteCategory}
+    <DragDropContext onDragEnd={onDragEnd}>
+      <div className="mb-4 flex justify-end">
+        <button
+          onClick={handleSaveAll}
+          disabled={!isDirty || isPending}
+          className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {isPending ? 'Сохранение...' : 'Сохранить изменения'}
+        </button>
+      </div>
+      <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
+        <section>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            Категории
+          </h2>
+          <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
+            <div className="mb-2 font-medium">Добавить новый тип</div>
+            {addingToParent === 'root' ? (
+              <AddItemForm
+                parentId={null}
+                onSave={handleCreateCategory}
+                onCancel={() => setAddingToParent(null)}
                 isPending={isPending}
+              />
+            ) : (
+              <button
+                onClick={() => setAddingToParent('root')}
+                className="w-full rounded-md border border-dashed bg-gray-50 py-2 text-sm text-gray-600 hover:bg-gray-100"
               >
-                <button
-                  onClick={() => setAddingToParent(root.id)}
-                  className="text-sm font-semibold text-gray-500 hover:text-gray-800"
-                >
-                  +
-                </button>
-              </ListItem>
-              {addingToParent === root.id && (
-                <div className="border-l border-gray-200 pl-6">
-                  <AddCategoryForm
-                    parentId={root.id}
-                    onSave={handleCreateCategory}
-                    onCancel={() => setAddingToParent(null)}
-                    isPending={isPending}
-                  />
+                + Создать новую категорию верхнего уровня (Тип)
+              </button>
+            )}
+          </div>
+          <div className="text-md mb-2 font-semibold">
+            Существующие категории
+          </div>
+          <div className="rounded-lg border bg-white p-4 shadow-sm">
+            <Droppable droppableId="ROOT" type="CATEGORIES-ROOT">
+              {(provided) => (
+                <div ref={provided.innerRef} {...provided.droppableProps}>
+                  {categories.map((root, index) => (
+                    <Draggable
+                      key={root.id}
+                      draggableId={root.id}
+                      index={index}
+                    >
+                      {(provided) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          className="flex items-center gap-1"
+                        >
+                          <div
+                            {...provided.dragHandleProps}
+                            className="cursor-grab text-gray-300 hover:text-gray-500"
+                          >
+                            <DragHandleIcon />
+                          </div>
+                          <div className="flex-grow">
+                            <ItemRow
+                              item={root}
+                              onUpdate={(id, data) =>
+                                updateItem(
+                                  initialCategories as any,
+                                  setCategories as any,
+                                  id,
+                                  data,
+                                )
+                              }
+                              onDelete={handleDeleteCategory}
+                              isPending={isPending}
+                              level={0}
+                            >
+                              <button
+                                onClick={() => setAddingToParent(root.id)}
+                                className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+                              >
+                                +
+                              </button>
+                            </ItemRow>
+                            {addingToParent === root.id && (
+                              <div className="pl-6">
+                                <AddItemForm
+                                  parentId={root.id}
+                                  onSave={handleCreateCategory}
+                                  onCancel={() => setAddingToParent(null)}
+                                  isPending={isPending}
+                                />
+                              </div>
+                            )}
+                            {root.children.length > 0 && (
+                              <CategoryTree items={root.children} level={1} />
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
                 </div>
               )}
-              <CategoryTree categories={root.children} />
-            </div>
-          ))}
-        </div>
-      </section>
+            </Droppable>
+          </div>
+        </section>
 
-      {/* Метки */}
-      <section>
-        <div className="mb-4 text-lg font-semibold text-gray-800">
-          Метки (Теги)
-        </div>
-        <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
-          <div className="mb-2 font-medium">Добавить новую метку</div>
-          <form
-            id="new-tag-form"
-            action={handleCreateTag}
-            className="flex items-center gap-2"
-          >
-            <input
-              name="name"
-              placeholder="Название метки"
-              className="w-full rounded-md border px-3 py-2"
-              required
-            />
-            <button
-              type="submit"
-              disabled={isPending}
-              className="flex-shrink-0 rounded-md bg-gray-800 px-4 py-2 text-white disabled:opacity-50"
-            >
-              Создать
-            </button>
-          </form>
-        </div>
-        <div className="text-md mb-2 font-semibold">Существующие метки</div>
-        <div className="rounded-lg border bg-white p-4 shadow-sm">
-          {initialTags.map((tag) => (
-            <ListItem
-              key={tag.id}
-              item={tag}
-              onUpdate={handleUpdateTag}
-              onDelete={handleDeleteTag}
+        <section>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800">
+            Метки (Теги)
+          </h2>
+          <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
+            <div className="mb-2 font-medium">Добавить новую метку</div>
+            <AddItemForm
+              onSave={(name) => handleCreateTag(name)}
+              onCancel={() => {}}
               isPending={isPending}
-              isSystem={systemTags.includes(tag.name.toLowerCase())}
             />
-          ))}
-        </div>
-      </section>
-    </div>
+          </div>
+          <div className="text-md mb-2 font-semibold">Существующие метки</div>
+          <Droppable droppableId="tags-list" type="TAGS">
+            {(provided) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="rounded-lg border bg-white p-4 shadow-sm"
+              >
+                {tags.map((tag, index) => (
+                  <Draggable key={tag.id} draggableId={tag.id} index={index}>
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="flex items-center gap-1"
+                      >
+                        <div
+                          {...provided.dragHandleProps}
+                          className="cursor-grab text-gray-300 hover:text-gray-500"
+                        >
+                          <DragHandleIcon />
+                        </div>
+                        <div className="flex-grow">
+                          <ItemRow
+                            item={tag}
+                            onUpdate={(id, data) =>
+                              updateItem(tags, setTags, id, data)
+                            }
+                            onDelete={handleDeleteTag}
+                            isPending={isPending}
+                            isSystem={systemTags.includes(
+                              tag.name.toLowerCase(),
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+            )}
+          </Droppable>
+        </section>
+      </div>
+    </DragDropContext>
   );
 }
