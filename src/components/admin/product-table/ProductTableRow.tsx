@@ -192,6 +192,20 @@ export const ProductTableRow = ({
   const tagMenuRef = useRef<HTMLDivElement>(null);
   const tagButtonRef = useRef<HTMLButtonElement>(null);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем состояние для отслеживания времени ---
+  const [currentTime, setCurrentTime] = useState(Date.now());
+
+  useEffect(() => {
+    // Если у варианта есть дата окончания скидки, запускаем таймер
+    if (variant.discountExpiresAt) {
+      const interval = setInterval(() => {
+        setCurrentTime(Date.now()); // Каждую секунду обновляем "текущее время"
+      }, 1000);
+      return () => clearInterval(interval); // Очищаем интервал при размонтировании
+    }
+  }, [variant.discountExpiresAt]);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const currentTagIds = new Set(variant.product.tags.map((t) => t.id));
   const availableTags = allTags.filter(
     (t) => !currentTagIds.has(t.id) && t.name.toLowerCase() !== 'скидка',
@@ -249,6 +263,17 @@ export const ProductTableRow = ({
 
   const hasDiscount =
     variant.oldPrice != null && variant.oldPrice > variant.price;
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика теперь использует `currentTime` ---
+  const isDiscountCurrentlyActive =
+    hasDiscount &&
+    (!variant.discountExpiresAt ||
+      new Date(variant.discountExpiresAt).getTime() > currentTime);
+
+  const finalDisplayPrice = isDiscountCurrentlyActive
+    ? variant.price
+    : variant.oldPrice || variant.price;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const discountPercent =
     hasDiscount && variant.oldPrice
@@ -383,8 +408,7 @@ export const ProductTableRow = ({
 
   const handleAddTag = (tagIdToAdd: string) => {
     const newTagIds = [...currentTagIds, tagIdToAdd];
-    onTagsChange(variant.product.id, newTagIds);
-    setIsTagMenuOpen(false);
+    onTagsChange(variant.product.id, newTagIds as string[]);
   };
 
   const handleRemoveTag = (tagIdToRemove: string) => {
@@ -487,7 +511,6 @@ export const ProductTableRow = ({
       </td>
       <td className="px-6 py-4 align-middle text-sm font-medium whitespace-nowrap text-gray-900">
         <div className="flex items-center">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
           <div className="flex w-16 flex-shrink-0 flex-col items-center">
             <div className="group relative aspect-[4/5] w-16">
               <Image
@@ -499,7 +522,6 @@ export const ProductTableRow = ({
                 sizes="64px"
                 className="rounded-md object-cover"
               />
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               {variant.images.length > 1 && (
                 <div className="absolute inset-0 z-10 flex flex-col opacity-0 transition-opacity duration-300 group-hover:opacity-100">
                   <div className="absolute inset-0 rounded-md bg-black/30" />
@@ -692,16 +714,28 @@ export const ProductTableRow = ({
         />
       </td>
       <td className="px-6 py-4 text-center text-sm whitespace-nowrap text-gray-800">
-        <div className="inline-flex h-6 items-center gap-x-1 rounded-md bg-green-50 px-1.5 py-0.5">
+        <div
+          className={`inline-flex h-6 items-center gap-x-1 rounded-md px-1.5 py-0.5 ${
+            isDiscountCurrentlyActive ? 'bg-green-50' : 'bg-gray-100'
+          }`}
+        >
           <input
             type="text"
-            value={formatNumberForInput(variant.price)}
+            value={formatNumberForInput(finalDisplayPrice)}
             onChange={(e) =>
               onNumericInputChange(variant.id, 'price', e.target.value)
             }
-            className="w-16 border-none bg-transparent p-0 text-center text-sm font-bold text-green-800 focus:ring-0"
+            className={`w-16 border-none bg-transparent p-0 text-center text-sm font-bold focus:ring-0 ${
+              isDiscountCurrentlyActive ? 'text-green-800' : 'text-gray-800'
+            }`}
           />
-          <span className="font-semibold text-green-800">RUB</span>
+          <span
+            className={`font-semibold ${
+              isDiscountCurrentlyActive ? 'text-green-800' : 'text-gray-800'
+            }`}
+          >
+            RUB
+          </span>
         </div>
       </td>
     </tr>

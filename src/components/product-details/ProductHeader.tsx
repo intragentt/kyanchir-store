@@ -9,7 +9,12 @@ interface ProductHeaderProps {
   price: number;
   oldPrice?: number | null;
   bonusPoints?: number | null;
+  isDiscountActive: boolean;
 }
+
+const formatBonusPoints = (points: number) => {
+  return points.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+};
 
 const BonusPointsBadge = ({
   points,
@@ -19,9 +24,7 @@ const BonusPointsBadge = ({
   if (!points || points <= 0) return null;
   return (
     <div className="ml-4 inline-flex flex-shrink-0 items-center gap-x-1.5 rounded-md bg-[#6B80C5]/10 px-2 py-1 text-sm font-bold text-[#6B80C5]">
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убран пробел между "+" и числом --- */}
-      <span>+{points}</span>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+      <span>+{formatBonusPoints(points)}</span>
       <ShortLogo className="h-3.5 w-3.5" />
     </div>
   );
@@ -32,13 +35,21 @@ export default function ProductHeader({
   price,
   oldPrice,
   bonusPoints,
+  isDiscountActive,
 }: ProductHeaderProps) {
-  const hasDiscount = oldPrice && oldPrice > price;
+  const hasDiscount = isDiscountActive && oldPrice && oldPrice > price;
   const discountPercent = hasDiscount
     ? Math.round(((oldPrice - price) / oldPrice) * 100)
     : 0;
 
-  const formattedPrice = formatPrice(price);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика выбора правильной цены для отображения ---
+  // Если скидка активна, показываем цену со скидкой.
+  // Если скидка ЗАКОНЧИЛАСЬ, показываем старую цену (oldPrice).
+  // Если скидки не было, показываем обычную цену.
+  const displayPrice = hasDiscount ? price : (oldPrice || price);
+  const formattedDisplayPrice = formatPrice(displayPrice);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const formattedOldPrice = hasDiscount ? formatPrice(oldPrice) : null;
 
   return (
@@ -50,7 +61,8 @@ export default function ProductHeader({
 
       <div className="mt-2 flex items-center justify-between">
         <div className="flex items-center gap-x-3">
-          <span>{formattedPrice?.value} RUB</span>
+          {/* --- ИЗМЕНЕНИЕ: Используем новую переменную для отображения цены --- */}
+          <span>{formattedDisplayPrice?.value} RUB</span>
           {hasDiscount && formattedOldPrice && (
             <span className="text-gray-400">
               <span className="line-through">{formattedOldPrice.value}</span>

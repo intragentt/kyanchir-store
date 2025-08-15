@@ -15,26 +15,25 @@ export async function PATCH(req: Request) {
       );
     }
 
-    // Увеличиваем время ожидания для этой конкретной операции
     await prisma.$transaction(
       async (tx) => {
         for (const variant of variants) {
-          // --- НАЧАЛО ОПТИМИЗАЦИИ ---
-
           const product = variant.product;
           const inventoryUpdatePromises = [];
 
-          // 1. Обновляем сам вариант (цены, бонусы) - это остается как есть
+          // 1. Обновляем сам вариант (цены, бонусы, И ТАЙМЕР)
           await tx.variant.update({
             where: { id: variant.id },
             data: {
               price: variant.price,
               oldPrice: variant.oldPrice,
               bonusPoints: variant.bonusPoints,
+              // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлена эта строка ---
+              discountExpiresAt: variant.discountExpiresAt,
+              // --- КОНЕЦ ИЗМЕНЕНИЙ ---
             },
           });
 
-          // 2. Готовим ОДИН большой объект для обновления продукта
           const productUpdateData: any = {};
           if (product?.status) {
             productUpdateData.status = product.status;
@@ -50,7 +49,6 @@ export async function PATCH(req: Request) {
             };
           }
 
-          // Если есть что обновлять в продукте - обновляем за один раз
           if (Object.keys(productUpdateData).length > 0) {
             await tx.product.update({
               where: { id: product.id },
@@ -58,7 +56,6 @@ export async function PATCH(req: Request) {
             });
           }
 
-          // 3. Собираем все обещания по обновлению остатков
           const allInventories = product.variants.flatMap(
             (v: any) => v.inventory,
           );
@@ -72,14 +69,11 @@ export async function PATCH(req: Request) {
             }
           }
 
-          // Выполняем все обновления остатков параллельно
           await Promise.all(inventoryUpdatePromises);
-
-          // --- КОНЕЦ ОПТИМИЗАЦИИ ---
         }
       },
       {
-        timeout: 15000, // Увеличиваем тайм-аут до 15 секунд на всякий случай
+        timeout: 15000,
       },
     );
 

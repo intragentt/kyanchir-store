@@ -100,6 +100,38 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлена логика управления состоянием скидки ---
+  const [isDiscountActive, setIsDiscountActive] = useState(
+    () =>
+      !!(
+        selectedVariant.discountExpiresAt &&
+        +new Date(selectedVariant.discountExpiresAt) > Date.now()
+      ),
+  );
+
+  useEffect(() => {
+    if (!selectedVariant.discountExpiresAt) {
+      setIsDiscountActive(false);
+      return;
+    }
+
+    const checkExpiry = () => {
+      const isStillActive =
+        +new Date(selectedVariant.discountExpiresAt!) > Date.now();
+      if (!isStillActive) {
+        setIsDiscountActive(false);
+        clearInterval(interval);
+      }
+    };
+
+    const interval = setInterval(checkExpiry, 1000);
+    // Проверяем сразу при монтировании
+    checkExpiry();
+
+    return () => clearInterval(interval);
+  }, [selectedVariant.discountExpiresAt]);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const handleSelectSize = (sizeValue: string) => {
     setSelectedSize((currentSize) =>
       currentSize === sizeValue ? null : sizeValue,
@@ -111,10 +143,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   }
 
   const ProductInfoBlock = () => {
-    const shouldShowTimer =
-      selectedVariant.discountExpiresAt &&
-      +new Date(selectedVariant.discountExpiresAt) - +new Date() > 0;
-
     return (
       <>
         <ProductHeader
@@ -122,9 +150,12 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           price={selectedVariant.price}
           oldPrice={selectedVariant.oldPrice}
           bonusPoints={selectedVariant.bonusPoints}
+          // --- ИЗМЕНЕНИЕ: Передаем состояние скидки в дочерний компонент ---
+          isDiscountActive={isDiscountActive}
         />
 
-        {shouldShowTimer && (
+        {/* --- ИЗМЕНЕНИЕ: Отображение таймера теперь зависит от isDiscountActive --- */}
+        {isDiscountActive && (
           <div className="mt-4 flex items-center gap-x-2">
             <CountdownTimer expiryDate={selectedVariant.discountExpiresAt} />
             <span className="text-sm font-medium text-gray-600">
@@ -144,11 +175,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             onSelectSize={handleSelectSize}
           />
         </div>
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Отступ увеличен (mt-2 -> mt-3) --- */}
         <div className="mt-3">
           <SizeChart onClick={() => setIsSizeChartOpen(true)} />
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <div className="mt-4">
           <ProductAttributes attributes={product.attributes} />
         </div>

@@ -1,5 +1,5 @@
 // Местоположение: src/components/admin/ProductTable.tsx
-'use client';
+'use client'; // <--- ДОБАВЛЕНО ЭТО ИЗМЕНЕНИЕ
 
 import { useState } from 'react';
 import Link from 'next/link';
@@ -105,7 +105,6 @@ export default function ProductTable({
     setEditedVariantIds((prev) => new Set(prev).add(variantId));
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая функция ---
   const handleCategoryChange = (
     productId: string,
     newCategories: Category[],
@@ -113,7 +112,6 @@ export default function ProductTable({
     setVariants((prev) =>
       prev.map((v) => {
         if (v.product.id === productId) {
-          // Глубокое копирование, чтобы избежать мутаций
           const updatedVariant = JSON.parse(JSON.stringify(v));
           updatedVariant.product.categories = newCategories;
           return updatedVariant;
@@ -127,7 +125,6 @@ export default function ProductTable({
       (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
     );
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleTagsChange = (productId: string, selectedTagIds: string[]) => {
     setVariants((prev) =>
