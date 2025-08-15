@@ -151,18 +151,31 @@ img, video, iframe, canvas, object, svg {
   opacity: 1;
 }
 
-/* Местоположение: src/app/globals.css (добавить в конец) */
-
-/* VVV--- УБИРАЕМ СТРЕЛОЧКИ У ЧИСЛОВЫХ ПОЛЕЙ ВВОДА ---VVV */
-
-/* Для Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-/* Для Firefox */
 input[type='number'] {
   -moz-appearance: textfield;
 }
+
+/* --- НАЧАЛО ИЗМЕНЕНИЙ: Стили для пагинации с повышенной специфичностью --- */
+/* Указываем, что стили действуют только внутри нашего контейнера */
+.product-pagination-container .swiper-pagination-bullet {
+  width: 8px;
+  height: 8px;
+  background-color: #d1d5db;
+  opacity: 1;
+  border-radius: 9999px;
+  transition: all 0.3s ease;
+}
+
+/* То же самое для активного элемента */
+.product-pagination-container .swiper-pagination-bullet-active {
+  width: 18px;
+  background-color: #272727;
+  border-radius: 9999px;
+}
+/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */

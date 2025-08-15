@@ -1,11 +1,14 @@
 // Местоположение: src/components/product-details/MobileProductGallery.tsx
 'use client';
 
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination, A11y } from 'swiper/modules'; // --- ИЗМЕНЕНИЕ 1: Добавляем A11y
+import { Pagination, A11y, Zoom } from 'swiper/modules';
+import type { Swiper as SwiperInstance } from 'swiper';
 import 'swiper/css';
 import 'swiper/css/pagination';
+import 'swiper/css/zoom';
 import { Image as PrismaImage } from '@prisma/client';
 
 interface GalleryProps {
@@ -17,44 +20,90 @@ export default function MobileProductGallery({
   images,
   productName,
 }: GalleryProps) {
+  const [swiperInstance, setSwiperInstance] = useState<SwiperInstance | null>(
+    null,
+  );
+  const galleryRef = useRef<HTMLDivElement | null>(null);
+  const zoomedSlideRef = useRef<HTMLElement | null>(null);
+
+  const handleGalleryClick = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (!galleryRef.current || !swiperInstance) return;
+
+    if (swiperInstance.zoom.scale !== 1) {
+      swiperInstance.zoom.out();
+      return;
+    }
+
+    const rect = galleryRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+
+    if (event.clientX > centerX) {
+      swiperInstance.slideNext();
+    } else {
+      swiperInstance.slidePrev();
+    }
+  };
+
   return (
-    <div className="pt-[10px]">
+    <div className="pt-[10px]" ref={galleryRef} onClick={handleGalleryClick}>
       <Swiper
-        modules={[Pagination, A11y]}
+        onSwiper={setSwiperInstance}
+        modules={[Pagination, A11y, Zoom]}
         slidesPerView={'auto'}
         spaceBetween={10}
-        // --- ИЗМЕНЕНИЕ 2: Включаем режим центрирования ---
         centeredSlides={true}
-        // --- ИЗМЕНЕНИЕ 3: Заставляем первый и последний слайды прижиматься к краям ---
         centeredSlidesBounds={true}
+        zoom={true}
+        onTouchEnd={(swiper) => {
+          setTimeout(() => {
+            if (swiper.zoom.scale !== 1) {
+              swiper.zoom.out();
+            }
+          }, 300);
+        }}
+        onZoomChange={(swiper, scale, imageEl, slideEl) => {
+          const swiperContainer = swiper.el as HTMLElement;
+          if (scale > 1) {
+            if (zoomedSlideRef.current) {
+              zoomedSlideRef.current.style.zIndex = '';
+            }
+            swiperContainer.style.overflow = 'visible';
+            slideEl.style.zIndex = '50';
+            zoomedSlideRef.current = slideEl;
+          } else {
+            swiperContainer.style.overflow = 'hidden';
+            if (zoomedSlideRef.current) {
+              zoomedSlideRef.current.style.zIndex = '';
+              zoomedSlideRef.current = null;
+            }
+          }
+        }}
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Кастомные классы удалены, чтобы использовались стандартные ---
         pagination={{
           el: '.product-pagination-container',
           clickable: true,
-          bulletClass: 'swiper-styled-pagination-bullet',
-          bulletActiveClass: 'swiper-styled-pagination-bullet_active',
         }}
-        // --- ИЗМЕНЕНИЕ 4: Убираем JS-отступы, теперь они не нужны ---
-        // slidesOffsetBefore={15}
-        // slidesOffsetAfter={15}
-        // --- ИЗМЕНЕНИЕ 5: Добавляем отступы через CSS, чтобы задать "границы" для слайдов ---
-        className="!px-4" // ~16px отступы по бокам
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+        className="!px-4"
       >
         {images.map((image, index) => (
           <SwiperSlide key={image.id} className="!w-[85%]">
             <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md">
-              <Image
-                src={image.url}
-                alt={`${productName} - фото ${index + 1}`}
-                fill
-                className="object-cover"
-                sizes="85vw"
-                priority={index === 0}
-              />
+              <div className="swiper-zoom-container">
+                <Image
+                  src={image.url}
+                  alt={`${productName} - фото ${index + 1}`}
+                  fill
+                  className="object-cover"
+                  sizes="85vw"
+                  priority={index === 0}
+                />
+              </div>
             </div>
           </SwiperSlide>
         ))}
       </Swiper>
-      <div className="product-pagination-container mt-[5px] flex h-[10px] items-center justify-center"></div>
+      <div className="product-pagination-container mt-[15px] flex h-[10px] items-center justify-center"></div>
     </div>
   );
 }
