@@ -42,26 +42,22 @@ export default function ProductHeader({
     ? Math.round(((oldPrice - price) / oldPrice) * 100)
     : 0;
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика выбора правильной цены для отображения ---
-  // Если скидка активна, показываем цену со скидкой.
-  // Если скидка ЗАКОНЧИЛАСЬ, показываем старую цену (oldPrice).
-  // Если скидки не было, показываем обычную цену.
-  const displayPrice = hasDiscount ? price : (oldPrice || price);
+  const displayPrice = hasDiscount ? price : oldPrice || price;
   const formattedDisplayPrice = formatPrice(displayPrice);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const formattedOldPrice = hasDiscount ? formatPrice(oldPrice) : null;
 
   return (
     <div className="font-body text-text-primary text-base font-semibold">
       <div className="flex items-start justify-between">
-        <div className="text-lg">{name}</div>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удален класс text-lg --- */}
+        <div>{name}</div>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <BonusPointsBadge points={bonusPoints} />
       </div>
 
       <div className="mt-2 flex items-center justify-between">
         <div className="flex items-center gap-x-3">
-          {/* --- ИЗМЕНЕНИЕ: Используем новую переменную для отображения цены --- */}
           <span>{formattedDisplayPrice?.value} RUB</span>
           {hasDiscount && formattedOldPrice && (
             <span className="text-gray-400">
