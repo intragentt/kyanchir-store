@@ -27,7 +27,7 @@ export async function GET() {
 
 /**
  * POST-хендлер для СОЗДАНИЯ нового базового ПРОДУКТА.
- * Создает только "оболочку" товара.
+ * VVV--- ГЛАВНОЕ ИЗМЕНЕНИЕ: Теперь он создает не только "оболочку", но и ПЕРВЫЙ ВАРИАНТ ---VVV
  */
 export async function POST(request: Request) {
   try {
@@ -38,11 +38,21 @@ export async function POST(request: Request) {
       return new NextResponse('Название продукта обязательно', { status: 400 });
     }
 
+    // Используем вложенную запись (nested write), чтобы создать продукт
+    // и связанный с ним вариант в одной атомарной операции.
     const newProduct = await prisma.product.create({
       data: {
         name,
         description,
         status, // DRAFT, PUBLISHED, etc.
+        variants: {
+          create: [
+            {
+              price: 0, // Цена по умолчанию
+              color: 'Базовый', // Цвет/название варианта по умолчанию
+            },
+          ],
+        },
       },
     });
 

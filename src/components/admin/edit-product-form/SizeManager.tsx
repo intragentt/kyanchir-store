@@ -1,7 +1,7 @@
 // Местоположение: src/components/admin/edit-product-form/SizeManager.tsx
 'use client';
 
-import { Size, Inventory } from '@prisma/client';
+import { Inventory, Size } from '@prisma/client';
 
 interface SizeManagerProps {
   allSizes: Size[];
@@ -14,30 +14,31 @@ export default function SizeManager({
   inventory,
   onInventoryChange,
 }: SizeManagerProps) {
-  // Временные данные для сеток, пока мы не создали для них модели
+  // Временно используем статичные данные, пока не будет модели для сеток
   const allSizeGrids = ['Одежда (S, M, L, XL)', 'Обувь (36-42)'];
-  const selectedSizeGrid = allSizeGrids[0]; // Временно выбираем первую
+  // Временно всегда выбираем первую сетку
+  const selectedSizeGrid = allSizeGrids[0];
 
   return (
     <div className="rounded-lg border bg-white p-6">
-      <div className="mb-4 text-lg font-semibold text-gray-800">
+      <div className="text-lg font-semibold text-gray-800">
         Размеры и остатки
       </div>
 
-      <div className="mb-4">
+      {/* VVV--- ВОЗВРАЩАЕМ БЛОК С ВЫБОРОМ СЕТКИ ---VVV */}
+      <div className="mt-4">
         <label
           htmlFor="size-grid"
-          className="mb-1 block text-sm font-medium text-gray-700"
+          className="block text-sm font-medium text-gray-700"
         >
           Размерная сетка
         </label>
         <select
           id="size-grid"
           value={selectedSizeGrid}
-          // Временно отключаем onChange, так как логика смены сеток еще не реализована
-          // onChange={(e) => onSizeGridChange(e.target.value)}
-          disabled // ИЗМЕНЕНИЕ: Заменяем readOnly на disabled, это правильный атрибут для select
-          className="block w-full max-w-xs rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100 sm:text-sm"
+          // Логика смены сеток пока не реализована, поэтому список неактивен
+          disabled
+          className="mt-1 block w-full max-w-xs rounded-md border-gray-300 bg-gray-50 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-opacity-50 sm:text-sm"
         >
           {allSizeGrids.map((grid) => (
             <option key={grid} value={grid}>
@@ -47,33 +48,34 @@ export default function SizeManager({
         </select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      {/* VVV--- ВОЗВРАЩАЕМ ПОЛЯ ДЛЯ ВВОДА ОСТАТКОВ ---VVV */}
+      <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
         {allSizes.map((size) => {
+          // Ищем текущий остаток для этого размера
           const currentStock =
-            inventory.find((item) => item.sizeId === size.id)?.stock ?? 0;
+            inventory.find((item) => item.sizeId === size.id)?.stock ?? '';
 
           return (
             <div key={size.id}>
               <label
-                htmlFor={`size-${size.id}`}
+                htmlFor={`stock-${size.id}`}
                 className="block text-sm font-medium text-gray-700"
               >
-                {size.value}
+                Размер: <span className="font-bold">{size.value}</span>
               </label>
               <input
                 type="number"
-                id={`size-${size.id}`}
+                id={`stock-${size.id}`}
+                name={`stock-${size.id}`}
+                min="0"
                 value={currentStock}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  const stockNumber = parseInt(value, 10);
-                  onInventoryChange(
-                    size.id,
-                    isNaN(stockNumber) ? 0 : stockNumber,
-                  );
+                  // При изменении вызываем функцию из родителя
+                  const newStock = parseInt(e.target.value, 10) || 0;
+                  onInventoryChange(size.id, newStock);
                 }}
                 placeholder="0"
-                className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                className="user-select-text mt-1 block w-full rounded-md border-gray-300 bg-gray-50 p-2 text-center shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
               />
             </div>
           );

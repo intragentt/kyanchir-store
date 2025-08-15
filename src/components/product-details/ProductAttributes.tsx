@@ -1,14 +1,13 @@
 // Местоположение: src/components/product-details/ProductAttributes.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 
+// ... компонент ChevronIcon без изменений ...
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className={`relative top-[1px] h-5 w-5 transform text-gray-800 transition-transform duration-300 ${
-      isOpen ? 'rotate-90' : ''
-    }`}
+    className={`relative top-[1px] h-5 w-5 transform text-gray-800 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
     viewBox="0 0 20 20"
     fill="currentColor"
   >
@@ -19,6 +18,48 @@ const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
     />
   </svg>
 );
+
+// VVV--- НОВЫЙ КОМПОНЕНТ ДЛЯ КРАСИВОГО ОТОБРАЖЕНИЯ СОСТАВА ---VVV
+interface CompositionItem {
+  material: string;
+  percentage: string;
+}
+
+const CompositionDisplay = ({ jsonValue }: { jsonValue: string }) => {
+  try {
+    const items: CompositionItem[] = JSON.parse(jsonValue);
+    // Проверяем, что это массив и он не пустой
+    if (!Array.isArray(items) || items.length === 0)
+      return <span>{jsonValue}</span>;
+
+    return (
+      <div>
+        {items.map(
+          (item, index) =>
+            // Отображаем только если есть и материал, и процент
+            item.material &&
+            item.percentage && (
+              <div key={index} className="flex justify-between">
+                <span className="font-body text-base text-gray-800">
+                  {item.material}
+                </span>
+                <span className="font-body text-base font-semibold text-gray-800">
+                  {item.percentage}%
+                </span>
+              </div>
+            ),
+        )}
+      </div>
+    );
+  } catch (e) {
+    // Если это невалидный JSON, просто возвращаем исходную строку
+    return (
+      <span className="font-body text-base font-semibold whitespace-pre-line text-gray-800">
+        {jsonValue}
+      </span>
+    );
+  }
+};
 
 interface Attribute {
   id: string;
@@ -35,12 +76,8 @@ export default function ProductAttributes({
 }: ProductAttributesProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // --- НОВАЯ, БОЛЕЕ ПРОСТАЯ ЛОГИКА ---
-  // Находим "Описание" и "Артикул"
   const description = attributes.find((attr) => attr.key === 'Описание');
   const article = attributes.find((attr) => attr.key === 'Артикул');
-
-  // Все остальные атрибуты считаем "скрытыми"
   const hiddenAttributes = attributes.filter(
     (attr) => attr.key !== 'Описание' && attr.key !== 'Артикул',
   );
@@ -49,10 +86,8 @@ export default function ProductAttributes({
     return null;
   }
 
-  // --- ОБНОВЛЕННАЯ ВЕРСТКА ---
   return (
     <div>
-      {/* Аккордеон показываем, только если есть скрытые атрибуты */}
       {hiddenAttributes.length > 0 && (
         <>
           <button
@@ -64,23 +99,23 @@ export default function ProductAttributes({
           </button>
 
           <div
-            className={`grid overflow-hidden transition-all duration-300 ease-in-out ${
-              isOpen
-                ? 'grid-rows-[1fr] opacity-100'
-                : 'grid-rows-[0fr] opacity-0'
-            }`}
+            className={`grid overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
           >
             <div className="min-h-0">
-              {/* VVV--- ВАЖНО: Добавляем `white-space: pre-line` для переноса строк в "Составе" ---VVV */}
               <div className="space-y-4 pb-4">
                 {hiddenAttributes.map((attr) => (
                   <div key={attr.id}>
                     <p className="font-body text-sm text-gray-500">
                       {attr.key}
                     </p>
-                    <p className="font-body text-base font-semibold whitespace-pre-line text-gray-800">
-                      {attr.value}
-                    </p>
+                    {/* VVV--- НАША "УМНАЯ" ЛОГИКА ---VVV */}
+                    {attr.key === 'Состав, %' ? (
+                      <CompositionDisplay jsonValue={attr.value} />
+                    ) : (
+                      <p className="font-body text-base font-semibold whitespace-pre-line text-gray-800">
+                        {attr.value}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -89,7 +124,6 @@ export default function ProductAttributes({
         </>
       )}
 
-      {/* Блок, который виден всегда */}
       <div className="space-y-4 py-4">
         {description && (
           <div>

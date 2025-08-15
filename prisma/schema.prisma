@@ -10,17 +10,18 @@ datasource db {
 }
 
 model Product {
-  id                String            @id @default(cuid())
-  sku               String?           @unique
-  name              String
-  alternativeNames  AlternativeName[]
-  description       String?           @db.Text
-  variants          Variant[]
-  attributes        Attribute[]
-  categories        Category[]        @relation("ProductToCategory")
-  status            Status            @default(DRAFT)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  id               String            @id @default(cuid())
+  sku              String?           @unique
+  name             String
+  alternativeNames AlternativeName[]
+  description      String?           @db.Text
+  variants         Variant[]
+  attributes       Attribute[]
+  categories       Category[]        @relation("ProductToCategory")
+  status           Status            @default(DRAFT)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  tags             Tag[]             @relation("ProductTags")
 }
 
 model Variant {
@@ -32,7 +33,7 @@ model Variant {
   price              Int
   oldPrice           Int?
   discountPercentage Int?
-  discountExpiresAt  DateTime?   // <-- ДОБАВЛЕНО
+  discountExpiresAt  DateTime?
   bonusPoints        Int?
   inventory          Inventory[]
   isFeatured         Boolean     @default(false)
@@ -78,6 +79,21 @@ model Category {
   id       String    @id @default(cuid())
   name     String    @unique
   products Product[] @relation("ProductToCategory")
+  parentId String?
+  parent   Category? @relation("SubCategories", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("SubCategories")
+  order    Int       @default(0)
+  // --- ДОБАВЛЕНО: Поле для цвета ---
+  color    String?
+}
+
+model Tag {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  products Product[] @relation("ProductTags")
+  order    Int       @default(0)
+  // --- ДОБАВЛЕНО: Поле для цвета ---
+  color    String?
 }
 
 enum Status {

@@ -1,18 +1,16 @@
 // Местоположение: src/components/admin/ProductTable.tsx
 'use client';
 
-import { useMemo, useState } from 'react';
-import Image from 'next/image';
+import { useState } from 'react';
 import Link from 'next/link';
-import { formatPrice } from '@/utils/formatPrice';
-import { VariantWithProductInfo } from '@/app/admin/dashboard/page';
+import type { VariantWithProductInfo } from '@/app/admin/dashboard/page';
+import type { Prisma, Category, Tag } from '@prisma/client';
+import { ProductTableRow } from './product-table/ProductTableRow';
 
-// --- ИКОНКИ ДЛЯ НОВЫХ ФУНКЦИЙ ---
-const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
-    <path d="M7 3a1 1 0 011-1h6a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 01-.707.293H3a1 1 0 01-1-1V4a1 1 0 011-1h4zM6 5v7h4.586l6.414-6.414V5H6z" />
-  </svg>
-);
+type ProductStatus = Prisma.ProductGetPayload<{}>['status'];
+
+const statusCycle: ProductStatus[] = ['DRAFT', 'PUBLISHED'];
+
 const UploadIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -31,160 +29,375 @@ const DownloadIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
+const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
+    <path d="M5.5 16a3.5 3.5 0 01-3.5-3.5V5.5A3.5 3.5 0 015.5 2h5.086a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V12.5A3.5 3.5 0 0112.5 16h-7zM5 5.5A1.5 1.5 0 003.5 7v5.5A1.5 1.5 0 005 14h7.5a1.5 1.5 0 001.5-1.5V8.586L8.586 4H5.5A1.5 1.5 0 005 5.5z" />
+    <path d="M7 8a1 1 0 11-2 0 1 1 0 012 0z" />
+  </svg>
+);
 
 interface ProductTableProps {
   variants: VariantWithProductInfo[];
+  allCategories: Category[];
+  allTags: Tag[];
 }
 
-export default function ProductTable({ variants }: ProductTableProps) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
+export default function ProductTable({
+  variants: initialVariants,
+  allCategories,
+  allTags,
+}: ProductTableProps) {
+  const [variants, setVariants] = useState(initialVariants);
+  const [editedVariantIds, setEditedVariantIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleCopy = (id: string) => {
-    navigator.clipboard.writeText(id);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 1500);
+  const handleNumericInputChange = (
+    variantId: string,
+    field: keyof VariantWithProductInfo,
+    inputValue: string,
+  ) => {
+    const numericString = inputValue.replace(/[^0-9]/g, '');
+    const value = numericString === '' ? null : parseInt(numericString, 10);
+    handleVariantChange(variantId, field, value);
   };
 
-  // Здесь будет логика для статуса и удаления
-  // ...
+  const handleVariantChange = (
+    variantId: string,
+    field: keyof VariantWithProductInfo,
+    value: any,
+  ) => {
+    setVariants((prev) =>
+      prev.map((v) => (v.id === variantId ? { ...v, [field]: value } : v)),
+    );
+    setEditedVariantIds((prev) => new Set(prev).add(variantId));
+  };
+
+  const handleInventoryChange = (
+    variantId: string,
+    inventoryId: string,
+    inputValue: string,
+  ) => {
+    const numericString = inputValue.replace(/[^0-9]/g, '');
+    const newStock = numericString === '' ? 0 : parseInt(numericString, 10);
+
+    setVariants((prev) =>
+      prev.map((v) => {
+        if (v.id === variantId) {
+          const updatedVariant = JSON.parse(JSON.stringify(v));
+          const inventoryItem = updatedVariant.product.variants
+            .flatMap((pv: any) => pv.inventory)
+            .find((inv: any) => inv.id === inventoryId);
+
+          if (inventoryItem) {
+            inventoryItem.stock = newStock;
+          }
+          return updatedVariant;
+        }
+        return v;
+      }),
+    );
+
+    setEditedVariantIds((prev) => new Set(prev).add(variantId));
+  };
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая функция ---
+  const handleCategoryChange = (
+    productId: string,
+    newCategories: Category[],
+  ) => {
+    setVariants((prev) =>
+      prev.map((v) => {
+        if (v.product.id === productId) {
+          // Глубокое копирование, чтобы избежать мутаций
+          const updatedVariant = JSON.parse(JSON.stringify(v));
+          updatedVariant.product.categories = newCategories;
+          return updatedVariant;
+        }
+        return v;
+      }),
+    );
+
+    const variantsToUpdate = variants.filter((v) => v.product.id === productId);
+    setEditedVariantIds(
+      (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
+    );
+  };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  const handleTagsChange = (productId: string, selectedTagIds: string[]) => {
+    setVariants((prev) =>
+      prev.map((v) => {
+        if (v.product.id === productId) {
+          const newTags = allTags.filter((t) => selectedTagIds.includes(t.id));
+          const updatedVariant = JSON.parse(JSON.stringify(v));
+          updatedVariant.product.tags = newTags;
+          return updatedVariant;
+        }
+        return v;
+      }),
+    );
+    const variantsToUpdate = variants.filter((v) => v.product.id === productId);
+    setEditedVariantIds(
+      (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
+    );
+  };
+
+  const handleDiscountChange = (
+    variant: VariantWithProductInfo,
+    newPercentStr: string,
+  ) => {
+    const newPercent = newPercentStr ? parseInt(newPercentStr, 10) : 0;
+    if (isNaN(newPercent) || newPercent < 0 || newPercent > 100) return;
+
+    const discountTag = allTags.find((t) => t.name.toLowerCase() === 'скидка');
+
+    setVariants((prev) => {
+      const variantsWithPriceChange = prev.map((v) => {
+        if (v.id === variant.id) {
+          const originalPrice = v.oldPrice || v.price;
+          if (newPercent > 0) {
+            return {
+              ...v,
+              price: Math.round(originalPrice * (1 - newPercent / 100)),
+              oldPrice: originalPrice,
+            };
+          } else {
+            return { ...v, price: originalPrice, oldPrice: null };
+          }
+        }
+        return v;
+      });
+
+      const anyVariantHasDiscount = variantsWithPriceChange
+        .filter((v) => v.product.id === variant.product.id)
+        .some((v) => v.oldPrice !== null);
+
+      return variantsWithPriceChange.map((v) => {
+        if (v.product.id === variant.product.id) {
+          if (!discountTag) return v;
+
+          const currentTags = v.product.tags || [];
+          const hasDiscountTag = currentTags.some(
+            (t) => t.id === discountTag.id,
+          );
+
+          let newTags = currentTags;
+          if (anyVariantHasDiscount && !hasDiscountTag) {
+            newTags = [...currentTags, discountTag];
+          } else if (!anyVariantHasDiscount && hasDiscountTag) {
+            newTags = currentTags.filter((t) => t.id !== discountTag.id);
+          }
+
+          return { ...v, product: { ...v.product, tags: newTags } };
+        }
+        return v;
+      });
+    });
+
+    const variantsToUpdate = variants.filter(
+      (v) => v.product.id === variant.product.id,
+    );
+    setEditedVariantIds(
+      (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
+    );
+  };
+
+  const handleProductStatusChange = (
+    productId: string,
+    newStatus: ProductStatus,
+  ) => {
+    setVariants((prev) =>
+      prev.map((v) => {
+        if (v.product.id === productId) {
+          const updatedVariant = JSON.parse(JSON.stringify(v));
+          updatedVariant.product.status = newStatus;
+          return updatedVariant;
+        }
+        return v;
+      }),
+    );
+
+    const variantsToUpdate = variants.filter((v) => v.product.id === productId);
+    setEditedVariantIds(
+      (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
+    );
+  };
+
+  const handleStatusToggle = (
+    currentStatus: ProductStatus,
+    productId: string,
+  ) => {
+    const currentIndex = statusCycle.indexOf(currentStatus);
+    const nextIndex = (currentIndex + 1) % statusCycle.length;
+    const newStatus = statusCycle[nextIndex];
+    handleProductStatusChange(productId, newStatus);
+  };
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      setSelectedVariantIds(new Set(variants.map((v) => v.id)));
+    } else {
+      setSelectedVariantIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (variantId: string, isSelected: boolean) => {
+    setSelectedVariantIds((prev) => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.add(variantId);
+      } else {
+        newSet.delete(variantId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleCopy = (id: string) => navigator.clipboard.writeText(id);
+
+  const handleSave = async () => {
+    if (editedVariantIds.size === 0 || isSaving) return;
+
+    setIsSaving(true);
+    const variantsToUpdate = variants.filter((v) => editedVariantIds.has(v.id));
+
+    try {
+      const response = await fetch('/api/variants/batch-update', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ variants: variantsToUpdate }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Ошибка при сохранении данных');
+      }
+
+      setEditedVariantIds(new Set());
+      alert('Изменения успешно сохранены!');
+    } catch (error) {
+      console.error('Failed to save variants:', error);
+      // @ts-ignore
+      alert(`Не удалось сохранить изменения: ${error.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="inline-block min-w-full align-middle">
-        <div className="overflow-hidden border-b border-gray-200">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              {/* VVV--- НОВАЯ ШАПКА ТАБЛИЦЫ ---VVV */}
-              <tr>
-                <th colSpan={5} className="px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-x-4">
-                      <div className="flex items-center gap-x-2">
-                        <button className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50">
-                          <UploadIcon className="h-4 w-4" /> Загрузить CSV
-                        </button>
-                        <button className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50">
-                          <DownloadIcon className="h-4 w-4" /> Выгрузить CSV
-                        </button>
-                      </div>
-                    </div>
-                    <Link
-                      href="/admin/products/new"
-                      className="hover:bg-opacity-80 rounded-md bg-[#272727] px-4 py-2 text-sm font-medium text-white shadow-sm"
-                    >
-                      + Создать товар
-                    </Link>
-                  </div>
-                </th>
-              </tr>
-              <tr>
-                <th
-                  scope="col"
-                  className="w-2/5 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-                >
-                  Товар
-                </th>
-                <th
-                  scope="col"
-                  className="w-1/5 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-                >
-                  Артикул
-                </th>
-                <th
-                  scope="col"
-                  className="w-1/5 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-                >
-                  Цена
-                </th>
-                <th
-                  scope="col"
-                  className="w-1/5 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-                >
-                  Статус
-                </th>
-                <th scope="col" className="relative px-6 py-3">
-                  <span className="sr-only">Действия</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {variants.map((variant, variantIdx) => (
-                <tr
-                  key={variant.id}
-                  className={variantIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                >
-                  <td className="px-6 py-4 text-sm font-medium whitespace-nowrap text-gray-900">
-                    <div className="flex items-center">
-                      <Image
-                        src={variant.images[0]?.url || '/placeholder.png'}
-                        alt={variant.product.name}
-                        width={40}
-                        height={40}
-                        className="h-10 w-10 rounded-md object-cover"
-                      />
-                      <div className="ml-4">
-                        <div>{variant.product.name}</div>
-                        {/* VVV--- ОСТАТКИ ВМЕСТО ЦВЕТА ---VVV */}
-                        <div className="font-mono text-xs text-gray-500">
-                          S:{' '}
-                          {variant.product.variants
-                            .find((v) => v.color === variant.color)
-                            ?.inventory.find((i) => i.size.value === 'S')
-                            ?.stock ?? 0}
-                          , M:{' '}
-                          {variant.product.variants
-                            .find((v) => v.color === variant.color)
-                            ?.inventory.find((i) => i.size.value === 'M')
-                            ?.stock ?? 0}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  {/* VVV--- АРТИКУЛ С КОПИРОВАНИЕМ ---VVV */}
-                  <td className="px-6 py-4 font-mono text-xs whitespace-nowrap text-gray-500">
-                    <div className="flex items-center gap-x-2">
-                      <span>{variant.id.slice(0, 8)}...</span>
-                      <button
-                        onClick={() => handleCopy(variant.id)}
-                        title="Копировать ID"
-                      >
-                        <CopyIcon
-                          className={`h-4 w-4 ${copiedId === variant.id ? 'text-green-500' : 'text-gray-400'}`}
-                        />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm whitespace-nowrap text-gray-800">
-                    {formatPrice(variant.price)?.value} ₽
-                  </td>
-                  {/* VVV--- СТАТУС С ПЕРЕКЛЮЧАТЕЛЕМ ---VVV */}
-                  <td className="px-6 py-4 text-sm whitespace-nowrap">
-                    <span
-                      className={`inline-flex rounded-full px-2 text-xs leading-5 font-semibold ${variant.product.status === 'PUBLISHED' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
-                    >
-                      {variant.product.status === 'PUBLISHED'
-                        ? 'Опубликован'
-                        : 'Черновик'}
-                    </span>
-                  </td>
-                  {/* VVV--- РЕДАКТИРОВАНИЕ И УДАЛЕНИЕ ---VVV */}
-                  <td className="px-6 py-4 text-right text-sm font-medium whitespace-nowrap">
-                    <Link
-                      href={`/admin/products/${variant.productId}/edit`}
-                      className="text-gray-600 hover:text-gray-900"
-                    >
-                      Редактировать
-                    </Link>
-                    {variant.product.status !== 'PUBLISHED' && (
-                      <button className="ml-4 font-semibold text-red-600 hover:text-red-800">
-                        Удалить
-                      </button>
-                    )}
-                  </td>
+    <div className="w-full">
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <button className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+            <UploadIcon className="h-4 w-4" /> Загрузить CSV
+          </button>
+          <button className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+            <DownloadIcon className="h-4 w-4" /> Выгрузить CSV
+          </button>
+          <Link
+            href="/admin/categories"
+            className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+          >
+            <TagIcon className="h-4 w-4" /> Управление категориями
+          </Link>
+          {editedVariantIds.size > 0 && (
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+            >
+              {isSaving
+                ? 'Сохранение...'
+                : `Сохранить (${editedVariantIds.size})`}
+            </button>
+          )}
+        </div>
+        <Link
+          href="/admin/products/new"
+          className="hover:bg-opacity-80 rounded-md bg-[#272727] px-4 py-2 text-sm font-medium text-white shadow-sm"
+        >
+          + Создать товар
+        </Link>
+      </div>
+
+      <div className="overflow-x-auto">
+        <div className="inline-block min-w-full pl-12 align-middle">
+          <div className="overflow-hidden border-b border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="relative px-6 py-3">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      onChange={handleSelectAll}
+                      checked={
+                        selectedVariantIds.size === variants.length &&
+                        variants.length > 0
+                      }
+                      ref={(input) => {
+                        if (input) {
+                          input.indeterminate =
+                            selectedVariantIds.size > 0 &&
+                            selectedVariantIds.size < variants.length;
+                        }
+                      }}
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    Категории
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    Товар / Арт. / Ост.
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    K-коины
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    Цена до скидки
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    Скидка
+                  </th>
+                  <th className="w-28 px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    Таймер
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    Цена
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {variants.map((variant, variantIdx) => (
+                  <ProductTableRow
+                    key={variant.id}
+                    variant={variant}
+                    variantIdx={variantIdx}
+                    isSelected={selectedVariantIds.has(variant.id)}
+                    isEdited={editedVariantIds.has(variant.id)}
+                    allCategories={allCategories}
+                    allTags={allTags}
+                    onSelectOne={handleSelectOne}
+                    onCopy={handleCopy}
+                    onStatusToggle={handleStatusToggle}
+                    onNumericInputChange={handleNumericInputChange}
+                    onDiscountChange={handleDiscountChange}
+                    onVariantChange={handleVariantChange}
+                    onInventoryChange={handleInventoryChange}
+                    onCategoryChange={handleCategoryChange}
+                    onTagsChange={handleTagsChange}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

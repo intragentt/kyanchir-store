@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic';
 
 import PageContainer from '@/components/layout/PageContainer';
-import prisma from '@/lib/prisma';
+import prisma from '@/lib/prisma'; // <-- ИСПРАВЛЕННЫЙ ИМПОРТ
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditProductForm from '@/components/admin/EditProductForm';
@@ -24,6 +24,7 @@ export type ProductWithDetails = Prisma.ProductGetPayload<{
     };
     attributes: true;
     categories: true;
+    tags: true; // Добавлена связь с тегами
   };
 }>;
 
@@ -36,7 +37,8 @@ export default async function EditProductPage({
 }: EditProductPageProps) {
   const { id } = await params;
 
-  const [product, allSizes, allCategories] = await Promise.all([
+  // --- ИЗМЕНЕНИЕ: Добавлена загрузка тегов ---
+  const [product, allSizes, allCategories, allTags] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
       include: {
@@ -54,12 +56,17 @@ export default async function EditProductPage({
         },
         attributes: true,
         categories: true,
+        tags: true, // Включаем теги в запрос
       },
     }),
     prisma.size.findMany({
       orderBy: { id: 'asc' },
     }),
     prisma.category.findMany({
+      orderBy: { name: 'asc' },
+    }),
+    prisma.tag.findMany({
+      // Загружаем все теги
       orderBy: { name: 'asc' },
     }),
   ]);
@@ -88,10 +95,12 @@ export default async function EditProductPage({
         </div>
 
         <div className="mt-8">
+          {/* --- ИЗМЕНЕНИЕ: Передаем теги в компонент --- */}
           <EditProductForm
             product={product}
             allSizes={allSizes}
             allCategories={allCategories}
+            allTags={allTags}
           />
         </div>
       </PageContainer>
