@@ -191,20 +191,20 @@ export const ProductTableRow = ({
   const [tagMenuStyle, setTagMenuStyle] = useState({});
   const tagMenuRef = useRef<HTMLDivElement>(null);
   const tagButtonRef = useRef<HTMLButtonElement>(null);
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем состояние для отслеживания времени ---
   const [currentTime, setCurrentTime] = useState(Date.now());
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Новое состояние для редактирования скидки ---
+  const [editingDiscount, setEditingDiscount] = useState<string | null>(null);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   useEffect(() => {
-    // Если у варианта есть дата окончания скидки, запускаем таймер
     if (variant.discountExpiresAt) {
       const interval = setInterval(() => {
-        setCurrentTime(Date.now()); // Каждую секунду обновляем "текущее время"
+        setCurrentTime(Date.now());
       }, 1000);
-      return () => clearInterval(interval); // Очищаем интервал при размонтировании
+      return () => clearInterval(interval);
     }
   }, [variant.discountExpiresAt]);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const currentTagIds = new Set(variant.product.tags.map((t) => t.id));
   const availableTags = allTags.filter(
@@ -264,7 +264,6 @@ export const ProductTableRow = ({
   const hasDiscount =
     variant.oldPrice != null && variant.oldPrice > variant.price;
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика теперь использует `currentTime` ---
   const isDiscountCurrentlyActive =
     hasDiscount &&
     (!variant.discountExpiresAt ||
@@ -273,7 +272,6 @@ export const ProductTableRow = ({
   const finalDisplayPrice = isDiscountCurrentlyActive
     ? variant.price
     : variant.oldPrice || variant.price;
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const discountPercent =
     hasDiscount && variant.oldPrice
@@ -442,6 +440,34 @@ export const ProductTableRow = ({
   const subCategoryClasses = selectedSubCategory
     ? 'bg-purple-100 text-purple-800'
     : 'border border-dashed border-gray-400 bg-white text-gray-500';
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Новые обработчики для инпута скидки ---
+  const handleDiscountFocus = () => {
+    setEditingDiscount(String(discountPercent));
+  };
+
+  const handleDiscountInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    setEditingDiscount(e.target.value);
+  };
+
+  const handleDiscountBlur = () => {
+    if (
+      editingDiscount !== null &&
+      editingDiscount !== String(discountPercent)
+    ) {
+      onDiscountChange(variant, editingDiscount);
+    }
+    setEditingDiscount(null);
+  };
+
+  const handleDiscountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      (e.target as HTMLInputElement).blur();
+    }
+  };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <tr className={rowClassName}>
@@ -689,14 +715,19 @@ export const ProductTableRow = ({
             discountPercent > 0 ? 'bg-red-100' : 'bg-gray-100'
           }`}
         >
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переработанный инпут скидки --- */}
           <input
-            type="number"
-            value={discountPercent}
-            onChange={(e) => onDiscountChange(variant, e.target.value)}
+            type="text" // Изменено на text для лучшего контроля
+            value={editingDiscount ?? discountPercent}
+            onFocus={handleDiscountFocus}
+            onChange={handleDiscountInputChange}
+            onBlur={handleDiscountBlur}
+            onKeyDown={handleDiscountKeyDown}
             className={`w-8 border-none bg-transparent p-0 text-center text-sm focus:ring-0 ${
               discountPercent > 0 ? 'font-bold text-red-800' : 'text-gray-700'
             }`}
           />
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <span
             className={`font-semibold ${
               discountPercent > 0 ? 'text-red-800' : 'text-gray-700'

@@ -49,14 +49,9 @@ export default function ProductHeader({
 
   return (
     <div className="font-body text-text-primary text-base font-semibold">
-      <div className="flex items-start justify-between">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удален класс text-lg --- */}
-        <div>{name}</div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-        <BonusPointsBadge points={bonusPoints} />
-      </div>
-
-      <div className="mt-2 flex items-center justify-between">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Бейджи поменяны местами --- */}
+      {/* Блок с ценой и БОНУСАМИ */}
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-x-3">
           <span>{formattedDisplayPrice?.value} RUB</span>
           {hasDiscount && formattedOldPrice && (
@@ -66,13 +61,19 @@ export default function ProductHeader({
             </span>
           )}
         </div>
+        <BonusPointsBadge points={bonusPoints} />
+      </div>
 
+      {/* Блок с названием и СКИДКОЙ */}
+      <div className="mt-2 flex items-start justify-between">
+        <div>{name}</div>
         {hasDiscount && (
-          <span className="rounded-md bg-[#E06F6F] px-2 py-1 text-sm font-semibold text-white">
+          <span className="ml-4 rounded-md bg-[#E06F6F] px-2 py-1 text-sm font-semibold text-white">
             -{discountPercent}%
           </span>
         )}
       </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 }

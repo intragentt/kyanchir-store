@@ -164,8 +164,8 @@ input[type='number'] {
 /* --- НАЧАЛО ИЗМЕНЕНИЙ: Стили для пагинации с повышенной специфичностью --- */
 /* Указываем, что стили действуют только внутри нашего контейнера */
 .product-pagination-container .swiper-pagination-bullet {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 5.5px;
   background-color: #d1d5db;
   opacity: 1;
   border-radius: 9999px;

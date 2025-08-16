@@ -1,8 +1,33 @@
 // Местоположение: src/components/admin/product-table/EditableCountdownTimer.tsx
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { VariantWithProductInfo } from '@/app/admin/dashboard/page';
+
+const MILLISECONDS = {
+  day: 86400000,
+  hour: 3600000,
+  minute: 60000,
+};
+
+const formatTimeForAdmin = (ms: number): string => {
+  if (ms <= 0) return '00:00:00';
+  const days = Math.floor(ms / MILLISECONDS.day);
+  const hours = Math.floor((ms % MILLISECONDS.day) / MILLISECONDS.hour);
+  const minutes = Math.floor((ms % MILLISECONDS.hour) / MILLISECONDS.minute);
+  return `${String(days).padStart(2, '0')}:${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+const parseTimeFromAdmin = (timeStr: string): number => {
+  const parts = timeStr.split(':').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return 0;
+  const [days, hours, minutes] = parts;
+  return (
+    days * MILLISECONDS.day +
+    hours * MILLISECONDS.hour +
+    minutes * MILLISECONDS.minute
+  );
+};
 
 export const EditableCountdownTimer = ({
   variant,
@@ -14,85 +39,80 @@ export const EditableCountdownTimer = ({
   onUpdate: (field: keyof VariantWithProductInfo, value: any) => void;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const [msLeft, setMsLeft] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [editValue, setEditValue] = useState('00:00:00');
+  const [timeLeft, setTimeLeft] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cursorPosRef = useRef<number | null>(null);
 
-  const [editHours, setEditHours] = useState('00');
-  const [editMinutes, setEditMinutes] = useState('00');
-  const [editSeconds, setEditSeconds] = useState('00');
+  useEffect(() => {
+    const calculateTime = () => {
+      if (!variant.discountExpiresAt) return 0;
+      return Math.max(
+        0,
+        new Date(variant.discountExpiresAt).getTime() - Date.now(),
+      );
+    };
+    setTimeLeft(calculateTime());
 
-  const calculateMsLeft = useCallback(() => {
-    if (!variant.discountExpiresAt) return 0;
-    const diff =
-      new Date(variant.discountExpiresAt).getTime() - new Date().getTime();
-    return Math.max(0, diff);
+    // --- ИЗМЕНЕНИЕ: Таймер продолжает идти даже в режиме редактирования ---
+    const interval = setInterval(() => setTimeLeft(calculateTime()), 1000);
+    return () => clearInterval(interval);
   }, [variant.discountExpiresAt]);
 
   useEffect(() => {
-    setMsLeft(calculateMsLeft());
-  }, [variant.discountExpiresAt, calculateMsLeft]);
-
-  useEffect(() => {
-    if (isPaused || msLeft <= 0 || isEditing) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
+    if (isEditing) {
+      inputRef.current?.focus();
+      if (cursorPosRef.current !== null) {
+        inputRef.current?.setSelectionRange(
+          cursorPosRef.current,
+          cursorPosRef.current,
+        );
+        cursorPosRef.current = null;
+      }
     }
-    intervalRef.current = setInterval(() => {
-      setMsLeft((prev) => Math.max(0, prev - 1000));
-    }, 1000);
+  }, [isEditing, editValue]);
 
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isPaused, msLeft, isEditing]);
-
-  const formatTime = (ms: number) => {
-    if (ms <= 0) {
-      if (!variant.discountExpiresAt) return hasDiscount ? 'Бессрочно' : '-';
-      return 'Истекла';
-    }
-    const days = Math.floor(ms / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((ms / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((ms / 1000 / 60) % 60);
-    const seconds = Math.floor((ms / 1000) % 60);
-    return `${days > 0 ? `${days}д ` : ''}${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleEditClick = () => {
-    if (isEditing) return;
-    const hours = Math.floor((msLeft / (1000 * 60 * 60)) % 24);
-    const minutes = Math.floor((msLeft / 1000 / 60) % 60);
-    const seconds = Math.floor((msLeft / 1000) % 60);
-    setEditHours(hours.toString().padStart(2, '0'));
-    setEditMinutes(minutes.toString().padStart(2, '0'));
-    setEditSeconds(seconds.toString().padStart(2, '0'));
+  const handleDisplayClick = () => {
+    setEditValue(formatTimeForAdmin(timeLeft));
     setIsEditing(true);
   };
 
-  const handleSave = () => {
-    const totalMs =
-      (parseInt(editHours) * 3600 +
-        parseInt(editMinutes) * 60 +
-        parseInt(editSeconds)) *
-      1000;
-    const newExpiryDate = new Date(Date.now() + totalMs);
-    onUpdate('discountExpiresAt', newExpiryDate);
-    setIsEditing(false);
-    setIsPaused(false);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    cursorPosRef.current = e.target.selectionStart;
+    let value = e.target.value.replace(/[^0-9]/g, '');
+    if (value.length > 6) value = value.slice(0, 6);
+
+    let formattedValue = value;
+    if (value.length > 2) {
+      formattedValue = `${value.slice(0, 2)}:${value.slice(2)}`;
+    }
+    if (value.length > 4) {
+      formattedValue = `${value.slice(0, 2)}:${value.slice(2, 4)}:${value.slice(4)}`;
+    }
+    setEditValue(formattedValue);
   };
 
-  const handlePauseToggle = () => {
-    if (isPaused) {
-      const newExpiryDate = new Date(Date.now() + msLeft);
+  const handleBlur = () => {
+    const totalMs = parseTimeFromAdmin(editValue);
+    const newExpiryDate = totalMs > 0 ? new Date(Date.now() + totalMs) : null;
+
+    // --- ИЗМЕНЕНИЕ: Вызываем onUpdate, только если значение действительно изменилось ---
+    if (String(newExpiryDate) !== String(variant.discountExpiresAt)) {
       onUpdate('discountExpiresAt', newExpiryDate);
     }
-    setIsPaused(!isPaused);
+    setIsEditing(false);
   };
 
-  const handleReset = () => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      inputRef.current?.blur();
+    }
+  };
+
+  const handleClearTimer = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onUpdate('discountExpiresAt', null);
-    onUpdate('oldPrice', null);
+    setIsEditing(false);
   };
 
   if (!hasDiscount) {
@@ -103,69 +123,52 @@ export const EditableCountdownTimer = ({
     );
   }
 
+  const status =
+    timeLeft <= 0
+      ? variant.discountExpiresAt
+        ? 'Истекла'
+        : 'Бессрочно'
+      : formatTimeForAdmin(timeLeft);
+
   return (
-    <div className="group relative inline-flex h-6 min-w-[7ch] items-center justify-center rounded-md bg-blue-100 px-1.5 text-blue-800">
-      <div
-        onClick={handleEditClick}
-        className={`cursor-pointer font-mono transition-opacity ${isEditing ? 'opacity-0' : 'opacity-100'}`}
-      >
-        {formatTime(msLeft)}
-      </div>
+    // --- ИЗМЕНЕНИЕ: Добавлен padding для расширения области наведения ---
+    <div className="group relative flex items-center justify-center px-4">
+      {/* Кнопка "Удалить" */}
+      {!isEditing && (
+        <button
+          onClick={handleClearTimer}
+          className="pointer-events-none absolute -right-2 z-10 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100"
+          title="Удалить таймер"
+        >
+          <span className="text-xl text-red-500 hover:text-red-700">✕</span>
+        </button>
+      )}
 
       <div
-        className={`absolute inset-0 flex items-center justify-center gap-3 rounded-md bg-white/70 backdrop-blur-sm transition-opacity ${isEditing ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+        className={`relative inline-flex h-6 min-w-[7ch] items-center justify-center rounded-md px-1.5 font-mono ${timeLeft > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}
       >
         {isEditing ? (
-          <>
+          <div className="relative">
             <input
+              ref={inputRef}
               type="text"
-              value={editHours}
-              onChange={(e) => setEditHours(e.target.value)}
-              className="w-6 border-b border-blue-400 bg-transparent p-0 text-center focus:ring-0"
+              value={editValue}
+              onChange={handleInputChange}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              placeholder="ДД:ЧЧ:ММ"
+              className="w-20 border-none bg-transparent p-0 text-center focus:ring-0"
             />
-            :
-            <input
-              type="text"
-              value={editMinutes}
-              onChange={(e) => setEditMinutes(e.target.value)}
-              className="w-6 border-b border-blue-400 bg-transparent p-0 text-center focus:ring-0"
-            />
-            :
-            <input
-              type="text"
-              value={editSeconds}
-              onChange={(e) => setEditSeconds(e.target.value)}
-              className="w-6 border-b border-blue-400 bg-transparent p-0 text-center focus:ring-0"
-            />
-            <button
-              onClick={handleSave}
-              className="text-xs font-semibold text-green-600"
-            >
-              ✓
-            </button>
-            <button
-              onClick={() => setIsEditing(false)}
-              className="text-xs font-bold text-red-500"
-            >
-              ✕
-            </button>
-          </>
+            <div className="pointer-events-none absolute right-0 -bottom-4 left-0 flex justify-around text-[10px] text-gray-400">
+              <span>ДД</span>
+              <span>ЧЧ</span>
+              <span>ММ</span>
+            </div>
+          </div>
         ) : (
-          <>
-            {/* --- ИЗМЕНЕНИЕ: Добавлена кнопка редактирования --- */}
-            <button onClick={handleEditClick} className="text-sm">
-              ✏️
-            </button>
-            <button onClick={handlePauseToggle} className="text-xs font-bold">
-              {isPaused ? '▶' : '❚❚'}
-            </button>
-            <button
-              onClick={handleReset}
-              className="text-xs font-bold text-red-500"
-            >
-              ✕
-            </button>
-          </>
+          <div onClick={handleDisplayClick} className="cursor-pointer">
+            {status}
+          </div>
         )}
       </div>
     </div>

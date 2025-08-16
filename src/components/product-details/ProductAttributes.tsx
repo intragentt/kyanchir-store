@@ -6,7 +6,8 @@ import { useState } from 'react';
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    className={`relative top-[1px] h-5 w-5 transform text-gray-800 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
+    // --- ИЗМЕНЕНИЕ: Цвет иконки теперь text-text-primary ---
+    className={`text-text-primary relative top-[1px] h-5 w-5 transform transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
     viewBox="0 0 20 20"
     fill="currentColor"
   >
@@ -81,17 +82,14 @@ export default function ProductAttributes({
     (attr) => attr.key !== 'Описание' && attr.key !== 'Артикул',
   );
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлена логика сортировки атрибутов ---
   const desiredOrder = ['Цвет', 'Состав, %', 'Уход'];
   const sortedAttributes = [...hiddenAttributes].sort((a, b) => {
     let indexA = desiredOrder.indexOf(a.key);
     let indexB = desiredOrder.indexOf(b.key);
-    // Если атрибута нет в нашем списке, отправляем его в конец
     if (indexA === -1) indexA = Infinity;
     if (indexB === -1) indexB = Infinity;
     return indexA - indexB;
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!attributes || attributes.length === 0) {
     return null;
@@ -101,24 +99,25 @@ export default function ProductAttributes({
     <div>
       {hiddenAttributes.length > 0 && (
         <>
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлены стили заголовка "О товаре" --- */}
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="font-body flex items-center gap-x-2 py-4 text-left text-base font-semibold text-gray-800"
+            className="font-body text-text-primary flex items-center gap-x-2 py-4 text-left text-base font-medium"
           >
             <span>О товаре</span>
-            {/* --- ИЗМЕНЕНИЕ: Теперь стрелка указывает вправо, а не вниз --- */}
             <ChevronIcon isOpen={!isOpen} />
           </button>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div
             className={`grid overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
           >
             <div className="min-h-0">
               <div className="space-y-4 pb-4">
-                {/* --- ИЗМЕНЕНИЕ: Используем отсортированный массив --- */}
                 {sortedAttributes.map((attr) => (
                   <div key={attr.id}>
-                    <p className="font-body text-base font-semibold text-gray-500">
+                    {/* --- ИЗМЕНЕНИЕ: Обновлены стили ключа атрибута --- */}
+                    <p className="font-body text-base font-medium text-gray-500">
                       {attr.key}
                     </p>
                     {attr.key === 'Состав, %' ? (
@@ -139,7 +138,8 @@ export default function ProductAttributes({
       <div className="space-y-4 py-4">
         {description && (
           <div>
-            <p className="font-body text-base font-semibold text-gray-500">
+            {/* --- ИЗМЕНЕНИЕ: Обновлены стили ключа атрибута --- */}
+            <p className="font-body text-base font-medium text-gray-500">
               {description.key}
             </p>
             <p className="font-body text-base font-medium text-[#272727]">
@@ -149,7 +149,8 @@ export default function ProductAttributes({
         )}
         {article && (
           <div>
-            <p className="font-body text-base font-semibold text-gray-500">
+            {/* --- ИЗМЕНЕНИЕ: Обновлены стили ключа атрибута --- */}
+            <p className="font-body text-base font-medium text-gray-500">
               {article.key}
             </p>
             <p className="font-body text-base font-medium text-[#272727]">

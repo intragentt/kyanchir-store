@@ -13,7 +13,10 @@ import ProductAttributes from './product-details/ProductAttributes';
 import BottomSheet from '@/components/ui/BottomSheet';
 import SizeGuideContent from './product-details/SizeGuideContent';
 import DesktopActionButtons from './product-details/DesktopActionButtons';
+import ArrowStep1 from '@/components/illustrations/ArrowStep1';
+import Image from 'next/image';
 
+// ... (компоненты CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
 const CountdownTimer = ({
   expiryDate,
 }: {
@@ -75,6 +78,79 @@ const CountdownTimer = ({
   );
 };
 
+const MobileSizeGuideWithAccordion = () => {
+  const [isHowToOpen, setIsHowToOpen] = useState(false);
+  const sizeData = [
+    { size: 'S', og: '80-86', opg: '70-77', ot: '60-66', ob: '90-94' },
+    { size: 'M', og: '87-91', opg: '78-82', ot: '67-72', ob: '95-99' },
+    { size: 'L', og: '92-100', opg: '83-86', ot: '73-78', ob: '99-106' },
+    { size: 'XL', og: '100-103', opg: '87-90', ot: '79-81', ob: '107-108' },
+  ];
+
+  return (
+    <>
+      <div className="font-body text-base font-semibold text-gray-500">
+        Таблица размеров
+      </div>
+      <div className="font-body mt-4 text-sm text-gray-800">
+        <div className="grid grid-cols-5 gap-x-2 pb-2 text-xs font-semibold text-gray-400">
+          <div />
+          <div className="text-center">ОГ</div>
+          <div className="text-center">ОПГ</div>
+          <div className="text-center">ОТ</div>
+          <div className="text-center">ОБ</div>
+        </div>
+        {sizeData.map(({ size, og, opg, ot, ob }) => (
+          <div
+            key={size}
+            className="grid grid-cols-5 items-center gap-x-2 pt-3"
+          >
+            <div className="text-left font-semibold">{size}</div>
+            <div className="text-center">{og}</div>
+            <div className="text-center">{opg}</div>
+            <div className="text-center">{ot}</div>
+            <div className="text-center">{ob}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 border-t border-gray-200 pt-4">
+        <button
+          onClick={() => setIsHowToOpen(!isHowToOpen)}
+          className="font-body flex w-full items-center justify-between text-base font-semibold text-gray-800"
+        >
+          <span>Как определить размер?</span>
+          <span
+            className={`transform transition-transform ${isHowToOpen ? 'rotate-180' : ''}`}
+          >
+            ▼
+          </span>
+        </button>
+        {isHowToOpen && (
+          <div className="animate-fade-in mt-4">
+            <p className="font-body text-base font-medium whitespace-pre-line text-[#272727]">
+              {`Узнай, как правильно определить свой размер 
+нижнего белья — мы собрали простое и наглядное 
+руководство, чтобы каждый комплект идеально 
+подчёркивал твою фигуру и был удобным 
+с первого дня`}
+            </p>
+            <div className="relative mt-4">
+              <ArrowStep1 className="absolute top-[-10px] left-[50px] h-auto w-[120px]" />
+              <Image
+                src="/images/how-to-measure.png"
+                width={345}
+                height={200}
+                alt="Как правильно снимать мерки"
+                className="rounded-lg"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
 type ProductWithDetails = Prisma.ProductGetPayload<{
   include: {
     variants: {
@@ -98,20 +174,25 @@ interface ProductDetailsProps {
 export default function ProductDetails({ product }: ProductDetailsProps) {
   const [selectedVariant, setSelectedVariant] = useState(product.variants[0]);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+  const [quantity, setQuantity] = useState(0);
+  const [activeSheet, setActiveSheet] = useState<
+    'sizeSelector' | 'sizeChart' | null
+  >(null);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлена логика управления состоянием скидки ---
-  const [isDiscountActive, setIsDiscountActive] = useState(
-    () =>
-      !!(
-        selectedVariant.discountExpiresAt &&
-        +new Date(selectedVariant.discountExpiresAt) > Date.now()
-      ),
-  );
+  const [isDiscountActive, setIsDiscountActive] = useState(() => {
+    const hasOldPrice =
+      selectedVariant.oldPrice &&
+      selectedVariant.oldPrice > selectedVariant.price;
+    if (!hasOldPrice) return false;
+
+    if (selectedVariant.discountExpiresAt) {
+      return +new Date(selectedVariant.discountExpiresAt) > Date.now();
+    }
+    return true;
+  });
 
   useEffect(() => {
     if (!selectedVariant.discountExpiresAt) {
-      setIsDiscountActive(false);
       return;
     }
 
@@ -125,18 +206,51 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     };
 
     const interval = setInterval(checkExpiry, 1000);
-    // Проверяем сразу при монтировании
     checkExpiry();
 
     return () => clearInterval(interval);
   }, [selectedVariant.discountExpiresAt]);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  const availableStock =
+    selectedVariant.inventory.find((inv) => inv.size.value === selectedSize)
+      ?.stock ?? 0;
+
+  useEffect(() => {
+    if (quantity > availableStock) {
+      setQuantity(availableStock);
+    }
+  }, [selectedSize, availableStock, quantity]);
 
   const handleSelectSize = (sizeValue: string) => {
-    setSelectedSize((currentSize) =>
-      currentSize === sizeValue ? null : sizeValue,
-    );
+    const newSize = selectedSize === sizeValue ? null : sizeValue;
+    setSelectedSize(newSize);
+
+    if (activeSheet === 'sizeSelector' && newSize !== null) {
+      setQuantity(1);
+    }
+
+    setActiveSheet(null);
   };
+
+  const handleAddToCart = () => {
+    if (!selectedSize) {
+      setActiveSheet('sizeSelector');
+      return;
+    }
+    setQuantity(1);
+    console.log(`Товар размера ${selectedSize} добавлен в корзину`);
+  };
+
+  const handleIncrease = () => {
+    setQuantity((prev) => prev + 1);
+  };
+
+  const handleDecrease = () => {
+    setQuantity((prev) => (prev > 0 ? prev - 1 : 0));
+  };
+
+  const isAddToCartDisabled = !selectedSize;
+  const isIncreaseDisabled = quantity >= availableStock;
 
   if (!product || !selectedVariant) {
     return <h2>Товар не найден.</h2>;
@@ -150,33 +264,35 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           price={selectedVariant.price}
           oldPrice={selectedVariant.oldPrice}
           bonusPoints={selectedVariant.bonusPoints}
-          // --- ИЗМЕНЕНИЕ: Передаем состояние скидки в дочерний компонент ---
           isDiscountActive={isDiscountActive}
         />
 
-        {/* --- ИЗМЕНЕНИЕ: Отображение таймера теперь зависит от isDiscountActive --- */}
-        {isDiscountActive && (
-          <div className="mt-4 flex items-center gap-x-2">
-            <CountdownTimer expiryDate={selectedVariant.discountExpiresAt} />
-            <span className="text-sm font-medium text-gray-600">
-              до конца акции
-            </span>
-          </div>
-        )}
-
-        <div className="mt-6">
-          <AddToCartButton />
+        <div className="mt-6 hidden lg:block">
+          <AddToCartButton
+            quantity={quantity}
+            onAddToCart={handleAddToCart}
+            onIncrease={handleIncrease}
+            onDecrease={handleDecrease}
+            isAddToCartDisabled={isAddToCartDisabled}
+            isIncreaseDisabled={isIncreaseDisabled}
+          />
         </div>
 
         <div className="mt-6">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Начертание изменено на font-medium --- */}
+          <div className="font-body text-text-primary mb-4 text-base font-medium">
+            Размер
+          </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <SizeSelector
             inventory={selectedVariant.inventory}
             selectedSize={selectedSize}
             onSelectSize={handleSelectSize}
           />
         </div>
-        <div className="mt-3">
-          <SizeChart onClick={() => setIsSizeChartOpen(true)} />
+
+        <div className="mt-6">
+          <SizeChart onClick={() => setActiveSheet('sizeChart')} />
         </div>
         <div className="mt-4">
           <ProductAttributes attributes={product.attributes} />
@@ -188,7 +304,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   return (
     <>
       <div className="mx-auto max-w-7xl px-[15px] lg:px-8 lg:pt-[95px]">
-        <div className="lg:hidden">
+        <div className="pb-32 lg:hidden">
           <div className="mx-[-15px]">
             <MobileProductGallery
               images={selectedVariant.images}
@@ -219,12 +335,56 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
       </div>
 
       <BottomSheet
-        isOpen={isSizeChartOpen}
-        onClose={() => setIsSizeChartOpen(false)}
+        isOpen={activeSheet === 'sizeChart'}
+        onClose={() => setActiveSheet(null)}
         title="Таблица размеров"
       >
         <SizeGuideContent />
       </BottomSheet>
+
+      <BottomSheet
+        isOpen={activeSheet === 'sizeSelector'}
+        onClose={() => setActiveSheet(null)}
+        title="Выберите размер"
+      >
+        <div className="flex h-full flex-col">
+          <div className="flex-shrink-0 border-b border-gray-200 bg-white px-4 pt-2 pb-4">
+            <SizeSelector
+              inventory={selectedVariant.inventory}
+              selectedSize={selectedSize}
+              onSelectSize={handleSelectSize}
+            />
+          </div>
+          <div className="flex-grow overflow-y-auto px-4 pb-4">
+            <div className="mt-6">
+              <MobileSizeGuideWithAccordion />
+            </div>
+          </div>
+        </div>
+      </BottomSheet>
+
+      <div className="fixed right-0 bottom-0 left-0 z-40 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:hidden">
+        {isDiscountActive && selectedVariant.discountExpiresAt && (
+          <div className="flex items-center gap-x-2 border-t border-gray-200 px-4 pt-3 pb-2">
+            <CountdownTimer expiryDate={selectedVariant.discountExpiresAt} />
+            <span className="text-sm font-medium text-gray-600">
+              до конца акции
+            </span>
+          </div>
+        )}
+        <div
+          className={`pb-safe-or-4 px-4 pt-4 ${!isDiscountActive || !selectedVariant.discountExpiresAt ? 'border-t border-gray-200' : ''}`}
+        >
+          <AddToCartButton
+            quantity={quantity}
+            onAddToCart={handleAddToCart}
+            onIncrease={handleIncrease}
+            onDecrease={handleDecrease}
+            isAddToCartDisabled={false}
+            isIncreaseDisabled={isIncreaseDisabled}
+          />
+        </div>
+      </div>
 
       <div className="h-[200vh] bg-white" />
     </>
