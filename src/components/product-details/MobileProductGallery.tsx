@@ -4,10 +4,9 @@
 import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { Pagination, A11y, Zoom } from 'swiper/modules';
+import { A11y, Zoom } from 'swiper/modules'; // Убираем Pagination, он больше не нужен
 import type { Swiper as SwiperInstance } from 'swiper';
 import 'swiper/css';
-import 'swiper/css/pagination';
 import 'swiper/css/zoom';
 import { Image as PrismaImage } from '@prisma/client';
 
@@ -26,17 +25,19 @@ export default function MobileProductGallery({
   const galleryRef = useRef<HTMLDivElement | null>(null);
   const zoomedSlideRef = useRef<HTMLElement | null>(null);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Состояния для нашей кастомной пагинации ---
+  const [slideCount, setSlideCount] = useState(images.length);
+  const [activeIndex, setActiveIndex] = useState(0);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const handleGalleryClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!galleryRef.current || !swiperInstance) return;
-
     if (swiperInstance.zoom.scale !== 1) {
       swiperInstance.zoom.out();
       return;
     }
-
     const rect = galleryRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
-
     if (event.clientX > centerX) {
       swiperInstance.slideNext();
     } else {
@@ -48,7 +49,9 @@ export default function MobileProductGallery({
     <div className="pt-[10px]" ref={galleryRef} onClick={handleGalleryClick}>
       <Swiper
         onSwiper={setSwiperInstance}
-        modules={[Pagination, A11y, Zoom]}
+        // --- ИЗМЕНЕНИЕ: Обновляем activeIndex при смене слайда ---
+        onSlideChange={(swiper) => setActiveIndex(swiper.activeIndex)}
+        modules={[A11y, Zoom]} // Pagination убран
         slidesPerView={'auto'}
         spaceBetween={10}
         centeredSlides={true}
@@ -56,17 +59,14 @@ export default function MobileProductGallery({
         zoom={true}
         onTouchEnd={(swiper) => {
           setTimeout(() => {
-            if (swiper.zoom.scale !== 1) {
-              swiper.zoom.out();
-            }
+            if (swiper.zoom.scale !== 1) swiper.zoom.out();
           }, 300);
         }}
         onZoomChange={(swiper, scale, imageEl, slideEl) => {
           const swiperContainer = swiper.el as HTMLElement;
           if (scale > 1) {
-            if (zoomedSlideRef.current) {
+            if (zoomedSlideRef.current)
               zoomedSlideRef.current.style.zIndex = '';
-            }
             swiperContainer.style.overflow = 'visible';
             slideEl.style.zIndex = '50';
             zoomedSlideRef.current = slideEl;
@@ -78,12 +78,7 @@ export default function MobileProductGallery({
             }
           }
         }}
-        // --- НАЧАЛО ИЗМЕНЕНИЙ: Кастомные классы удалены, чтобы использовались стандартные ---
-        pagination={{
-          el: '.product-pagination-container',
-          clickable: true,
-        }}
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+        // --- ИЗМЕНЕНИЕ: Опция pagination полностью удалена ---
         className="!px-4"
       >
         {images.map((image, index) => (
@@ -103,7 +98,27 @@ export default function MobileProductGallery({
           </SwiperSlide>
         ))}
       </Swiper>
-      <div className="product-pagination-container mt-[15px] flex h-[10px] items-center justify-center"></div>
+
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Наша собственная, полностью управляемая пагинация --- */}
+      <div className="mt-[15px] flex h-[10px] items-center justify-center gap-x-2">
+        {Array.from({ length: slideCount }).map((_, index) => {
+          const isActive = index === activeIndex;
+          return (
+            <button
+              key={index}
+              onClick={(e) => {
+                e.stopPropagation(); // Предотвращаем клик по галерее
+                swiperInstance?.slideTo(index);
+              }}
+              aria-label={`Перейти к слайду ${index + 1}`}
+              className={`h-1 rounded-full transition-all duration-300 ${
+                isActive ? 'w-5 bg-[#272727]' : 'w-1.5 bg-gray-300'
+              }`}
+            />
+          );
+        })}
+      </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 }

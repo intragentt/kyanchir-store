@@ -6,8 +6,9 @@ import { useState } from 'react';
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    // --- ИЗМЕНЕНИЕ: Цвет иконки теперь text-text-primary ---
-    className={`text-text-primary relative top-[1px] h-5 w-5 transform transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`}
+    className={`relative top-[1px] h-5 w-5 transform text-text-primary transition-transform duration-300 ${
+      isOpen ? '-rotate-90' : 'rotate-90'
+    }`}
     viewBox="0 0 20 20"
     fill="currentColor"
   >
@@ -31,25 +32,27 @@ const CompositionDisplay = ({ jsonValue }: { jsonValue: string }) => {
       return <span>{jsonValue}</span>;
 
     return (
-      <div className="space-y-1">
-        {items.map(
-          (item, index) =>
-            item.material &&
-            item.percentage && (
-              <div
-                key={index}
-                className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-2"
-              >
-                <span className="font-body text-base font-medium text-[#272727]">
-                  {item.material}
-                </span>
-                <span className="border-b border-dotted border-gray-400"></span>
-                <span className="font-body text-base font-medium text-[#272727]">
-                  {item.percentage}%
-                </span>
-              </div>
-            ),
-        )}
+      <div className="max-w-xs">
+        <div className="space-y-1">
+          {items.map(
+            (item, index) =>
+              item.material &&
+              item.percentage && (
+                <div
+                  key={index}
+                  className="grid grid-cols-[auto_1fr_auto] items-baseline gap-x-2"
+                >
+                  <span className="font-body text-base font-medium text-[#272727]">
+                    {item.material}
+                  </span>
+                  <span className="border-b border-dotted border-gray-400"></span>
+                  <span className="font-body text-base font-medium text-[#272727]">
+                    {item.percentage}%
+                  </span>
+                </div>
+              ),
+          )}
+        </div>
       </div>
     );
   } catch (e) {
@@ -75,6 +78,8 @@ export default function ProductAttributes({
   attributes,
 }: ProductAttributesProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const TRUNCATE_LENGTH = 150;
 
   const description = attributes.find((attr) => attr.key === 'Описание');
   const article = attributes.find((attr) => attr.key === 'Артикул');
@@ -98,16 +103,14 @@ export default function ProductAttributes({
   return (
     <div>
       {hiddenAttributes.length > 0 && (
-        <>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлены стили заголовка "О товаре" --- */}
+        <div>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="font-body text-text-primary flex items-center gap-x-2 py-4 text-left text-base font-medium"
+            className="font-body flex w-full items-center justify-between py-4 text-left text-base font-medium text-text-primary"
           >
             <span>О товаре</span>
-            <ChevronIcon isOpen={!isOpen} />
+            <ChevronIcon isOpen={isOpen} />
           </button>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div
             className={`grid overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
@@ -116,7 +119,6 @@ export default function ProductAttributes({
               <div className="space-y-4 pb-4">
                 {sortedAttributes.map((attr) => (
                   <div key={attr.id}>
-                    {/* --- ИЗМЕНЕНИЕ: Обновлены стили ключа атрибута --- */}
                     <p className="font-body text-base font-medium text-gray-500">
                       {attr.key}
                     </p>
@@ -132,33 +134,40 @@ export default function ProductAttributes({
               </div>
             </div>
           </div>
-        </>
+        </div>
       )}
-
-      <div className="space-y-4 py-4">
+      
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убрана линия, увеличен отступ у Артикула --- */}
+      <div className="space-y-4 border-t border-gray-200 py-4">
         {description && (
           <div>
-            {/* --- ИЗМЕНЕНИЕ: Обновлены стили ключа атрибута --- */}
-            <p className="font-body text-base font-medium text-gray-500">
-              {description.key}
-            </p>
-            <p className="font-body text-base font-medium text-[#272727]">
-              {description.value}
-            </p>
+            <p className="font-body text-base font-medium text-gray-500">{description.key}</p>
+            <div className="font-body text-base font-medium text-[#272727]">
+              {description.value.length > TRUNCATE_LENGTH && !isDescriptionExpanded
+                ? `${description.value.substring(0, TRUNCATE_LENGTH)}... `
+                : description.value}
+              
+              {description.value.length > TRUNCATE_LENGTH && (
+                <button
+                  onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                  className="font-medium text-gray-500 hover:text-gray-700"
+                >
+                  {isDescriptionExpanded ? 'Свернуть' : 'Читать дальше'}
+                </button>
+              )}
+            </div>
           </div>
         )}
         {article && (
-          <div>
-            {/* --- ИЗМЕНЕНИЕ: Обновлены стили ключа атрибута --- */}
-            <p className="font-body text-base font-medium text-gray-500">
-              {article.key}
-            </p>
+          <div className="flex items-center gap-x-2 pt-4"> {/* Добавлен отступ pt-4 */}
+            <p className="font-body text-base font-medium text-gray-500">{article.key}:</p>
             <p className="font-body text-base font-medium text-[#272727]">
               {article.value}
             </p>
           </div>
         )}
       </div>
+       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 }

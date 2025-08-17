@@ -2,7 +2,7 @@
 import PageContainer from '@/components/layout/PageContainer';
 import ProductTable from '@/components/admin/ProductTable';
 import prisma from '@/lib/prisma';
-import { Prisma, Category, Tag } from '@prisma/client'; // Импортируем типы Category и Tag
+import { Prisma, Category, Tag } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,9 +28,18 @@ export type VariantWithProductInfo = Prisma.VariantGetPayload<{
   };
 }>;
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" функция сортировки размеров ---
+const sizeOrder = ['S', 'M', 'L', 'XL'];
+const sortInventoryBySize = (inventory: any[]) => {
+  return inventory.sort((a, b) => {
+    const indexA = sizeOrder.indexOf(a.size.value);
+    const indexB = sizeOrder.indexOf(b.size.value);
+    return indexA - indexB;
+  });
+};
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 export default async function DashboardPage() {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Загружаем варианты, категории и метки одновременно
   const [allVariants, allCategories, allTags] = await Promise.all([
     prisma.variant.findMany({
       orderBy: {
@@ -68,22 +77,28 @@ export default async function DashboardPage() {
       },
     }),
     prisma.tag.findMany({
-      // <-- ДОБАВЛЕН ЗАПРОС ДЛЯ МЕТОК
       orderBy: {
         name: 'asc',
       },
     }),
   ]);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем нашу новую функцию сортировки ---
+  allVariants.forEach((variant) => {
+    variant.product.variants.forEach((productVariant) => {
+      // Сортируем inventory для каждого вложенного варианта
+      sortInventoryBySize(productVariant.inventory);
+    });
+  });
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
       <PageContainer className="py-12">
-        {/* Передаем в таблицу все необходимые данные */}
         <ProductTable
-          variants={allVariants}
+          variants={allVariants} // Теперь варианты содержат отсортированные inventory
           allCategories={allCategories}
-          allTags={allTags} // <-- ПЕРЕДАЕМ МЕТКИ
+          allTags={allTags}
         />
       </PageContainer>
     </main>

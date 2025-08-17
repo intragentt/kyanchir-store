@@ -53,11 +53,11 @@ export default function SizeSelector({
               <LowStockBadge stock={stock} />
             ) : null}
 
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Увеличены значения в clamp() для кнопок и текста --- */}
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшены значения в clamp() для кнопок и текста --- */}
             <button
               onClick={() => onSelectSize(size.value)}
               disabled={isOutOfStock}
-              className={`flex h-[clamp(3.4rem,17vw,4.25rem)] w-[clamp(3.4rem,17vw,4.25rem)] items-center justify-center rounded-lg border text-[clamp(1.125rem,5.5vw,1.375rem)] font-medium transition-colors ${
+              className={`flex h-[clamp(3.1rem,15.5vw,3.8rem)] w-[clamp(3.1rem,15.5vw,3.8rem)] items-center justify-center rounded-lg border text-[clamp(1rem,5vw,1.25rem)] font-medium transition-colors ${
                 isOutOfStock
                   ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
                   : isSelected

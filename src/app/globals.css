@@ -161,21 +161,3 @@ input[type='number'] {
   -moz-appearance: textfield;
 }
 
-/* --- НАЧАЛО ИЗМЕНЕНИЙ: Стили для пагинации с повышенной специфичностью --- */
-/* Указываем, что стили действуют только внутри нашего контейнера */
-.product-pagination-container .swiper-pagination-bullet {
-  width: 10px;
-  height: 5.5px;
-  background-color: #d1d5db;
-  opacity: 1;
-  border-radius: 9999px;
-  transition: all 0.3s ease;
-}
-
-/* То же самое для активного элемента */
-.product-pagination-container .swiper-pagination-bullet-active {
-  width: 18px;
-  background-color: #272727;
-  border-radius: 9999px;
-}
-/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */

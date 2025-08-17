@@ -15,6 +15,7 @@ import SizeGuideContent from './product-details/SizeGuideContent';
 import DesktopActionButtons from './product-details/DesktopActionButtons';
 import ArrowStep1 from '@/components/illustrations/ArrowStep1';
 import Image from 'next/image';
+import ProductActions from './product-details/ProductActions';
 
 // ... (компоненты CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
 const CountdownTimer = ({
@@ -279,11 +280,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         </div>
 
         <div className="mt-6">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Начертание изменено на font-medium --- */}
           <div className="font-body text-text-primary mb-4 text-base font-medium">
             Размер
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <SizeSelector
             inventory={selectedVariant.inventory}
             selectedSize={selectedSize}
@@ -294,8 +293,12 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         <div className="mt-6">
           <SizeChart onClick={() => setActiveSheet('sizeChart')} />
         </div>
+
         <div className="mt-4">
           <ProductAttributes attributes={product.attributes} />
+        </div>
+        <div className="mt-6">
+          <ProductActions />
         </div>
       </>
     );
@@ -311,7 +314,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
               productName={product.name}
             />
           </div>
-          <div className="mt-[10px]">
+          <div className="mt-6">
             <ProductInfoBlock />
           </div>
         </div>
@@ -372,9 +375,11 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </span>
           </div>
         )}
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлен класс pb-2 для дополнительного отступа --- */}
         <div
-          className={`pb-safe-or-4 px-4 pt-4 ${!isDiscountActive || !selectedVariant.discountExpiresAt ? 'border-t border-gray-200' : ''}`}
+          className={`pb-safe-or-4 px-4 pt-4 pb-7 ${!isDiscountActive || !selectedVariant.discountExpiresAt ? 'border-t border-gray-200' : ''}`}
         >
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <AddToCartButton
             quantity={quantity}
             onAddToCart={handleAddToCart}
