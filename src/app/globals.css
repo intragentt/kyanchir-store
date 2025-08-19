@@ -8,6 +8,10 @@
     --brand-lilac-light-color: #C1D0FF;
     --heart-red: #D32F2F;
     --feedback-error-color: #E06F6F;
+    
+    /* --- НАЧАЛО ИЗМЕНЕНИЙ: Переменная для высоты футера по умолчанию --- */
+    --mobile-footer-height: 0px;
+    /* --- КОНЕЦ ИЗМЕНЕНИЙ --- */
   }
 
   html {
@@ -20,7 +24,6 @@
     background-color: var(--background-primary);
     color: var(--text-primary);
     font-family: var(--font-body);
-    /* Наше ключевое правило для плавности на границах скролла */
     overscroll-behavior-y: contain;
   }
 
@@ -161,3 +164,15 @@ input[type='number'] {
   -moz-appearance: textfield;
 }
 
+/* --- НАЧАЛО ИЗМЕНЕНИЙ: Новые правила для адаптивного отступа --- */
+/* 
+  Это правило "слушает" наличие нашего сигнального класса.
+  Если на странице есть .mobile-sticky-footer, оно "включает"
+  переменную и устанавливает ее значение в высоту футера.
+  Мы используем --footer-total-height, чтобы его можно было
+  легко вычислить в JavaScript.
+*/
+body:has(.mobile-sticky-footer) {
+  --mobile-footer-height: var(--footer-total-height, 100px);
+}
+/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */

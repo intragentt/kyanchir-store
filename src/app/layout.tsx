@@ -10,11 +10,17 @@ import {
   HeaderStatus,
 } from '@/context/StickyHeaderContext';
 
+import { FooterProvider } from '@/context/FooterContext';
+
 import DynamicHeroSection from '@/components/DynamicHeroSection';
 import ConditionalHeader from '@/components/ConditionalHeader';
 import Footer from '@/components/Footer';
 import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
+import NetworkStatusManager from '@/components/NetworkStatusManager';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем наш новый универсальный менеджер ---
+import NotificationManager from '@/components/NotificationManager';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function RootLayout({
   children,
@@ -25,7 +31,7 @@ export default function RootLayout({
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
   const [headerHeight, setHeaderHeight] = useState(0);
   const [isSearchActive, setIsSearchActive] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false); // Состояние меню теперь тоже здесь
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const lastScrollY = useRef(0);
   const scrollLockPosition = useRef(0);
@@ -36,7 +42,6 @@ export default function RootLayout({
   const scrollUpAnchor = useRef<number | null>(null);
   const scrollDownAnchor = useRef<number | null>(null);
 
-  // ЕДИНЫЙ обработчик блокировки скролла для МЕНЮ и ПОИСКА
   useEffect(() => {
     const shouldLock = isSearchActive || isMenuOpen;
     isLockingScroll.current = true;
@@ -67,7 +72,6 @@ export default function RootLayout({
     return () => clearTimeout(timer);
   }, [isSearchActive, isMenuOpen]);
 
-  // Обработчик скролла для "липкой" шапки
   useEffect(() => {
     if (!isHomePage) return;
 
@@ -123,17 +127,25 @@ export default function RootLayout({
       <head>
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
+        <meta name="theme-color" content="#FFFFFF" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <StickyHeaderContext.Provider value={contextValue}>
         <body className="flex h-full min-h-screen flex-col">
-          <ConditionalHeader />
-          <SearchOverlay />
-          {isHomePage && <DynamicHeroSection />}
-          <main className="flex-grow">{children}</main>
-          <Footer />
-          <ClientInteractivity />
+          <FooterProvider>
+            <NetworkStatusManager />
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Размещаем здесь наш новый компонент --- */}
+            <NotificationManager />
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+            <ConditionalHeader />
+            <SearchOverlay />
+            {isHomePage && <DynamicHeroSection />}
+            <main className="flex-grow">{children}</main>
+            <Footer />
+            <ClientInteractivity />
+          </FooterProvider>
         </body>
       </StickyHeaderContext.Provider>
     </html>

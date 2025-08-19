@@ -3,8 +3,8 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import CartIcon from '@/components/icons/CartIcon';
 import HeartIcon from '@/components/icons/HeartIcon';
+import ShareIcon from '@/components/icons/ShareIcon';
 
 const BackArrowIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -21,23 +21,6 @@ const BackArrowIcon = (props: React.SVGProps<SVGSVGElement>) => (
       strokeWidth="1"
       strokeLinecap="round"
       strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const ShareIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.2}
-    stroke="currentColor"
-    {...props}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M9 8.25H7.5a2.25 2.25 0 00-2.25 2.25v9a2.25 2.25 0 002.25 2.25h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25H15m0-3l-3-3m0 0l-3 3m3-3v12"
     />
   </svg>
 );
@@ -72,6 +55,25 @@ export default function ProductPageHeader() {
     }
   };
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Мозг" (логика 'Поделиться') скопирован сюда ---
+  const handleShareClick = async () => {
+    // Проверяем, поддерживает ли браузер Web Share API
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: document.title, // Заголовок страницы
+          url: window.location.href, // URL текущей страницы
+        });
+      } catch (error) {
+        console.error('Ошибка при попытке поделиться:', error);
+      }
+    } else {
+      // Запасной вариант для старых браузеров
+      alert('Ваш браузер не поддерживает эту функцию.');
+    }
+  };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
     <header className="relative z-10 bg-white lg:hidden">
       <div className="flex h-16 w-full items-center gap-x-3 px-4">
@@ -90,21 +92,23 @@ export default function ProductPageHeader() {
           <input
             type="search"
             placeholder="Поиск"
-            className="w-full rounded-lg border-none bg-gray-100 py-2.5 pr-4 pl-10 text-sm text-gray-900 focus:ring-2 focus:ring-gray-300 focus:outline-none"
+            className="w-full rounded-lg border-none bg-gray-100 py-2.5 pr-4 pl-10 text-sm text-gray-900 focus:text-base focus:ring-2 focus:ring-gray-300 focus:outline-none"
           />
         </div>
 
-        {/* --- ИЗМЕНЕНИЕ: Иконка корзины УДАЛЕНА --- */}
         <div className="flex flex-shrink-0 items-center gap-x-3">
           <Link href="/favorites" aria-label="Избранное">
             <HeartIcon className="h-6 w-6" />
           </Link>
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Подключаем "мозг" к кнопке --- */}
           <button
+            onClick={handleShareClick}
             aria-label="Поделиться"
             className="transition-opacity hover:opacity-70"
           >
             <ShareIcon className="h-6 w-6" />
           </button>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </div>
       </div>
     </header>

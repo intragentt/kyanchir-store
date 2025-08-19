@@ -1,58 +1,63 @@
 // Местоположение: src/store/useAppStore.ts
 import { create } from 'zustand';
-import { Product } from '@/lib/csvParser';
 
-export interface CartItem extends Product {
-  quantity: number;
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Новая, более мощная система уведомлений ---
+interface NotificationState {
+  isVisible: boolean;
+  message: string;
+  type: 'success' | 'error';
+  Icon: React.ComponentType<React.SVGProps<SVGSVGElement>> | null;
 }
 
-interface StoreState {
-  activeCategory: string;
-  setActiveCategory: (categoryId: string) => void;
+interface AppState {
+  isOnline: boolean;
+  setIsOnline: (isOnline: boolean) => void;
 
-  cart: CartItem[];
-  addToCart: (product: Product) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  totalItems: () => number;
+  notification: NotificationState;
+  showNotification: (
+    message: string,
+    type: 'success' | 'error',
+    Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>,
+  ) => void;
+  hideNotification: () => void;
 }
 
-export const useAppStore = create<StoreState>((set, get) => ({
-  activeCategory: 'all',
-  setActiveCategory: (categoryId: string) =>
-    set({ activeCategory: categoryId }),
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  cart: [],
+let notificationTimeout: NodeJS.Timeout;
 
-  addToCart: (product) => {
-    const cart = get().cart;
-    const findProduct = cart.find((p) => p.id === product.id);
-    if (findProduct) {
-      findProduct.quantity += 1;
-    } else {
-      cart.push({ ...product, quantity: 1 });
+export const useAppStore = create<AppState>((set, get) => ({
+  isOnline: true,
+  setIsOnline: (isOnline) => set({ isOnline }),
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Реализация новой системы ---
+  notification: {
+    isVisible: false,
+    message: '',
+    type: 'success',
+    Icon: null,
+  },
+
+  showNotification: (message, type, Icon) => {
+    // Если уже есть уведомление, сначала сбрасываем таймер
+    if (notificationTimeout) {
+      clearTimeout(notificationTimeout);
     }
-    set({ cart: [...cart] });
+
+    set({
+      notification: { isVisible: true, message, type, Icon },
+    });
+
+    // Устанавливаем таймер на скрытие через 3 секунды
+    notificationTimeout = setTimeout(() => {
+      get().hideNotification();
+    }, 3000);
   },
 
-  removeFromCart: (productId) => {
-    set({ cart: get().cart.filter((p) => p.id !== productId) });
+  hideNotification: () => {
+    set((state) => ({
+      notification: { ...state.notification, isVisible: false },
+    }));
   },
-
-  updateQuantity: (productId, quantity) => {
-    const cart = get().cart;
-    const findProduct = cart.find((p) => p.id === productId);
-    if (findProduct) {
-      if (quantity > 0) {
-        findProduct.quantity = quantity;
-        set({ cart: [...cart] });
-      } else {
-        get().removeFromCart(productId);
-      }
-    }
-  },
-
-  totalItems: () => {
-    return get().cart.reduce((total, item) => total + item.quantity, 0);
-  },
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }));

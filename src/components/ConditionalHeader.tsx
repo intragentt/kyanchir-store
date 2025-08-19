@@ -8,10 +8,11 @@ import ProductPageHeader from '@/components/layout/ProductPageHeader';
 import StickyProductPageHeader from '@/components/layout/StickyProductPageHeader';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useStickyHeader } from '@/context/StickyHeaderContext';
+import { useSmartSticky } from '@/hooks/useSmartSticky';
 
-// Контроллер для Главной страницы
+// Контроллер для Главной страницы (остается без изменений)
 const HomePageHeaderController = () => {
-  // --- ИЗМЕНЕНИЕ: Получаем управление и для МЕНЮ из "мозгового центра" ---
+  // ... (код без изменений)
   const {
     headerStatus,
     headerHeight,
@@ -24,7 +25,6 @@ const HomePageHeaderController = () => {
   const originalHeaderRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    // Не измеряем высоту, если открыт поиск или меню, чтобы избежать "прыжков"
     if (originalHeaderRef.current && !isSearchActive && !isMenuOpen) {
       const height = originalHeaderRef.current.offsetHeight;
       if (height > 0 && height !== headerHeight) {
@@ -33,7 +33,6 @@ const HomePageHeaderController = () => {
     }
   }, [headerHeight, setHeaderHeight, isSearchActive, isMenuOpen]);
 
-  // Шапка видна, если она "прилеплена" ИЛИ активен поиск, ИЛИ открыто меню
   const isStickyVisible =
     headerStatus === 'pinned' || isSearchActive || isMenuOpen;
   const isTransitionEnabled =
@@ -41,7 +40,6 @@ const HomePageHeaderController = () => {
 
   return (
     <>
-      {/* 1. ОРИГИНАЛ: Передаем ему полное управление */}
       <div ref={originalHeaderRef}>
         <Header
           isSearchActive={isSearchActive}
@@ -50,8 +48,6 @@ const HomePageHeaderController = () => {
           onMenuToggle={setIsMenuOpen}
         />
       </div>
-
-      {/* 2. КЛОН: Также передаем ему все команды */}
       <div
         className={`fixed top-0 left-0 z-50 w-full ${
           isTransitionEnabled
@@ -70,68 +66,68 @@ const HomePageHeaderController = () => {
   );
 };
 
-// Контроллер для страницы товара (остается без изменений)
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Улучшенный контроллер для страницы товара с "логикой защёлки" ---
 const ProductPageHeaderController = () => {
-  const [isStickyVisible, setIsStickyVisible] = useState(false);
-  const [isTransitionEnabled, setIsTransitionEnabled] = useState(false);
   const originalHeaderRef = useRef<HTMLDivElement>(null);
-  const lastScrollY = useRef(0);
-  const scrollUpStartPosition = useRef<number | null>(null);
-  const SCROLL_UP_THRESHOLD = 50;
-  const ACTIVATION_OFFSET = 120;
-  useEffect(() => {
-    const originalStyle = document.body.style.overscrollBehaviorY;
-    document.body.style.overscrollBehaviorY = 'contain';
-    return () => {
-      document.body.style.overscrollBehaviorY = originalStyle;
-    };
+  const [originalHeaderHeight, setOriginalHeaderHeight] = useState(0);
+  // Новое состояние-"защёлка": активно ли в принципе "липкое" состояние
+  const [isStickySessionActive, setIsStickySessionActive] = useState(false);
+
+  // Наш хук для показа/скрытия, когда "липкое" состояние активно
+  const isSmartVisible = useSmartSticky();
+
+  // 1. Измеряем высоту оригинальной шапки
+  useLayoutEffect(() => {
+    if (originalHeaderRef.current) {
+      setOriginalHeaderHeight(originalHeaderRef.current.offsetHeight);
+    }
   }, []);
+
+  // 2. Управляем состоянием-"защёлкой"
   useEffect(() => {
-    const originalHeaderElement = originalHeaderRef.current;
-    if (!originalHeaderElement) return;
-    const originalHeaderTopPosition = originalHeaderElement.offsetTop;
-    const activationPoint =
-      originalHeaderElement.offsetHeight + ACTIVATION_OFFSET;
+    // Не запускаем логику, пока не измерили высоту
+    if (originalHeaderHeight === 0) return;
+
     const handleScroll = () => {
       const scrollY = window.scrollY;
-      if (scrollY <= originalHeaderTopPosition) {
-        setIsStickyVisible(false);
-        setIsTransitionEnabled(false);
-        return;
+
+      // Если мы проскроллили ниже оригинальной шапки - "защёлкиваем" липкий режим
+      if (scrollY > originalHeaderHeight) {
+        setIsStickySessionActive(true);
       }
-      setIsTransitionEnabled(true);
-      if (scrollY > activationPoint) {
-        if (scrollY < lastScrollY.current) {
-          if (scrollUpStartPosition.current === null) {
-            scrollUpStartPosition.current = lastScrollY.current;
-          }
-          if (scrollUpStartPosition.current - scrollY > SCROLL_UP_THRESHOLD) {
-            setIsStickyVisible(true);
-          }
-        } else {
-          setIsStickyVisible(false);
-          scrollUpStartPosition.current = null;
-        }
+      // А "отщёлкиваем" его, только когда вернулись почти к самому верху
+      else if (scrollY < 10) {
+        setIsStickySessionActive(false);
       }
-      lastScrollY.current = scrollY;
     };
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [originalHeaderHeight]); // Зависимость от высоты, чтобы сработать после измерения
+
+  // 3. Финальное решение о видимости:
+  // Шапка видна, если "сессия" активна И "умный" хук дал команду на показ
+  const isStickyVisible = isStickySessionActive && isSmartVisible;
+
   return (
     <>
+      {/* Оригинальная шапка, которая остается в потоке документа */}
       <div ref={originalHeaderRef}>
         <ProductPageHeader />
       </div>
+
+      {/* "Умная" липкая шапка-клон */}
       <StickyProductPageHeader
         isVisible={isStickyVisible}
-        isTransitionEnabled={isTransitionEnabled}
+        // Анимация всегда включена, когда активна "липкая сессия"
+        isTransitionEnabled={isStickySessionActive}
       />
     </>
   );
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-// Главный компонент-маршрутизатор
+// Главный компонент-маршрутизатор (остается без изменений)
 export default function ConditionalHeader() {
   const pathname = usePathname();
   const isProductPage = pathname.startsWith('/product/');
@@ -141,17 +137,14 @@ export default function ConditionalHeader() {
   const { isSearchActive, setIsSearchActive, isMenuOpen, setIsMenuOpen } =
     useStickyHeader();
 
-  // Для всех случаев, кроме страницы товара, мы передаем полное управление
   if (isProductPage) {
     return <ProductPageHeaderController />;
   }
 
-  // На мобильной версии главной страницы используем специальный контроллер
   if (isHomePage && !isDesktop) {
     return <HomePageHeaderController />;
   }
 
-  // Для всех остальных случаев (десктоп, другие страницы) используем обычный Header
   return (
     <Header
       isSearchActive={isSearchActive}

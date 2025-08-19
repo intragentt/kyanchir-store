@@ -21,7 +21,9 @@ export default function Preloader({ top }: PreloaderProps) {
         pointerEvents: 'auto',
       }}
     >
-      <ShortLogo className="animate-fade-pulse h-12 w-auto text-gray-300" />
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем класс 'block' --- */}
+      <ShortLogo className="animate-fade-pulse block h-12 w-auto text-gray-300" />
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 }

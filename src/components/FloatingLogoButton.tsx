@@ -1,59 +1,71 @@
 // Местоположение: src/components/FloatingLogoButton.tsx
-"use client";
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import ShortLogo from './icons/ShortLogo';
+import { useFooter } from '@/context/FooterContext';
 
 interface FloatingLogoButtonProps {
   onClick: () => void;
-  isMenuOpen: boolean; 
+  isMenuOpen: boolean;
 }
 
-export default function FloatingLogoButton({ onClick, isMenuOpen }: FloatingLogoButtonProps) {
-  const [opacity, setOpacity] = useState(0.5);
+export default function FloatingLogoButton({
+  onClick,
+  isMenuOpen,
+}: FloatingLogoButtonProps) {
+  const [opacity, setOpacity] = useState(0.15);
+  const { footerHeight, isFooterVisible } = useFooter();
 
+  // Логика прозрачности (без изменений)
   useEffect(() => {
     if (isMenuOpen) {
       setOpacity(1);
       return;
     }
-    const minOpacity = 0.5;
-    const maxOpacity = 1;
-    const transitionDistance = 200;
-    const scrollY = window.scrollY;
-    const scrollProgress = Math.min(scrollY / transitionDistance, 1);
-    const newOpacity = minOpacity + (maxOpacity - minOpacity) * scrollProgress;
-    setOpacity(newOpacity);
+    const GHOST_OPACITY = 0.15;
+    const MIN_OPACITY = 0.5;
+    const MAX_OPACITY = 1;
+    const ACTIVATION_THRESHOLD = 50;
+    const TRANSITION_DISTANCE = 200;
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      if (scrollY < ACTIVATION_THRESHOLD) {
+        setOpacity(GHOST_OPACITY);
+      } else {
+        const scrollProgress = Math.min(
+          (scrollY - ACTIVATION_THRESHOLD) / TRANSITION_DISTANCE,
+          1,
+        );
+        const newOpacity =
+          MIN_OPACITY + (MAX_OPACITY - MIN_OPACITY) * scrollProgress;
+        setOpacity(newOpacity);
+      }
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [isMenuOpen]);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Значительно увеличиваем базовый отступ ---
+  const BASE_BOTTOM_OFFSET = 120; // Было 44, стало 80
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  const currentFooterHeight = isFooterVisible ? footerHeight : 0;
 
   return (
     <button
       onClick={onClick}
-      style={{ opacity: opacity }}
-      className={`
-        fixed            
-        bottom-6         
-        right-6          
-        ${isMenuOpen ? 'z-[110]' : 'z-50'} 
-        h-24 w-24        
-        rounded-full     
-        bg-white/70      
-        backdrop-blur-sm 
-        border-2 border-[#E6E7EE]
-        flex             
-        items-center     
-        justify-center   
-        transition-all 
-        duration-300     
-      `}
+      style={{
+        opacity: opacity,
+        bottom: `${BASE_BOTTOM_OFFSET + currentFooterHeight}px`,
+        transition: 'opacity 300ms ease-in-out, bottom 300ms ease-in-out',
+      }}
+      className={`fixed right-6 ${isMenuOpen ? 'z-[110]' : 'z-50'} flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#E6E7EE] bg-white/70 backdrop-blur-sm`}
     >
-      {/* --- ГЛАВНОЕ ИЗМЕНЕНИЕ: Управляем видом иконки --- */}
       {isMenuOpen ? (
-        // Если меню открыто, показываем логотип в новом цвете
-        <ShortLogo className="h-8 w-auto text-[#6B80C5]" /> 
+        <ShortLogo className="h-8 w-auto text-[#6B80C5]" />
       ) : (
-        // Если меню закрыто, показываем логотип в стандартном цвете
-        <ShortLogo className="h-8 w-auto text-[#E6E7EE]" /> 
+        <ShortLogo className="h-8 w-auto text-[#E6E7EE]" />
       )}
     </button>
   );

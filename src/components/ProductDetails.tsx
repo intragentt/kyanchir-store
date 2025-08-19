@@ -17,7 +17,7 @@ import ArrowStep1 from '@/components/illustrations/ArrowStep1';
 import Image from 'next/image';
 import ProductActions from './product-details/ProductActions';
 
-// ... (компоненты CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
+// ... (компонент CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
 const CountdownTimer = ({
   expiryDate,
 }: {
@@ -168,6 +168,81 @@ type ProductWithDetails = Prisma.ProductGetPayload<{
   };
 }>;
 
+interface ProductInfoBlockProps {
+  product: ProductWithDetails;
+  selectedVariant: ProductWithDetails['variants'][0];
+  isDiscountActive: boolean;
+  quantity: number;
+  handleAddToCart: () => void;
+  handleIncrease: () => void;
+  handleDecrease: () => void;
+  isAddToCartDisabled: boolean;
+  isIncreaseDisabled: boolean;
+  selectedSize: string | null;
+  handleSelectSize: (size: string) => void;
+  setActiveSheet: (sheet: 'sizeSelector' | 'sizeChart' | null) => void;
+}
+
+const ProductInfoBlock = ({
+  product,
+  selectedVariant,
+  isDiscountActive,
+  quantity,
+  handleAddToCart,
+  handleIncrease,
+  handleDecrease,
+  isAddToCartDisabled,
+  isIncreaseDisabled,
+  selectedSize,
+  handleSelectSize,
+  setActiveSheet,
+}: ProductInfoBlockProps) => {
+  return (
+    <>
+      <ProductHeader
+        name={product.name}
+        price={selectedVariant.price}
+        oldPrice={selectedVariant.oldPrice}
+        bonusPoints={selectedVariant.bonusPoints}
+        isDiscountActive={isDiscountActive}
+      />
+
+      <div className="mt-6 hidden lg:block">
+        <AddToCartButton
+          quantity={quantity}
+          onAddToCart={handleAddToCart}
+          onIncrease={handleIncrease}
+          onDecrease={handleDecrease}
+          isAddToCartDisabled={isAddToCartDisabled}
+          isIncreaseDisabled={isIncreaseDisabled}
+        />
+      </div>
+
+      <div className="mt-6">
+        <div className="font-body text-text-primary mb-4 text-base font-medium">
+          Размер
+        </div>
+        <SizeSelector
+          inventory={selectedVariant.inventory}
+          selectedSize={selectedSize}
+          onSelectSize={handleSelectSize}
+        />
+      </div>
+
+      <div className="mt-6">
+        <SizeChart onClick={() => setActiveSheet('sizeChart')} />
+      </div>
+
+      <div className="mt-4">
+        <ProductAttributes attributes={product.attributes} />
+      </div>
+      <div className="mt-6">
+        <ProductActions />
+      </div>
+    </>
+  );
+};
+
 interface ProductDetailsProps {
   product: ProductWithDetails;
 }
@@ -257,53 +332,6 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     return <h2>Товар не найден.</h2>;
   }
 
-  const ProductInfoBlock = () => {
-    return (
-      <>
-        <ProductHeader
-          name={product.name}
-          price={selectedVariant.price}
-          oldPrice={selectedVariant.oldPrice}
-          bonusPoints={selectedVariant.bonusPoints}
-          isDiscountActive={isDiscountActive}
-        />
-
-        <div className="mt-6 hidden lg:block">
-          <AddToCartButton
-            quantity={quantity}
-            onAddToCart={handleAddToCart}
-            onIncrease={handleIncrease}
-            onDecrease={handleDecrease}
-            isAddToCartDisabled={isAddToCartDisabled}
-            isIncreaseDisabled={isIncreaseDisabled}
-          />
-        </div>
-
-        <div className="mt-6">
-          <div className="font-body text-text-primary mb-4 text-base font-medium">
-            Размер
-          </div>
-          <SizeSelector
-            inventory={selectedVariant.inventory}
-            selectedSize={selectedSize}
-            onSelectSize={handleSelectSize}
-          />
-        </div>
-
-        <div className="mt-6">
-          <SizeChart onClick={() => setActiveSheet('sizeChart')} />
-        </div>
-
-        <div className="mt-4">
-          <ProductAttributes attributes={product.attributes} />
-        </div>
-        <div className="mt-6">
-          <ProductActions />
-        </div>
-      </>
-    );
-  };
-
   return (
     <>
       <div className="mx-auto max-w-7xl px-[15px] lg:px-8 lg:pt-[95px]">
@@ -315,7 +343,20 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             />
           </div>
           <div className="mt-6">
-            <ProductInfoBlock />
+            <ProductInfoBlock
+              product={product}
+              selectedVariant={selectedVariant}
+              isDiscountActive={isDiscountActive}
+              quantity={quantity}
+              handleAddToCart={handleAddToCart}
+              handleIncrease={handleIncrease}
+              handleDecrease={handleDecrease}
+              isAddToCartDisabled={isAddToCartDisabled}
+              isIncreaseDisabled={isIncreaseDisabled}
+              selectedSize={selectedSize}
+              handleSelectSize={handleSelectSize}
+              setActiveSheet={setActiveSheet}
+            />
           </div>
         </div>
 
@@ -331,7 +372,20 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           </div>
           <div className="col-span-6 xl:col-span-5">
             <div className="max-w-lg">
-              <ProductInfoBlock />
+              <ProductInfoBlock
+                product={product}
+                selectedVariant={selectedVariant}
+                isDiscountActive={isDiscountActive}
+                quantity={quantity}
+                handleAddToCart={handleAddToCart}
+                handleIncrease={handleIncrease}
+                handleDecrease={handleDecrease}
+                isAddToCartDisabled={isAddToCartDisabled}
+                isIncreaseDisabled={isIncreaseDisabled}
+                selectedSize={selectedSize}
+                handleSelectSize={handleSelectSize}
+                setActiveSheet={setActiveSheet}
+              />
             </div>
           </div>
         </main>
@@ -366,7 +420,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         </div>
       </BottomSheet>
 
-      <div className="fixed right-0 bottom-0 left-0 z-40 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:hidden">
+      <div className="mobile-sticky-footer fixed right-0 bottom-0 left-0 z-40 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:hidden">
         {isDiscountActive && selectedVariant.discountExpiresAt && (
           <div className="flex items-center gap-x-2 border-t border-gray-200 px-4 pt-3 pb-2">
             <CountdownTimer expiryDate={selectedVariant.discountExpiresAt} />
@@ -375,11 +429,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             </span>
           </div>
         )}
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлен класс pb-2 для дополнительного отступа --- */}
         <div
-          className={`pb-safe-or-4 px-4 pt-4 pb-7 ${!isDiscountActive || !selectedVariant.discountExpiresAt ? 'border-t border-gray-200' : ''}`}
+          className={`pb-safe-or-4 px-4 pt-4 pb-2 ${!isDiscountActive || !selectedVariant.discountExpiresAt ? 'border-t border-gray-200' : ''}`}
         >
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <AddToCartButton
             quantity={quantity}
             onAddToCart={handleAddToCart}

@@ -31,17 +31,21 @@ export default function ProductActions() {
       >
         <HeartIcon
           filled={isLiked}
-          className="h-5 w-5"
+          className="h-6 w-6"
           style={{ color: isLiked ? '#D32F2F' : '#272727' }}
         />
-        <span>В избранное</span>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлены классы для смещения текста --- */}
+        <span className="relative top-[1px]">В избранное</span>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </button>
       <button
         onClick={handleShareClick}
         className="font-body text-text-primary flex items-center gap-x-2 text-base font-medium"
       >
-        <ShareIcon className="h-5 w-5" />
-        <span>Поделиться</span>
+        <ShareIcon className="h-6 w-6" />
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлены классы для смещения текста --- */}
+        <span className="relative top-[1px]">Поделиться</span>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </button>
     </div>
   );

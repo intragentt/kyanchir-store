@@ -5,10 +5,16 @@
 import { useState, useEffect, useRef } from 'react';
 import FloatingLogoButton from './FloatingLogoButton';
 import FloatingMenuOverlay from './FloatingMenuOverlay';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Подключаем "мозговой центр" ---
+import { useFooter } from '@/context/FooterContext';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function ClientInteractivity() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const scrollYRef = useRef(0);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Слушаем" команды от футера ---
+  const { footerHeight, isFooterVisible } = useFooter();
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     if (isMenuOpen) {
@@ -34,6 +40,13 @@ export default function ClientInteractivity() {
     setIsMenuOpen(!isMenuOpen);
   };
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Вычисляем динамическую позицию для кнопки "Закрыть" ---
+  const BASE_CLOSE_BUTTON_OFFSET_PX = 96; // 6rem в пикселях (6 * 16px)
+  const currentFooterHeight = isFooterVisible ? footerHeight : 0;
+  const closeButtonBottomPosition =
+    BASE_CLOSE_BUTTON_OFFSET_PX + currentFooterHeight;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
     <>
       <FloatingLogoButton onClick={toggleMenu} isMenuOpen={isMenuOpen} />
@@ -41,12 +54,15 @@ export default function ClientInteractivity() {
       {isMenuOpen && (
         <button
           onClick={toggleMenu}
-          className="// --- ИСПРАВЛЕНО: Оставляем только один, правильный размер --- animate-in fade-in zoom-in-75 fixed right-[calc(7rem+env(safe-area-inset-right))] bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[110] flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#E6E7EE] bg-white/70 backdrop-blur-sm duration-300"
+          // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем статический класс 'bottom' и применяем динамический стиль ---
+          style={{ bottom: `${closeButtonBottomPosition}px` }}
+          className="animate-in fade-in zoom-in-75 fixed right-[calc(7rem+env(safe-area-inset-right))] z-[110] flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#E6E7EE] bg-white/70 backdrop-blur-sm transition-[bottom] duration-300"
+          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           aria-label="Закрыть меню"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 text-gray-800" // Этот размер верный
+            className="h-5 w-5 text-gray-800"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
