@@ -1,11 +1,11 @@
 // Местоположение: src/app/login/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import PageContainer from '@/components/layout/PageContainer';
+import { useRouter } from 'next/navigation';
 
-// --- Иконка Telegram для красоты ---
 const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -24,10 +24,46 @@ const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем состояние для Telegram ID ---
-  const [telegramId, setTelegramId] = useState('');
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loginToken, setLoginToken] = useState<string | null>(null);
+  const router = useRouter();
+
+  // --- "СЛУШАЕМ ЭФИР" ---
+  useEffect(() => {
+    if (!loginToken) return;
+
+    // Каждые 2 секунды "спрашиваем" у сервера, активирован ли "билет".
+    const interval = setInterval(async () => {
+      const response = await fetch('/api/auth/telegram/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: loginToken }),
+      });
+      const data = await response.json();
+
+      if (data.status === 'activated') {
+        // УРА! Билет активирован!
+        clearInterval(interval);
+
+        // Финализируем сессию
+        await fetch('/api/auth/telegram/finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: data.userId }),
+        });
+
+        // Перенаправляем пользователя в его новый дом.
+        router.push('/profile');
+      } else if (data.status === 'expired') {
+        // Если билет просрочен, останавливаем проверку.
+        clearInterval(interval);
+        setLoginToken(null);
+        alert('Время ожидания истекло. Пожалуйста, попробуйте снова.');
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [loginToken, router]);
 
   const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -37,24 +73,24 @@ export default function LoginPage() {
     setIsSubmitting(false);
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Новая функция для отправки Telegram ID ---
-  const handleTelegramSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!telegramId) return;
+  const handleTelegramLogin = async () => {
     setIsSubmitting(true);
+    // 1. Создаем "билет".
+    const response = await fetch('/api/auth/telegram/start', {
+      method: 'POST',
+    });
+    const data = await response.json();
+    const token = data.token;
 
-    // Вызываем signIn, но теперь с провайдером 'credentials'
-    // и передаем ему наш telegramId.
-    // `redirect: false` нужен, чтобы страница не перезагружалась.
-    await signIn('credentials', { telegramId, redirect: false });
-
-    // После успешной отправки, NextAuth сам перенаправит нас
-    // на страницу /login/verify-request, так как мы ее указали в конфиге.
-    // Поэтому здесь можно просто перенаправить пользователя вручную
-    // или показать сообщение об успехе.
-    window.location.href = '/login/verify-request';
+    if (token) {
+      setLoginToken(token);
+      // 2. Открываем "портал".
+      window.location.href = `https://t.me/kyanchir_store_bot?start=${token}`;
+    } else {
+      alert('Не удалось создать ссылку для входа. Попробуйте позже.');
+    }
+    setIsSubmitting(false);
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
@@ -66,7 +102,6 @@ export default function LoginPage() {
             </h2>
           </div>
 
-          {/* --- ФОРМА ДЛЯ EMAIL --- */}
           <form className="mt-8 space-y-6" onSubmit={handleEmailSubmit}>
             <p className="text-center text-sm text-gray-600">Через email</p>
             <div>
@@ -99,42 +134,17 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ФОРМА ДЛЯ TELEGRAM --- */}
-          <form className="space-y-6" onSubmit={handleTelegramSubmit}>
+          <div className="space-y-6">
             <p className="text-center text-sm text-gray-600">Через Telegram</p>
-            <div>
-              <input
-                id="telegram-id"
-                name="telegramId"
-                type="text"
-                required
-                value={telegramId}
-                onChange={(e) => setTelegramId(e.target.value)}
-                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-sky-500 focus:ring-sky-500 focus:outline-none sm:text-sm"
-                placeholder="Ваш Telegram ID"
-              />
-            </div>
-            <p className="text-center text-xs text-gray-500">
-              Чтобы узнать свой ID, напишите{' '}
-              <a
-                href="https://t.me/userinfobot"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sky-600 hover:underline"
-              >
-                @userinfobot
-              </a>
-            </p>
             <button
-              type="submit"
+              onClick={handleTelegramLogin}
               disabled={isSubmitting}
               className="group relative flex w-full items-center justify-center gap-x-2 rounded-md border border-transparent bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
             >
               <TelegramIcon />
-              {isSubmitting ? 'Отправка...' : 'Получить ссылку в Telegram'}
+              {isSubmitting ? 'Открываем портал...' : 'Войти через Telegram'}
             </button>
-          </form>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+          </div>
         </div>
       </PageContainer>
     </main>

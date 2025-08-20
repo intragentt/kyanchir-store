@@ -24,6 +24,7 @@
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
     "date-fns": "^4.1.0",
+    "jose": "^6.0.12",
     "next": "15.3.5",
     "next-auth": "^4.24.11",
     "node-telegram-bot-api": "^0.66.0",
