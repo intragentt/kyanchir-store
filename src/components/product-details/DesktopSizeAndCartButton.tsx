@@ -4,7 +4,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем иконки для счетчика ---
+// --- Иконки для счетчика ---
 const MinusIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -24,7 +24,6 @@ const PlusIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   <svg
@@ -41,7 +40,8 @@ const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   </svg>
 );
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем интерфейс пропсов для поддержки счетчика ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем "должностную инструкцию" (Props) ---
+// Мы добавляем все недостающие "пункты", которые требует ProductDetails.tsx
 interface DesktopSizeAndCartButtonProps {
   inventory: Array<{ size: { value: string }; stock: number }>;
   selectedSize: string | null;
@@ -59,7 +59,7 @@ export default function DesktopSizeAndCartButton({
   inventory,
   selectedSize,
   onSelectSize,
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Принимаем новые пропсы ---
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Принимаем все новые "приказы" ---
   quantity,
   onAddToCart,
   onIncrease,
