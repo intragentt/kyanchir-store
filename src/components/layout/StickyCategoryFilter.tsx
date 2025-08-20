@@ -1,26 +1,40 @@
 // Местоположение: src/components/layout/StickyCategoryFilter.tsx
 'use client';
 
-import CategoryFilter from '../CategoryFilter'; // Наш оригинальный компонент
+import CategoryFilter from '../CategoryFilter';
 
-// Определяем типы для пропсов, которые будут управлять этим компонентом
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем "должностную инструкцию" (Props) ---
+// Добавляем все недостающие "пункты", чтобы соответствовать CatalogHeaderController.
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface StickyCategoryFilterProps {
   isVisible: boolean;
-  topPosition: number; // Это ключ к нашему "аккордеону"!
+  topPosition: number;
   onSelectCategory: (categoryId: string) => void;
   activeCategory: string;
+  categories: Category[];
+  scrollLeft: number;
+  onScroll: (scrollLeft: number) => void;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function StickyCategoryFilter({
   isVisible,
   topPosition,
   onSelectCategory,
   activeCategory,
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Принимаем новые "инструменты" ---
+  categories,
+  scrollLeft,
+  onScroll,
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }: StickyCategoryFilterProps) {
-  // Генерируем классы для плавной анимации, как у шапки
   const wrapperClasses = [
-    'fixed w-full z-[151]', // z-index важен, чтобы быть НАД шапкой, но под мобильным меню
-    'will-change-transform', // Подсказка для Safari
+    'fixed w-full z-[151]',
+    'will-change-transform',
     'transition-transform duration-300 ease-in-out',
     isVisible ? 'transform-none' : '-translate-y-full',
   ]
@@ -28,18 +42,20 @@ export default function StickyCategoryFilter({
     .join(' ');
 
   return (
-    // Этот div будет "липким"
     <div
       className={wrapperClasses}
-      // Динамически устанавливаем позицию от верха экрана.
-      // Если шапка видна, top будет 65px. Если нет - 0px.
       style={{ top: `${topPosition}px` }}
       aria-hidden={!isVisible}
     >
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем все "инструменты" дальше, в сам фильтр --- */}
       <CategoryFilter
         onSelectCategory={onSelectCategory}
         activeCategory={activeCategory}
+        categories={categories}
+        scrollLeft={scrollLeft}
+        onScroll={onScroll}
       />
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 }

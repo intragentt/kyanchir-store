@@ -10,7 +10,6 @@ import StickyHeader from './StickyHeader';
 import CategoryFilter from '../CategoryFilter';
 import StickyCategoryFilter from './StickyCategoryFilter';
 import CatalogContent from '../CatalogContent';
-
 import { useStickyHeader } from '@/context/StickyHeaderContext';
 
 // Типы
@@ -20,15 +19,34 @@ export type ProductWithInfo = Product & {
   imageUrls: string[];
 };
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем тип для категорий ---
+interface Category {
+  id: string;
+  name: string;
+}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 const HEADER_HEIGHT = 65;
 
-export default function CatalogHeaderController() {
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Компонент теперь должен ПРИНИМАТЬ категории ---
+interface CatalogHeaderControllerProps {
+  categories: Category[];
+}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+export default function CatalogHeaderController({
+  categories,
+}: CatalogHeaderControllerProps) {
   const [allProducts, setAllProducts] = useState<ProductWithInfo[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<ProductWithInfo[]>(
     [],
   );
   const [activeCategory, setActiveCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем состояние для синхронизации скролла ---
+  const [scrollLeft, setScrollLeft] = useState(0);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const [isStickyHeaderVisible, setIsStickyHeaderVisible] = useState(false);
   const [isStickyFilterVisible, setIsStickyFilterVisible] = useState(false);
@@ -39,7 +57,6 @@ export default function CatalogHeaderController() {
   const workZoneRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
 
-  // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Получаем из "мозгового центра" ВСЕ необходимое управление ---
   const { isSearchActive, setIsSearchActive, isMenuOpen, setIsMenuOpen } =
     useStickyHeader();
 
@@ -47,8 +64,15 @@ export default function CatalogHeaderController() {
     setIsLoading(false);
   }, []);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем обработчик скролла ---
+  const handleFilterScroll = useCallback((newScrollLeft: number) => {
+    setScrollLeft(newScrollLeft);
+  }, []);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const applyFilter = useCallback(
     (products: ProductWithInfo[], categoryId: string) => {
+      // Логика фильтрации остается вашей
       if (categoryId === 'all') {
         setFilteredProducts(products);
       } else {
@@ -122,10 +146,14 @@ export default function CatalogHeaderController() {
         topPosition={filterTopPosition}
         onSelectCategory={handleSelectCategory}
         activeCategory={activeCategory}
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем недостающие пропсы "клону" ---
+        categories={categories}
+        scrollLeft={scrollLeft}
+        onScroll={handleFilterScroll}
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       />
 
       <div ref={originalHeaderRef}>
-        {/* --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ 2: Передаем ВСЕ необходимые пропсы в Header --- */}
         <Header
           isSearchActive={isSearchActive}
           onSearchToggle={setIsSearchActive}
@@ -134,10 +162,15 @@ export default function CatalogHeaderController() {
         />
       </div>
       <div ref={originalFilterRef}>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем недостающие пропсы "оригиналу" --- */}
         <CategoryFilter
           onSelectCategory={handleSelectCategory}
           activeCategory={activeCategory}
+          categories={categories}
+          scrollLeft={scrollLeft}
+          onScroll={handleFilterScroll}
         />
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
 
       <div ref={workZoneRef}>
