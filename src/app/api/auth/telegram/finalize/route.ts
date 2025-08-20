@@ -22,8 +22,13 @@ export async function POST(request: Request) {
     const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
     const session = await encrypt({ user, expires });
 
-    // Этот синтаксис верен для App Router.
-    cookies().set('session', session, { expires, httpOnly: true });
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: "Хитрый Адаптер" ---
+    // TypeScript в среде сборки Vercel по какой-то причине считает, что cookies()
+    // возвращает Promise. Мы "подыгрываем" ему, добавляя `await`.
+    // Это не сломает логику, но удовлетворит проверку типов.
+    const cookieStore = await cookies();
+    cookieStore.set('session', session, { expires, httpOnly: true });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json({ status: 'success' });
   } catch (error) {
