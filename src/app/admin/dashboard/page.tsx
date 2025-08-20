@@ -1,8 +1,10 @@
 // Местоположение: src/app/admin/dashboard/page.tsx
+// ФИНАЛЬНАЯ, КОРРЕКТНАЯ ВЕРСИЯ
+
 import PageContainer from '@/components/layout/PageContainer';
 import ProductTable from '@/components/admin/ProductTable';
 import prisma from '@/lib/prisma';
-import { Prisma, Category, Tag } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +30,6 @@ export type VariantWithProductInfo = Prisma.VariantGetPayload<{
   };
 }>;
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" функция сортировки размеров ---
 const sizeOrder = ['S', 'M', 'L', 'XL'];
 const sortInventoryBySize = (inventory: any[]) => {
   return inventory.sort((a, b) => {
@@ -37,68 +38,68 @@ const sortInventoryBySize = (inventory: any[]) => {
     return indexA - indexB;
   });
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default async function DashboardPage() {
-  const [allVariants, allCategories, allTags] = await Promise.all([
-    prisma.variant.findMany({
-      orderBy: {
-        product: {
-          createdAt: 'desc',
-        },
-      },
-      include: {
-        images: {
-          orderBy: {
-            order: 'asc',
+  const [allVariants, allCategories, allTags, filterPresets] =
+    await Promise.all([
+      prisma.variant.findMany({
+        orderBy: {
+          product: {
+            createdAt: 'desc',
           },
         },
-        product: {
-          include: {
-            variants: {
-              include: {
-                inventory: {
-                  include: {
-                    size: true,
+        include: {
+          images: { orderBy: { order: 'asc' } },
+          product: {
+            include: {
+              variants: {
+                include: {
+                  inventory: {
+                    include: {
+                      size: true,
+                    },
                   },
                 },
               },
+              categories: true,
+              attributes: true,
+              tags: true,
             },
-            categories: true,
-            attributes: true,
-            tags: true,
           },
         },
-      },
-    }),
-    prisma.category.findMany({
-      orderBy: {
-        name: 'asc',
-      },
-    }),
-    prisma.tag.findMany({
-      orderBy: {
-        name: 'asc',
-      },
-    }),
-  ]);
+      }),
+      prisma.category.findMany({ orderBy: { name: 'asc' } }),
+      prisma.tag.findMany({ orderBy: { name: 'asc' } }),
+      prisma.filterPreset.findMany({
+        include: {
+          items: {
+            orderBy: { order: 'asc' },
+            include: {
+              category: true,
+              tag: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      }),
+    ]);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем нашу новую функцию сортировки ---
+  // Применяем сортировку к inventory каждого варианта.
   allVariants.forEach((variant) => {
+    // ВАЖНО: Мы сортируем инвентарь во *вложенных* вариантах продукта
     variant.product.variants.forEach((productVariant) => {
-      // Сортируем inventory для каждого вложенного варианта
       sortInventoryBySize(productVariant.inventory);
     });
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
       <PageContainer className="py-12">
         <ProductTable
-          variants={allVariants} // Теперь варианты содержат отсортированные inventory
+          variants={allVariants}
           allCategories={allCategories}
           allTags={allTags}
+          filterPresets={filterPresets}
         />
       </PageContainer>
     </main>

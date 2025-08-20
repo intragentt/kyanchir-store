@@ -1,7 +1,12 @@
 // Местоположение: src/components/FloatingMenuOverlay.tsx
 'use client';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// ИСПРАВЛЕНО: Устранена синтаксическая ошибка в импортах.
 import React, { useState } from 'react';
+import Link from 'next/link';
+import { useSession, signOut } from 'next-auth/react';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import BurgerIcon from './icons/BurgerIcon';
 import SearchIcon from './icons/SearchIcon';
 import HeartIcon from './icons/HeartIcon';
@@ -16,15 +21,16 @@ export default function FloatingMenuOverlay({
   onClose,
 }: FloatingMenuOverlayProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === 'authenticated';
 
   if (!isOpen) {
     return null;
   }
 
+  // Вся остальная JSX-разметка остается без изменений.
   return (
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col bg-white p-6 duration-300">
-      {/* --- 1. ИЗМЕНЕНИЕ: Блок аккордеона теперь НАД шапкой --- */}
-      {/* Он будет появляться в самом верху контейнера */}
       {isHelpOpen && (
         <div className="animate-in slide-in-from-top-5 flex flex-col space-y-3 duration-300">
           <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
@@ -39,8 +45,6 @@ export default function FloatingMenuOverlay({
         </div>
       )}
 
-      {/* --- 2. ИЗМЕНЕНИЕ: Шапка теперь имеет динамический отступ сверху --- */}
-      {/* Если аккордеон открыт, у шапки появляется отступ `mt-8`, и она плавно сдвигается вниз */}
       <div
         className={`flex w-full flex-none items-center space-x-4 transition-all duration-300 ${isHelpOpen ? 'mt-8' : 'mt-0'}`}
       >
@@ -76,12 +80,36 @@ export default function FloatingMenuOverlay({
         </div>
       </div>
 
-      {/* --- 3. ИЗМЕНЕНИЕ: Основное меню теперь имеет статичный отступ --- */}
-      {/* Его будет "толкать" вниз вся конструкция выше, поэтому ему не нужна своя анимация */}
       <div className="mt-10">
-        <div className="font-body text-base font-semibold whitespace-nowrap text-gray-800 md:text-lg">
-          Вход / Регистрация
-        </div>
+        {isAuthenticated ? (
+          <div className="flex flex-col space-y-4">
+            <Link
+              href="/profile"
+              onClick={onClose}
+              className="font-body text-base font-semibold whitespace-nowrap text-gray-800 md:text-lg"
+            >
+              Личный кабинет
+            </Link>
+            <p className="truncate text-sm text-gray-500">
+              {session?.user?.email}
+            </p>
+            <button
+              onClick={() => signOut()}
+              className="font-body text-left text-base font-medium text-red-600 transition-colors hover:text-red-800"
+            >
+              Выход
+            </button>
+          </div>
+        ) : (
+          <Link
+            href="/login"
+            onClick={onClose}
+            className="font-body text-base font-semibold whitespace-nowrap text-gray-800 md:text-lg"
+          >
+            Вход / Регистрация
+          </Link>
+        )}
+
         <div className="mt-10 flex items-center space-x-3">
           <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
           <div className="font-body text-base font-semibold text-gray-800 md:text-lg">

@@ -1,11 +1,28 @@
 // Местоположение: src/components/admin/ProductTable.tsx
-'use client'; // <--- ДОБАВЛЕНО ЭТО ИЗМЕНЕНИЕ
+'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
 import type { VariantWithProductInfo } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
 import { ProductTableRow } from './product-table/ProductTableRow';
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+
+// Определяем точный тип для filterPresets, который мы получаем на странице.
+// Это "чертеж" данных, который гарантирует, что мы работаем с правильной структурой.
+type FilterPresetWithItems = Prisma.FilterPresetGetPayload<{
+  include: {
+    items: {
+      include: {
+        category: true;
+        tag: true;
+      };
+    };
+  };
+}>;
+
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type ProductStatus = Prisma.ProductGetPayload<{}>['status'];
 
@@ -40,12 +57,21 @@ interface ProductTableProps {
   variants: VariantWithProductInfo[];
   allCategories: Category[];
   allTags: Tag[];
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // Добавляем новое свойство в "контракт" компонента.
+  // Теперь он официально ожидает получить массив пресетов фильтров.
+  filterPresets: FilterPresetWithItems[];
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
 export default function ProductTable({
   variants: initialVariants,
   allCategories,
   allTags,
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // "Распаковываем" filterPresets из пропсов, чтобы использовать их в компоненте.
+  filterPresets,
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }: ProductTableProps) {
   const [variants, setVariants] = useState(initialVariants);
   const [editedVariantIds, setEditedVariantIds] = useState<Set<string>>(

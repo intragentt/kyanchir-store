@@ -1,37 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛍️ Проект интернет-магазина "Kyanchir"
 
-## Getting Started
+Это репозиторий для разработки фронтенда и бэкенда интернет-магазина "Kyanchir". Проект построен на современном стеке с использованием Next.js, TypeScript и Prisma.
 
-First, run the development server:
+## 🚀 Быстрый старт
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Для запуска проекта в режиме разработки выполните следующие шаги:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 1.  **Установите зависимости:**
+    
+    npm install
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 2.  **Запустите сервер для разработки:**
+    
+    npm run dev
+    
+    После выполнения команды откройте [http://localhost:3000](http://localhost:3000) в вашем браузере.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📜 Философия и архитектура
 
-## Learn More
+Этот проект — не просто код. У него есть своя философия и архитектурные принципы (, "Кухня + Зал" и т.д.). Прежде чем вносить изменения, **обязательно ознакомьтесь с нашей "Конституцией"** в файле [**README_KYANCHIR.md**](./README_KYANCHIR.md).
 
-To learn more about Next.js, take a look at the following resources:
+## Основные команды
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+-   `npm run dev`: Запуск проекта для разработки с Turbopack.
+-   `npm run build`: Сборка оптимизированной версии проекта для продакшена.
+-   `npm run start`: Запуск продакшен-сборки.
+-   `npm run prisma:seed`: Первоначальное "засеивание" базы данных товарами из `prisma/seed.ts`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# kyanchir-store-
+*Этот README.md — живой документ. Если вы добавляете новую ключевую команду или меняете процесс запуска, пожалуйста, обновите этот файл.*

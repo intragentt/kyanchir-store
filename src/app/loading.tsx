@@ -1,30 +1,45 @@
 // Местоположение: src/app/loading.tsx
-'use client';
+// Метафора: "Анимационный занавес" или "Элегантный аперитив".
+// Этот специальный файл Next.js автоматически показывается пользователю,
+// пока "кухня" (page.tsx) готовит основное "блюдо" (загружает данные).
+// Его задача — скрыть технические процессы и обеспечить приятный опыт ожидания.
+
+'use client'; // Компонент должен быть клиентским, так как использует хуки (useEffect, usePathname).
 
 import { useEffect } from 'react';
-import { usePathname } from 'next/navigation'; // 1. Импортируем хук для получения URL
-import ShortLogo from '@/components/icons/ShortLogo';
+import { usePathname } from 'next/navigation'; // Инструмент, чтобы узнать текущий URL
+import ShortLogo from '@/components/icons/ShortLogo'; // Наш брендированный логотип
 
 export default function Loading() {
-  const pathname = usePathname(); // 2. Получаем текущий путь, например, "/" или "/catalog"
+  // "Смотрим, на какой сцене мы выступаем". Получаем текущий путь, например, "/" или "/catalog".
+  const pathname = usePathname();
 
-  // 3. Устанавливаем z-index в зависимости от пути:
-  //    - Если это главная страница, z-index будет 155 (выше шапки, у которой 152).
-  //    - Если любая другая страница, z-index будет 150 (ниже шапки).
-  const zIndexClass = pathname === '/' ? 'z-[155]' : 'z-[150]';
+  // "Умный костюмер": Решаем, как должен выглядеть "занавес" в зависимости от сцены.
+  // Это ключевая логика компонента!
+  const zIndexClass =
+    pathname === '/'
+      ? 'z-[155]' // На главной странице "занавес" должен быть НАД шапкой (у нее z-index 152).
+      : 'z-[150]'; // На всех остальных страницах он ПОД шапкой, оставляя ее видимой.
 
+  // "Режиссерский прием": Блокируем скролл, пока идет загрузка.
+  // Это предотвращает ситуацию, когда пользователь может прокручивать пустую страницу.
   useEffect(() => {
+    // "Заморозить!"
     document.body.style.overflow = 'hidden';
+    // "Разморозить!": эта функция очистки сработает, когда компонент исчезнет.
     return () => {
       document.body.style.overflow = 'auto';
     };
-  }, []);
+  }, []); // Пустой массив зависимостей означает, что это сработает только один раз при появлении.
 
   return (
-    // 4. Применяем наш динамический z-index к обертке прелоадера
+    // Сам "занавес": полноэкранный блок с полупрозрачным фоном и блюром.
     <div
+      // Применяем наш динамический z-index, чтобы "занавес" занял правильное место.
       className={`fixed inset-0 flex h-screen items-center justify-center overflow-hidden bg-white/70 backdrop-blur-sm ${zIndexClass}`}
     >
+      {/* "Главный актер": анимированный логотип в центре сцены. */}
+      {/* Анимации `animate-shine` и `animate-fade-pulse` — это наши кастомные эффекты из tailwind.config.ts */}
       <ShortLogo className="logo-brand-color animate-shine animate-fade-pulse h-256[px] w-auto" />
     </div>
   );

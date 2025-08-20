@@ -1,69 +1,52 @@
 // Местоположение: src/components/CategoryFilter.tsx
+// ФИНАЛЬНАЯ ВЕРСИЯ
+
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect } from 'react';
 
-// --- ИЗМЕНЕНИЕ: Обновляем список категорий ---
-const categories = [
-  { id: 'all', name: 'все товары' },
-  { id: 'pijamas', name: 'пижамы' },
-  { id: 'underwear', name: 'нижнее белье' },
-  { id: 'for-home', name: 'для дома' },
-  { id: 'certificates', name: 'сертификаты' },
-];
+type Category = {
+  id: string;
+  name: string;
+};
 
 interface CategoryFilterProps {
+  categories: Category[];
   onSelectCategory: (categoryId: string) => void;
   activeCategory: string;
+  scrollLeft: number;
+  onScroll: (scrollOffset: number) => void;
+  disableCentering?: boolean;
 }
 
 export default function CategoryFilter({
+  categories,
   onSelectCategory,
   activeCategory,
+  scrollLeft,
+  onScroll,
+  disableCentering = false,
 }: CategoryFilterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const activeLineRef = useRef<HTMLDivElement>(null);
-  const [lineStyle, setLineStyle] = useState({ left: 0, width: 0 });
   const isFirstRender = useRef(true);
 
-  // Логика обновления подчеркивающей линии
-  const updateLinePosition = useCallback(() => {
-    if (containerRef.current) {
-      const activeElement = containerRef.current.querySelector(
-        `[data-category-id="${activeCategory}"]`,
-      ) as HTMLElement;
-      if (activeElement) {
-        setLineStyle({
-          left: activeElement.offsetLeft,
-          width: activeElement.offsetWidth,
-        });
-      }
+  // Механизм "Слушаться": просто и надежно.
+  useEffect(() => {
+    if (
+      containerRef.current &&
+      containerRef.current.scrollLeft !== scrollLeft
+    ) {
+      containerRef.current.scrollLeft = scrollLeft;
     }
-  }, [activeCategory]);
+  }, [scrollLeft]);
 
+  // "Умный камерамэн" с "выключателем".
   useEffect(() => {
-    const timeout = setTimeout(updateLinePosition, 50);
-    window.addEventListener('resize', updateLinePosition);
-    return () => {
-      clearTimeout(timeout);
-      window.removeEventListener('resize', updateLinePosition);
-    };
-  }, [activeCategory, updateLinePosition]);
-
-  const handleCategoryClick = (categoryId: string) => {
-    if (categoryId === activeCategory) return;
-    onSelectCategory(categoryId);
-    // Сохраняем выбор в localStorage (опционально)
-    localStorage.setItem('activeCategory', categoryId);
-  };
-
-  // Автоскролл активной кнопки при любом изменении activeCategory
-  useEffect(() => {
-    if (containerRef.current) {
+    if (!disableCentering && containerRef.current) {
       const btn = containerRef.current.querySelector(
         `[data-category-id="${activeCategory}"]`,
       );
-      if (btn && btn.scrollIntoView) {
+      if (btn) {
         btn.scrollIntoView({
           behavior: isFirstRender.current ? 'auto' : 'smooth',
           block: 'nearest',
@@ -72,7 +55,17 @@ export default function CategoryFilter({
       }
     }
     isFirstRender.current = false;
-  }, [activeCategory]);
+  }, [activeCategory, disableCentering]);
+
+  const handleCategoryClick = (categoryId: string) => {
+    if (categoryId === activeCategory) return;
+    onSelectCategory(categoryId);
+    localStorage.setItem('activeCategory', categoryId);
+  };
+
+  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    onScroll(event.currentTarget.scrollLeft);
+  };
 
   return (
     <div
@@ -82,6 +75,7 @@ export default function CategoryFilter({
       <div className="relative w-full">
         <div
           ref={containerRef}
+          onScroll={handleScroll}
           className="kyanchir-lg:justify-center -mx-4 flex items-center justify-start overflow-x-auto sm:-mx-6 lg:-mx-8"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
@@ -91,11 +85,7 @@ export default function CategoryFilter({
                 key={category.id}
                 data-category-id={category.id}
                 onClick={() => handleCategoryClick(category.id)}
-                className={`font-body flex-none px-3 text-base font-semibold whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none md:text-lg ${
-                  activeCategory === category.id
-                    ? 'text-brand-lilac'
-                    : 'hover:text-text-primary text-gray-500'
-                }`}
+                className={`font-body flex-none px-3 text-base font-semibold whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none md:text-lg ${activeCategory === category.id ? 'text-brand-lilac' : 'hover:text-text-primary text-gray-500'}`}
               >
                 <span className="flex h-full flex-col items-center justify-center">
                   <span>{category.name}</span>
@@ -114,7 +104,6 @@ export default function CategoryFilter({
             ))}
           </div>
         </div>
-        {/* Градиенты по краям скролла */}
         <div className="pointer-events-none absolute top-0 right-[-1rem] z-10 h-full w-6 bg-gradient-to-l from-white/90 to-transparent sm:right-[-1.5rem] lg:right-[-2rem]" />
         <div className="pointer-events-none absolute top-0 left-[-1rem] z-10 h-full w-6 bg-gradient-to-r from-white to-transparent sm:left-[-1.5rem] lg:left-[-2rem]" />
       </div>
