@@ -6,6 +6,8 @@ import { signIn } from 'next-auth/react';
 import PageContainer from '@/components/layout/PageContainer';
 import { useRouter } from 'next/navigation';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Исправлена SVG-иконка ---
+// Данные в <path> теперь являются валидными строками.
 const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -14,13 +16,14 @@ const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
     height="24px"
     {...props}
   >
-    <path fill="#29b6f6" d="M24,4_A_20,20_0_1,0_44,24_20,20_0_0,0_24,4_Z" />
+    <path fill="#29b6f6" d="M24,4 A20,20 0 1,0 44,24 A20,20 0 0,0 24,4 Z" />
     <path
       fill="#fff"
-      d="M34,15_l-13,11_c0,0-2.3,1.4-3.6,0_c-1.3-1.4,1-4.3,1-4.3_l3-13_c0,0,1-3-3-2_c-4,1-9,4-11,6_c-2,2-2,5-2,5_l4,1_c0,0,3,1,2,3_c-1,2-5,2-5,2_l-4,1_c0,0-2,0-2,2_s2,2,2,2_l5,2_c0,0,2-2,6,1_s5,4,5,4_l2,2_c0,0,2,2,4,0_s1-10,1-10_Z"
+      d="M34,15 l-13,11 c0,0-2.3,1.4-3.6,0 c-1.3-1.4,1-4.3,1-4.3 l3-13 c0,0,1-3-3-2 c-4,1-9,4-11,6 c-2,2-2,5-2,5 l4,1 c0,0,3,1,2,3 c-1,2-5,2-5,2 l-4,1 c0,0-2,0-2,2 s2,2,2,2 l5,2 c0,0,2-2,6,1 s5,4,5,4 l2,2 c0,0,2,2,4,0 s1-10,1-10 Z"
     />
   </svg>
 );
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -28,11 +31,9 @@ export default function LoginPage() {
   const [loginToken, setLoginToken] = useState<string | null>(null);
   const router = useRouter();
 
-  // --- "СЛУШАЕМ ЭФИР" ---
   useEffect(() => {
     if (!loginToken) return;
 
-    // Каждые 2 секунды "спрашиваем" у сервера, активирован ли "билет".
     const interval = setInterval(async () => {
       const response = await fetch('/api/auth/telegram/check', {
         method: 'POST',
@@ -42,20 +43,14 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (data.status === 'activated') {
-        // УРА! Билет активирован!
         clearInterval(interval);
-
-        // Финализируем сессию
         await fetch('/api/auth/telegram/finalize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: data.userId }),
         });
-
-        // Перенаправляем пользователя в его новый дом.
         router.push('/profile');
       } else if (data.status === 'expired') {
-        // Если билет просрочен, останавливаем проверку.
         clearInterval(interval);
         setLoginToken(null);
         alert('Время ожидания истекло. Пожалуйста, попробуйте снова.');
@@ -75,7 +70,6 @@ export default function LoginPage() {
 
   const handleTelegramLogin = async () => {
     setIsSubmitting(true);
-    // 1. Создаем "билет".
     const response = await fetch('/api/auth/telegram/start', {
       method: 'POST',
     });
@@ -84,7 +78,6 @@ export default function LoginPage() {
 
     if (token) {
       setLoginToken(token);
-      // 2. Открываем "портал".
       window.location.href = `https://t.me/kyanchir_store_bot?start=${token}`;
     } else {
       alert('Не удалось создать ссылку для входа. Попробуйте позже.');
