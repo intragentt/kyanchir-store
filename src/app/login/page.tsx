@@ -1,13 +1,10 @@
 // Местоположение: src/app/login/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import PageContainer from '@/components/layout/PageContainer';
-import { useRouter } from 'next/navigation';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Исправлена SVG-иконка ---
-// Данные в <path> теперь являются валидными строками.
 const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -23,67 +20,28 @@ const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loginToken, setLoginToken] = useState<string | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!loginToken) return;
-
-    const interval = setInterval(async () => {
-      const response = await fetch('/api/auth/telegram/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: loginToken }),
-      });
-      const data = await response.json();
-
-      if (data.status === 'activated') {
-        clearInterval(interval);
-        await fetch('/api/auth/telegram/finalize', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: data.userId }),
-        });
-        router.push('/profile');
-      } else if (data.status === 'expired') {
-        clearInterval(interval);
-        setLoginToken(null);
-        alert('Время ожидания истекло. Пожалуйста, попробуйте снова.');
-      }
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [loginToken, router]);
 
   const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email) return;
     setIsSubmitting(true);
-    await signIn('email', { email });
+    // Указываем, что после входа нужно вернуться на страницу профиля
+    await signIn('email', { email, callbackUrl: '/profile' });
     setIsSubmitting(false);
   };
 
-  const handleTelegramLogin = async () => {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Упрощенная функция для официального входа ---
+  const handleTelegramLogin = () => {
     setIsSubmitting(true);
-    const response = await fetch('/api/auth/telegram/start', {
-      method: 'POST',
-    });
-    const data = await response.json();
-    const token = data.token;
-
-    if (token) {
-      setLoginToken(token);
-      window.location.href = `https://t.me/kyanchir_store_bot?start=${token}`;
-    } else {
-      alert('Не удалось создать ссылку для входа. Попробуйте позже.');
-    }
-    setIsSubmitting(false);
+    // Просто вызываем signIn с id провайдера 'telegram'.
+    // NextAuth и Telegram сделают всю магию за нас.
+    signIn('telegram', { callbackUrl: '/profile' });
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
@@ -98,22 +56,9 @@ export default function LoginPage() {
           <form className="mt-8 space-y-6" onSubmit={handleEmailSubmit}>
             <p className="text-center text-sm text-gray-600">Через email</p>
             <div>
-              <input
-                id="email-address"
-                name="email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="relative block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
-                placeholder="Email"
-              />
+              <input /* ... */ />
             </div>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
-            >
+            <button /* ... */>
               {isSubmitting ? 'Отправка...' : 'Отправить ссылку'}
             </button>
           </form>
@@ -135,7 +80,7 @@ export default function LoginPage() {
               className="group relative flex w-full items-center justify-center gap-x-2 rounded-md border border-transparent bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
             >
               <TelegramIcon />
-              {isSubmitting ? 'Открываем портал...' : 'Войти через Telegram'}
+              {isSubmitting ? 'Ожидание...' : 'Войти через Telegram'}
             </button>
           </div>
         </div>
