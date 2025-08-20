@@ -41,7 +41,7 @@ const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   </svg>
 );
 
-// --- ИЗМЕНЕНИЕ: Обновляем интерфейс пропсов ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем интерфейс пропсов для поддержки счетчика ---
 interface DesktopSizeAndCartButtonProps {
   inventory: Array<{ size: { value: string }; stock: number }>;
   selectedSize: string | null;
@@ -53,17 +53,20 @@ interface DesktopSizeAndCartButtonProps {
   isAddToCartDisabled: boolean;
   isIncreaseDisabled: boolean;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function DesktopSizeAndCartButton({
   inventory,
   selectedSize,
   onSelectSize,
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Принимаем новые пропсы ---
   quantity,
   onAddToCart,
   onIncrease,
   onDecrease,
   isAddToCartDisabled,
   isIncreaseDisabled,
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }: DesktopSizeAndCartButtonProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -115,15 +118,15 @@ export default function DesktopSizeAndCartButton({
         )}
       </div>
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем логику счетчика --- */}
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем логику для отображения либо кнопки, либо счетчика --- */}
       <div className="w-3/5">
         {quantity === 0 ? (
           <Button
             onClick={onAddToCart}
             disabled={isAddToCartDisabled}
-            variant="accent-solid" // У вас тут кастомный вариант, убедитесь, что он есть в Button.tsx
+            variant="accent-solid"
             className="h-14 w-full"
-            style={{ backgroundColor: '#6B80C5' }} // И кастомные стили
+            style={{ backgroundColor: '#6B80C5' }}
           >
             В корзину
           </Button>
