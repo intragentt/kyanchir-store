@@ -16,10 +16,37 @@ import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
 
-// Этот компонент теперь отвечает за всю клиентскую логику, которая раньше была в layout.
+const CustomCloseButton = () => (
+  <button
+    onClick={() => {
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.close();
+      }
+    }}
+    className="fixed top-4 right-4 z-[9999] h-8 w-8 rounded-full bg-black/10 text-black backdrop-blur-sm transition-colors hover:bg-black/20"
+    aria-label="Закрыть"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="m-auto h-6 w-6"
+    >
+      <path
+        fillRule="evenodd"
+        d="M5.47 5.47a.75.75 0 011.06 0L12 10.94l5.47-5.47a.75.75 0 111.06 1.06L13.06 12l5.47 5.47a.75.75 0 11-1.06 1.06L12 13.06l-5.47 5.47a.75.75 0 01-1.06-1.06L10.94 12 5.47 6.53a.75.75 0 010-1.06z"
+        clipRule="evenodd"
+      />
+    </svg>
+  </button>
+);
+
 export default function AppCore({ children }: { children: React.ReactNode }) {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "потерянные" строки ---
   const pathname = usePathname();
   const isHomePage = pathname === '/';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  const [isTelegramApp, setIsTelegramApp] = useState(false);
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
   const [headerHeight, setHeaderHeight] = useState(0);
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -32,22 +59,16 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const scrollUpAnchor = useRef<number | null>(null);
   const scrollDownAnchor = useRef<number | null>(null);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Внедряем "Пусковой механизм" для Web App ---
   useEffect(() => {
-    // Этот код выполнится один раз, когда компонент "оживет" в браузере.
-    // Мы проверяем, существует ли специальный объект Telegram Web App.
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
-
-      // 1. Подаем команду на расширение до максимальной высоты.
       tg.expand();
-
-      // 2. Даем понять Telegram, что наше приложение полностью загрузилось и готово к отображению.
-      // Это убирает лишние задержки и делает опыт более "нативным".
+      tg.setHeaderColor('secondary_bg_color');
+      tg.BackButton.hide();
+      setIsTelegramApp(true);
       tg.ready();
     }
-  }, []); // Пустой массив зависимостей гарантирует, что код выполнится только один раз.
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  }, []);
 
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
@@ -122,6 +143,7 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   return (
     <StickyHeaderContext.Provider value={contextValue}>
       <FooterProvider>
+        {isTelegramApp && <CustomCloseButton />}
         <NetworkStatusManager />
         <NotificationManager />
         <ConditionalHeader />

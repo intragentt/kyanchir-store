@@ -1,18 +1,20 @@
-// Местоположение: telegram.d.ts (НОВЫЙ ФАЙЛ)
+// Местоположение: telegram.d.ts
 
-// Этот файл - наш "официальный документ" для TypeScript.
-
-// Мы описываем, что может существовать объект WebApp
-interface WebApp {
-  // и какие у него есть "кнопки" и "рычаги", которые мы используем.
-  expand: () => void;
-  ready: () => void;
-  // Можно добавить и другие свойства по мере необходимости
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем описание всех новых "рычагов" ---
+interface BackButton {
+  hide: () => void;
 }
 
-// Теперь мы официально заявляем, что в глобальном "здании" window
-// может появиться "коммуникационный узел" Telegram
-// у которого, в свою очередь, есть "пульт управления" WebApp.
+interface WebApp {
+  expand: () => void;
+  ready: () => void;
+  // Официально "узакониваем" новые методы
+  setHeaderColor: (color_key: 'bg_color' | 'secondary_bg_color') => void;
+  close: () => void;
+  BackButton: BackButton;
+}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 interface Window {
   Telegram?: {
     WebApp: WebApp;
