@@ -8,19 +8,10 @@
 */
 
 /* --- ШАГ 1: АКТИВАЦИЯ TAILWIND --- */
-/* Эта директива — точка входа. Она заменяется на все базовые стили, 
-   компоненты и утилиты Tailwind в процессе сборки. */
 @import "tailwindcss";
 
-
 /* --- ШАГ 2: ОПРЕДЕЛЕНИЕ БАЗОВОГО СЛОЯ --- */
-/* `@layer base` — это специальная директива Tailwind, которая позволяет нам
-   добавлять или переопределять стили для базовых HTML-тегов. */
 @layer base {
-  
-  /* :root — это "панель управления" нашего дизайна. Здесь мы объявляем
-     глобальные CSS-переменные (дизайн-токены), которые можно будет
-     использовать в любом месте проекта. */
   :root {
     --background-primary: #FFFFFF;
     --text-primary: #272727;
@@ -28,9 +19,6 @@
     --brand-lilac-light-color: #C1D0FF;
     --heart-red: #D32F2F;
     --feedback-error-color: #E06F6F;
-    
-    /* Эта переменная служит "почтовым ящиком", в который JS может положить
-       актуальную высоту мобильного футера. */
     --mobile-footer-height: 0px;
   }
 
@@ -40,38 +28,37 @@
 
   body {
     height: 100%;
-    -webkit-font-smoothing: antialiased; /* Сглаживание шрифтов для лучшей читаемости */
-    background-color: var(--background-primary); /* Используем наши переменные */
+    -webkit-font-smoothing: antialiased;
+    background-color: var(--background-primary);
     color: var(--text-primary);
-    font-family: var(--font-body); /* Шрифты, определенные в fonts.ts */
-    overscroll-behavior-y: contain; /* Предотвращает "оттягивание" страницы на мобильных */
+    font-family: var(--font-body);
+    overscroll-behavior-y: contain;
+
+    /* ✅ Учитываем статус-бар и вырезы */
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    box-sizing: border-box;
   }
 
-  /* Универсальный класс для плавного скрытия элементов */
   .content-hidden {
     opacity: 0;
     pointer-events: none;
     user-select: none;
     transition: opacity 0.3s ease;
   }
-  
-  /* --- СИСТЕМА АДАПТИВНОЙ ТИПОГРАФИКИ (КЛЮЧЕВАЯ ЧАСТЬ) --- */
+
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading); /* Применяем шрифт для заголовков */
-    word-break: break-word; /* Правила переноса длинных слов */
+    font-family: var(--font-heading);
+    word-break: break-word;
     hyphens: auto;
   }
 
-  /* Балансировка текста для красивых заголовков в несколько строк */
   h1, h2, h3 {
     text-wrap: balance; 
   }
 
-  /* 
-    "Плавная" типографика с помощью `clamp(MIN, PREFERRED, MAX)`.
-    Размер шрифта будет плавно меняться между MIN и MAX в зависимости
-    от ширины экрана (PREFERRED, где `vw` — это % от ширины экрана).
-  */
   h1 {
     font-size: clamp(2rem, 6vw + 1rem, 6rem);
     line-height: 1.1;
@@ -97,7 +84,7 @@
   }
 
   p, button {
-    font-size: clamp(1rem, 0.8vw + 0.5rem, 1.125rem); /* Текст тоже плавно масштабируется */
+    font-size: clamp(1rem, 0.8vw + 0.5rem, 1.125rem);
   }
 
   p {
@@ -112,55 +99,43 @@
 }
 
 /* --- ШАГ 3: ГЛОБАЛЬНЫЕ КЛАССЫ И АНИМАЦИИ --- */
-
-/* Отдельный класс для стилизации логотипа, включая состояния */
 .logo-brand-color {
   color: var(--brand-lilac-color);
   transition: color 0.2s ease-in-out;
 }
 .logo-brand-color:active { color: var(--brand-lilac-light-color); }
-@media (min-width: 1024px) { .logo-brand-color:hover { color: var(--brand-lilac-light-color); } }
+@media (min-width: 1024px) {
+  .logo-brand-color:hover { color: var(--brand-lilac-light-color); }
+}
 
-/* Определение кастомной анимации пульсации */
 @keyframes fade-pulse {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }
 }
-/* Класс для применения этой анимации. Используется в loading.tsx */
 .animate-fade-pulse {
   animation: fade-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* --- ШАГ 4: СБРОС СТИЛЕЙ И СТИЛИ ДЛЯ ВЕНДОРОВ --- */
-
-/* Базовый сброс для предсказуемой работы с размерами */
 *, *::before, *::after { box-sizing: border-box; }
-
-/* Установка минимальной ширины для избежания "сломанной" верстки */
 html, body { min-width: 320px; width: 100%; }
-
-/* Делаем изображения адаптивными по умолчанию */
 img, video, iframe, canvas, object, svg { max-width: 100%; height: auto; display: block; }
 
-/* Стилизация сторонней библиотеки Swiper.js */
 .product-gallery-container .swiper-styled-pagination-bullet { /* ... */ }
 .thumbs-swiper .swiper-slide-thumb-active { /* ... */ }
 
-/* Сброс стилей для полей ввода чисел */
 input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 input[type='number'] { -moz-appearance: textfield; }
 
 /* --- ШАГ 5: ПРОДВИНУТАЯ АДАПТИВНАЯ ЛОГИКА --- */
-/* 
-  Это правило использует современный псевдо-селектор :has().
-  Оно читается так: "Если у body есть потомок с классом .mobile-sticky-footer..."
-*/
 body:has(.mobile-sticky-footer) {
-  /* "...тогда для body установить переменную --mobile-footer-height,
-     взяв ее значение из другой переменной --footer-total-height".
-     Это позволяет элементам на странице (например, каталогу) "узнать"
-     высоту футера и добавить себе отступ снизу, чтобы футер их не перекрывал.
-     Это чистый CSS, который заменяет сложный JavaScript!
-  */
   --mobile-footer-height: var(--footer-total-height, 100px);
+}
+
+/* ✅ Утилитный класс для гибкого использования safe-area */
+.safe-area {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
