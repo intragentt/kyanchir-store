@@ -1,10 +1,13 @@
 // Местоположение: src/app/layout.tsx
-// Метафора: "Мозговой центр и Скелет Приложения" (Теперь это чистый Серверный Компонент)
+// Метафора: "Мозговой центр и Скелет Приложения"
 
 import './globals.css';
 import { fontHeading, fontBody, fontMono } from './fonts';
 import AuthProvider from '@/components/providers/AuthProvider'; // Наш "Агент Безопасности"
 import AppCore from '@/components/AppCore'; // Наш новый "Мастер-отделочник"
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем "инструмент" для вставки скриптов ---
+import Script from 'next/script';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function RootLayout({
   children,
@@ -22,13 +25,13 @@ export default function RootLayout({
         <meta name="theme-color" content="#FFFFFF" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className="flex h-full min-h-screen flex-col">
-        {/* 
-          СТРУКТУРА:
-          1. "Агент Безопасности" (AuthProvider) оборачивает всё.
-          2. "Мастер-отделочник" (AppCore) отвечает за всю внутреннюю структуру и интерактивность.
-          3. "Дети" (children) — это конкретная страница, которую мы показываем.
-        */}
+      <body>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Вживляем "нейронный имплант" Telegram --- */}
+        <Script
+          src="https://telegram.org/js/telegram-web-app.js"
+          strategy="beforeInteractive"
+        />
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <AuthProvider>
           <AppCore>{children}</AppCore>
         </AuthProvider>

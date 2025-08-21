@@ -61,7 +61,9 @@ export default function LoginPage() {
           </div>
 
           <form className="mt-8 space-y-6" onSubmit={handleEmailSubmit}>
-            <p className="text-center text-sm text-gray-600">Через email</p>
+            <p className="text-center text-sm text-gray-600">
+              Через email
+            </p>
             <div>
               <input
                 id="email"
@@ -71,14 +73,14 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+                className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
                 placeholder="you@example.com"
               />
             </div>
             <button
               type="submit"
               disabled={isEmailSubmitting}
-              className="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
+              className="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {isEmailSubmitting ? 'Отправка...' : 'Отправить ссылку'}
             </button>
