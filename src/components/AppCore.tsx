@@ -42,10 +42,9 @@ const CustomCloseButton = () => (
 );
 
 export default function AppCore({ children }: { children: React.ReactNode }) {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "потерянные" строки ---
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const [isTelegramApp, setIsTelegramApp] = useState(false);
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -60,14 +59,31 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const scrollDownAnchor = useRef<number | null>(null);
 
   useEffect(() => {
-    if (window.Telegram?.WebApp) {
-      const tg = window.Telegram.WebApp;
-      tg.expand();
+    const tg = window?.Telegram?.WebApp;
+    if (!tg) return;
+
+    tg.ready();
+
+    (async () => {
+      try {
+        // ✅ пробуем полноэкран
+        if (tg.requestFullscreen) {
+          await tg.requestFullscreen();
+        } else {
+          // фолбэк для старых клиентов
+          tg.expand();
+        }
+      } catch {
+        // на случай отказа/ошибки — тянем высоту
+        tg.expand();
+      }
+
+      // косметика и скрытие телеграм-кнопки "Назад"
       tg.setHeaderColor('secondary_bg_color');
       tg.BackButton.hide();
+
       setIsTelegramApp(true);
-      tg.ready();
-    }
+    })();
   }, []);
 
   useEffect(() => {
@@ -95,24 +111,19 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (isSearchActive || isMenuOpen || !isHomePage) {
-        return;
-      }
+      if (isSearchActive || isMenuOpen || !isHomePage) return;
       const currentScrollY = window.scrollY;
       const isScrollingDown = currentScrollY > lastScrollY.current;
 
       if (isScrollingDown) {
-        if (currentScrollY > headerHeight) {
-          setHeaderStatus('unpinned');
-        }
+        if (currentScrollY > headerHeight) setHeaderStatus('unpinned');
         scrollUpAnchor.current = null;
         if (scrollDownAnchor.current === null) {
           scrollDownAnchor.current = currentScrollY;
         }
       } else {
-        if (scrollUpAnchor.current === null) {
+        if (scrollUpAnchor.current === null)
           scrollUpAnchor.current = currentScrollY;
-        }
         if (
           currentScrollY < scrollUpAnchor.current - SCROLL_UP_THRESHOLD &&
           currentScrollY > headerHeight

@@ -1,6 +1,6 @@
 // Местоположение: telegram.d.ts
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем описание всех новых "рычагов" ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 interface BackButton {
   hide: () => void;
 }
@@ -8,10 +8,16 @@ interface BackButton {
 interface WebApp {
   expand: () => void;
   ready: () => void;
-  // Официально "узакониваем" новые методы
+
+  // Новые/используемые методы
   setHeaderColor: (color_key: 'bg_color' | 'secondary_bg_color') => void;
   close: () => void;
   BackButton: BackButton;
+
+  // ✅ Полноэкранный режим (доступен в новых клиентах Telegram)
+  requestFullscreen?: () => Promise<void> | void;
+  exitFullscreen?: () => Promise<void> | void;
+  isFullscreen?: boolean;
 }
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
