@@ -41,13 +41,9 @@ const CustomCloseButton = () => (
   </button>
 );
 
-// Белая вставка ровно по высоте статус-бара (safe-area)
-const SafeAreaTop = () => (
-  <div
-    className="safe-area-top pointer-events-none fixed inset-x-0 top-0 z-[10000]"
-    aria-hidden="true"
-  />
-);
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем компонент SafeAreaTop, так как он больше не нужен ---
+// const SafeAreaTop = () => ( ... );
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -74,20 +70,16 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
-        // пробуем полноэкран
         if (tg.requestFullscreen) {
           await tg.requestFullscreen();
         } else {
-          tg.expand(); // фолбэк для старых клиентов
+          tg.expand();
         }
       } catch {
-        tg.expand(); // на случай отказа/ошибки
+        tg.expand();
       }
-
-      // делаем верх белым и скрываем телеграм-кнопку "Назад"
-      tg.setHeaderColor('bg_color'); // белый (у темы)
+      tg.setHeaderColor('bg_color');
       tg.BackButton.hide();
-
       setIsTelegramApp(true);
     })();
   }, []);
@@ -160,8 +152,9 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   return (
     <StickyHeaderContext.Provider value={contextValue}>
       <FooterProvider>
-        {/* Белая safe-area сверху — делает статус-бар всегда белым */}
-        <SafeAreaTop />
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем SafeAreaTop --- */}
+        {/* <SafeAreaTop /> */}
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
         {isTelegramApp && <CustomCloseButton />}
         <NetworkStatusManager />
@@ -170,8 +163,9 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
         <SearchOverlay />
         {isHomePage && <DynamicHeroSection />}
 
-        {/* Сдвигаем контент ниже статус-бара */}
-        <main className="safe-top flex-grow">{children}</main>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем класс safe-top --- */}
+        <main className="flex-grow">{children}</main>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
         <Footer />
         <ClientInteractivity />

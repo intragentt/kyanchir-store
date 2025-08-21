@@ -1,10 +1,6 @@
 /* 
   Местоположение: src/app/globals.css
   Метафора: "Визуальная ДНК" или "Фундаментальные правила стиля".
-  Этот файл — самый низкий уровень нашей стилизации. Он делает три вещи:
-  1. Подключает Tailwind CSS.
-  2. Определяет глобальные "константы" дизайна (CSS-переменные).
-  3. Задает базовый, "неодетый" вид для стандартных HTML-элементов (заголовки, параграфы).
 */
 
 /* --- ШАГ 1: АКТИВАЦИЯ TAILWIND --- */
@@ -34,11 +30,14 @@
     font-family: var(--font-body);
     overscroll-behavior-y: contain;
 
-    /* ✅ Учитываем safe-area только по бокам и снизу */
+    /* --- НАЧАЛО ИЗМЕНЕНИЙ: Учитываем safe-area со ВСЕХ сторон --- */
+    /* Теперь мы добавляем отступ сверху, равный высоте статус-бара, "челки" и т.д. */
+    padding-top: env(safe-area-inset-top);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     padding-bottom: env(safe-area-inset-bottom);
     box-sizing: border-box;
+    /* --- КОНЕЦ ИЗМЕНЕНИЙ --- */
   }
 
   .content-hidden {
@@ -131,7 +130,7 @@ body:has(.mobile-sticky-footer) {
   --mobile-footer-height: var(--footer-total-height, 100px);
 }
 
-/* ✅ Утилиты для safe-area */
+/* ✅ Утилиты для safe-area (остаются полезными для специфических случаев) */
 .safe-area {
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
