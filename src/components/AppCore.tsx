@@ -1,5 +1,5 @@
 // Местоположение: src/components/AppCore.tsx
-'use client'; // <-- Это официальное удостоверение "Мастера-отделочника"
+'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
@@ -18,7 +18,6 @@ import NotificationManager from '@/components/NotificationManager';
 
 // Этот компонент теперь отвечает за всю клиентскую логику, которая раньше была в layout.
 export default function AppCore({ children }: { children: React.ReactNode }) {
-  // --- ВСЯ ВАША СТАРАЯ ЛОГИКА ИЗ LAYOUT.TSX ТЕПЕРЬ ЖИВЕТ ЗДЕСЬ ---
   const pathname = usePathname();
   const isHomePage = pathname === '/';
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
@@ -32,6 +31,23 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const SCROLL_DOWN_THRESHOLD = 50;
   const scrollUpAnchor = useRef<number | null>(null);
   const scrollDownAnchor = useRef<number | null>(null);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Внедряем "Пусковой механизм" для Web App ---
+  useEffect(() => {
+    // Этот код выполнится один раз, когда компонент "оживет" в браузере.
+    // Мы проверяем, существует ли специальный объект Telegram Web App.
+    if (window.Telegram?.WebApp) {
+      const tg = window.Telegram.WebApp;
+
+      // 1. Подаем команду на расширение до максимальной высоты.
+      tg.expand();
+
+      // 2. Даем понять Telegram, что наше приложение полностью загрузилось и готово к отображению.
+      // Это убирает лишние задержки и делает опыт более "нативным".
+      tg.ready();
+    }
+  }, []); // Пустой массив зависимостей гарантирует, что код выполнится только один раз.
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
@@ -103,7 +119,6 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     setIsMenuOpen,
   };
 
-  // --- РЕНДЕРИМ ВСЮ "ВНУТРЕННЮЮ ОТДЕЛКУ" ---
   return (
     <StickyHeaderContext.Provider value={contextValue}>
       <FooterProvider>
