@@ -41,6 +41,14 @@ const CustomCloseButton = () => (
   </button>
 );
 
+// Белая вставка ровно по высоте статус-бара (safe-area)
+const SafeAreaTop = () => (
+  <div
+    className="safe-area-top pointer-events-none fixed inset-x-0 top-0 z-[10000]"
+    aria-hidden="true"
+  />
+);
+
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
@@ -66,20 +74,18 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
 
     (async () => {
       try {
-        // ✅ пробуем полноэкран
+        // пробуем полноэкран
         if (tg.requestFullscreen) {
           await tg.requestFullscreen();
         } else {
-          // фолбэк для старых клиентов
-          tg.expand();
+          tg.expand(); // фолбэк для старых клиентов
         }
       } catch {
-        // на случай отказа/ошибки — тянем высоту
-        tg.expand();
+        tg.expand(); // на случай отказа/ошибки
       }
 
-      // косметика и скрытие телеграм-кнопки "Назад"
-      tg.setHeaderColor('secondary_bg_color');
+      // делаем верх белым и скрываем телеграм-кнопку "Назад"
+      tg.setHeaderColor('bg_color'); // белый (у темы)
       tg.BackButton.hide();
 
       setIsTelegramApp(true);
@@ -154,13 +160,19 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   return (
     <StickyHeaderContext.Provider value={contextValue}>
       <FooterProvider>
+        {/* Белая safe-area сверху — делает статус-бар всегда белым */}
+        <SafeAreaTop />
+
         {isTelegramApp && <CustomCloseButton />}
         <NetworkStatusManager />
         <NotificationManager />
         <ConditionalHeader />
         <SearchOverlay />
         {isHomePage && <DynamicHeroSection />}
-        <main className="flex-grow">{children}</main>
+
+        {/* Сдвигаем контент ниже статус-бара */}
+        <main className="safe-top flex-grow">{children}</main>
+
         <Footer />
         <ClientInteractivity />
       </FooterProvider>
