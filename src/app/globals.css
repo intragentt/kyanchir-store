@@ -30,9 +30,8 @@
     font-family: var(--font-body);
     overscroll-behavior-y: contain;
 
-    /* --- НАЧАЛО ИЗМЕНЕНИЙ: Учитываем safe-area со ВСЕХ сторон --- */
-    /* Теперь мы добавляем отступ сверху, равный высоте статус-бара, "челки" и т.д. */
-    padding-top: env(safe-area-inset-top);
+    /* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем отступ сверху, так как шапка Telegram теперь делает это за нас --- */
+    /* padding-top: env(safe-area-inset-top); */
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     padding-bottom: env(safe-area-inset-bottom);
