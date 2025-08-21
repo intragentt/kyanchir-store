@@ -1,4 +1,4 @@
-// Местоположение: src/app/api/bot/create-login-link/route.ts (НОВЫЙ ФАЙЛ)
+// Местоположение: src/app/api/bot/create-login-link/route.ts
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { addMinutes } from 'date-fns';
@@ -6,15 +6,55 @@ import prisma from '@/lib/prisma';
 
 export async function POST(request: Request) {
   try {
-    // 1. Проверяем "пароль" от нашего Эмиссара
     const authHeader = request.headers.get('Authorization');
     const secret = process.env.BOT_API_SECRET;
+
+    // --- НАЧАЛО ДИАГНОСТИКИ ---
+    console.log('--- НАЧАЛО АУДИТА БЕЗОПАСНОСТИ ---');
+
+    if (authHeader) {
+      console.log(
+        `Получен заголовок 'Authorization'. Длина: ${authHeader.length}`,
+      );
+      console.log(`Первые 15 символов: '${authHeader.substring(0, 15)}'`);
+      console.log(
+        `Последние 15 символов: '${authHeader.substring(authHeader.length - 15)}'`,
+      );
+    } else {
+      console.log("!!! ОШИБКА: Заголовок 'Authorization' НЕ ПОЛУЧЕН.");
+    }
+
+    if (secret) {
+      console.log(
+        `Секрет 'BOT_API_SECRET' на сервере. Длина: ${secret.length}`,
+      );
+      console.log(`Первые 15 символов: '${secret.substring(0, 15)}'`);
+      console.log(
+        `Последние 15 символов: '${secret.substring(secret.length - 15)}'`,
+      );
+    } else {
+      console.log(
+        "!!! КРИТИЧЕСКАЯ ОШИБКА: Секрет 'BOT_API_SECRET' НЕ НАЙДЕН на сервере.",
+      );
+    }
+
+    const expectedAuthHeader = `Bearer ${secret}`;
+    console.log(`Ожидался заголовок. Длина: ${expectedAuthHeader.length}`);
+
+    if (authHeader === expectedAuthHeader) {
+      console.log('--- ВЕРДИКТ: УСПЕХ! Ключи полностью совпадают. ---');
+    } else {
+      console.log('--- ВЕРДИКТ: ПРОВАЛ! Ключи НЕ СОВПАДАЮТ. ---');
+    }
+
+    console.log('--- КОНЕЦ АУДИТА БЕЗОПАСНОСТИ ---');
+    // --- КОНЕЦ ДИАГНОСТИКИ ---
 
     if (!secret || authHeader !== `Bearer ${secret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Получаем данные о пользователе от Эмиссара
+    // ... (остальная часть кода без изменений) ...
     const { telegramId, firstName, phone } = await request.json();
     if (!telegramId || !phone) {
       return NextResponse.json(
@@ -22,27 +62,16 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-
-    // 3. Находим или создаем пользователя в нашей базе
     const user = await prisma.user.upsert({
       where: { telegramId },
       update: { phone, name: firstName },
       create: { telegramId, phone, name: firstName },
     });
-
-    // 4. Создаем для него одноразовый "пропуск"
     const token = crypto.randomBytes(32).toString('hex');
     const expires = addMinutes(new Date(), 5);
-
     await prisma.loginToken.create({
-      data: {
-        token,
-        expires,
-        userId: user.id, // Сразу привязываем к пользователю!
-      },
+      data: { token, expires, userId: user.id },
     });
-
-    // 5. Отправляем "пропуск" обратно Эмиссару
     return NextResponse.json({ token });
   } catch (error) {
     console.error('[Bot API] Error creating login link:', error);
