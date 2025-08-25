@@ -8,6 +8,13 @@ import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
 import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
 
+// Наша собственная функция-валидатор для Email
+const validateEmail = (email: string) => {
+  const re =
+    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+  return re.test(String(email).toLowerCase());
+};
+
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -17,9 +24,22 @@ export default function LoginPage() {
 
   const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!identifier) return;
     setIsLoading(true);
     setError(null);
+
+    // --- НАША НОВАЯ, КАСТОМНАЯ ПРОВЕРКА ---
+    if (!identifier) {
+      setError('Поле Email не может быть пустым.');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!validateEmail(identifier)) {
+      setError('Пожалуйста, введите корректный Email.');
+      setIsLoading(false);
+      return;
+    }
+    // --- КОНЕЦ ПРОВЕРКИ ---
 
     try {
       const res = await signIn('email', {
@@ -45,7 +65,6 @@ export default function LoginPage() {
   };
 
   return (
-    // Убираем PageContainer и управляем отступами и фоном напрямую
     <div className="flex min-h-screen items-start justify-center bg-zinc-50 px-4 pt-20 sm:pt-24">
       <div className="w-full max-w-sm">
         <div className="space-y-5 rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
@@ -58,15 +77,17 @@ export default function LoginPage() {
             </div>
           </Link>
 
+          {/* Отключаем стандартную валидацию браузера */}
           <form
             className="font-body space-y-4 text-left"
             onSubmit={handleLoginSubmit}
+            noValidate
           >
             <div>
               <input
                 id="identifier"
                 name="identifier"
-                type="text"
+                type="email" // Меняем тип на email для правильной клавиатуры на мобильных
                 autoComplete="email"
                 required
                 value={identifier}
