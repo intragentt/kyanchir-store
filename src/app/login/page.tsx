@@ -2,7 +2,6 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
@@ -39,20 +38,27 @@ export default function LoginPage() {
     }
 
     try {
-      const res = await signIn('email', {
-        email: identifier,
-        redirect: false,
+      // Мы используем стандартный `fetch`, чтобы имитировать отправку формы
+      // next-auth/react `signIn` здесь не так удобен для этой задачи
+      const res = await fetch('/api/auth/signin/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          email: identifier,
+          callbackUrl: '/profile',
+          json: 'true', // Важный параметр, чтобы ответ был в JSON
+        }),
       });
 
-      if (res?.ok && !res.error) {
-        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-        // Всегда перенаправляем на страницу ввода кода, передавая email в параметрах
+      if (res.ok) {
+        // Всегда перенаправляем на страницу ввода кода
         router.push(
           `/login/verify-code?email=${encodeURIComponent(identifier)}`,
         );
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       } else {
-        setError(res?.error || 'Не удалось отправить код для входа.');
+        setError('Не удалось отправить код для входа.');
       }
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
@@ -77,7 +83,6 @@ export default function LoginPage() {
               <Logo />
             </div>
           </Link>
-
           <form
             className="font-body space-y-4 text-left"
             onSubmit={handleLoginSubmit}

@@ -174,30 +174,28 @@ model User {
   emailVerified DateTime?
   image         String?
   telegramId    String?   @unique
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  phone         String?   // Добавляем опциональное поле для номера телефона
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  phone         String?
   accounts      Account[]
   sessions      Session[]
   loginTokens   LoginToken[]
 }
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 model VerificationToken {
   identifier String
   token      String   @unique
   expires    DateTime
+  attempts   Int      @default(0) // Добавляем счетчик попыток
+
   @@unique([identifier, token])
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-// Модель для хранения временных "билетов" для входа через Telegram.
 model LoginToken {
   id        String   @id @default(cuid())
-  token     String   @unique // Уникальный номер "билета"
-  expires   DateTime // Срок годности "билета" (например, 5 минут)
-  
-  // Связь с пользователем. Сначала `null`, заполняется после активации в боте.
+  token     String   @unique
+  expires   DateTime
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   createdAt DateTime @default(now())
 }
