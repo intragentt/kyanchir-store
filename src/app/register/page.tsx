@@ -2,11 +2,11 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
 import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
+import ClearIcon from '@/components/icons/ClearIcon';
 
 const validateEmail = (email: string) => {
   const re =
@@ -38,17 +38,22 @@ export default function RegisterPage() {
     }
 
     try {
-      const res = await signIn('email', {
-        email,
-        redirect: false,
+      const res = await fetch('/api/auth/signin/email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          email: email,
+          callbackUrl: '/profile',
+          json: 'true',
+        }),
       });
 
-      if (res?.ok && !res.error) {
-        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      if (res.ok) {
         router.push(`/login/verify-code?email=${encodeURIComponent(email)}`);
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       } else {
-        setError(res?.error || 'Не удалось завершить регистрацию.');
+        setError('Не удалось отправить код для регистрации.');
       }
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
@@ -79,7 +84,7 @@ export default function RegisterPage() {
             onSubmit={handleRegisterSubmit}
             noValidate
           >
-            <div>
+            <div className="relative">
               <input
                 id="email"
                 name="email"
@@ -88,20 +93,38 @@ export default function RegisterPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
                 placeholder="Email"
               />
+              {email && (
+                <button
+                  type="button"
+                  onClick={() => setEmail('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                </button>
+              )}
             </div>
-            <div>
+            <div className="relative">
               <input
                 id="password"
                 name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
                 placeholder="Пароль"
               />
+              {password && (
+                <button
+                  type="button"
+                  onClick={() => setPassword('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                </button>
+              )}
             </div>
 
             <button
