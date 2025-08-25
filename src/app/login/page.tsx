@@ -6,33 +6,11 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import PageContainer from '@/components/layout/PageContainer';
 import Logo from '@/components/icons/Logo';
-import Link from 'next/link'; // Импортируем Link для навигации
-
-const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    width="22"
-    height="22"
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    {...props}
-  >
-    <path
-      d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M16.9999 8.00001L8.49992 11.5C7.99992 11.7 7.99992 12.3 8.49992 12.5L10.4999 13.2C10.7999 13.3 11.0999 13.6 11.1999 13.9L11.8999 15.9C12.0999 16.4 12.6999 16.4 12.8999 15.9L16.9999 8.00001Z"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+import Link from 'next/link';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Заменяем старую иконку на нашу новую, фирменную
+import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
@@ -162,7 +140,9 @@ export default function LoginPage() {
             onClick={redirectToTelegramBot}
             className="font-body flex w-full items-center justify-center gap-x-2 rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
           >
-            <TelegramIcon className="text-sky-500" />
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            <TelegramOfficialIcon className="h-6 w-6" />
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             Войти через Telegram
           </button>
         </div>
