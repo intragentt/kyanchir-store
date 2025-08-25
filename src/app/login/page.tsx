@@ -4,7 +4,6 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import PageContainer from '@/components/layout/PageContainer';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
 import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
@@ -46,7 +45,8 @@ export default function LoginPage() {
   };
 
   return (
-    <PageContainer className="flex min-h-screen items-start justify-center bg-zinc-50 pt-24 sm:pt-32">
+    // Убираем PageContainer и управляем отступами и фоном напрямую
+    <div className="flex min-h-screen items-start justify-center bg-zinc-50 px-4 pt-20 sm:pt-24">
       <div className="w-full max-w-sm">
         <div className="space-y-5 rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
           <Link
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-                placeholder="Email, телефон или юзернейм"
+                placeholder="Email"
               />
             </div>
             <div>
@@ -99,7 +99,7 @@ export default function LoginPage() {
                   htmlFor="remember-me"
                   className="ml-2 block text-sm text-zinc-700"
                 >
-                  Сохранить вход
+                  Запомнить меня
                 </label>
               </div>
             </div>
@@ -154,6 +154,6 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
-    </PageContainer>
+    </div>
   );
 }
