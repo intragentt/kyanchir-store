@@ -17,8 +17,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // --- НАЧАЛО ИСПРАВЛЕНИЙ ---
-    // Ищем токен по его уникальному значению. Он должен быть один.
+    // Ищем токен по его уникальному значению
     const verificationToken = await prisma.verificationToken.findUnique({
       where: { token },
     });
@@ -26,12 +25,12 @@ export async function POST(req: Request) {
     // Если токен вообще не найден
     if (!verificationToken) {
       return NextResponse.json(
-        { error: 'Неверный код.', attemptsLeft: 0 },
+        { error: 'Неверный код.', attemptsLeft: 'N/A' },
         { status: 401 },
       );
     }
 
-    // Если токен найден, но он для другого email или просрочен
+    // Если токен для другого email или просрочен
     if (
       verificationToken.identifier !== email ||
       verificationToken.expires < new Date()
@@ -45,26 +44,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Если попытки исчерпаны
-    if (verificationToken.attempts >= MAX_ATTEMPTS) {
-      await prisma.verificationToken.delete({ where: { token } });
-      return NextResponse.json(
-        {
-          error: 'Превышено количество попыток. Запросите новый код.',
-          attemptsLeft: 0,
-        },
-        { status: 401 },
-      );
-    }
-    // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
-
     // --- УСПЕШНАЯ ВЕРИФИКАЦИЯ ---
+
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
-      // Такого быть не должно, т.к. next-auth создает юзера при отправке письма, но проверим
       return NextResponse.json(
         { error: 'Пользователь не найден.' },
         { status: 404 },

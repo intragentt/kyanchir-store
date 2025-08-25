@@ -4,7 +4,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import EmailProvider from 'next-auth/providers/email';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { createTransport } from 'nodemailer'; // Импортируем nodemailer
+import { createTransport } from 'nodemailer';
 
 const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -16,9 +16,7 @@ const authOptions: NextAuthOptions = {
         token: { label: 'Login Token', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.token) {
-          return null;
-        }
+        if (!credentials?.token) return null;
 
         const loginToken = await prisma.loginToken.findUnique({
           where: { token: credentials.token },
@@ -40,7 +38,6 @@ const authOptions: NextAuthOptions = {
       },
     }),
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
     EmailProvider({
       server: {
         host: process.env.EMAIL_SERVER_HOST,
@@ -52,13 +49,10 @@ const authOptions: NextAuthOptions = {
       },
       from: process.env.EMAIL_FROM,
 
-      // Генерируем шестизначный код вместо стандартного токена
       generateVerificationToken: async () => {
-        const token = Math.floor(100000 + Math.random() * 900000).toString();
-        return token;
+        return Math.floor(100000 + Math.random() * 900000).toString();
       },
 
-      // Создаем и отправляем наше кастомное письмо
       sendVerificationRequest: async ({
         identifier: email,
         url,
@@ -68,7 +62,6 @@ const authOptions: NextAuthOptions = {
         const { host } = new URL(url);
         const transport = createTransport(provider.server);
 
-        // Отправляем письмо с помощью nodemailer
         await transport.sendMail({
           to: email,
           from: provider.from,
@@ -91,14 +84,13 @@ const authOptions: NextAuthOptions = {
         });
       },
     }),
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   ],
   pages: {
     signIn: '/login',
-    verifyRequest: '/login/verify-request',
     error: '/login/error',
   },
   session: {
+    // Эта сессия теперь используется только для EmailProvider, наша основная - JWT в cookie
     strategy: 'database',
   },
 };

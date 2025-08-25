@@ -42,11 +42,10 @@ function VerifyCodePage() {
     setIsLoading(true);
     setError(null);
     try {
+      // Просто вызываем стандартный endpoint next-auth для отправки письма
       await fetch('/api/auth/signin/email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           email,
           callbackUrl: '/profile',
@@ -81,9 +80,8 @@ function VerifyCodePage() {
         body: JSON.stringify({ email, token: code }),
       });
 
-      const data = await verifyRes.json();
-
       if (!verifyRes.ok) {
+        const data = await verifyRes.json();
         setError(data.error || 'Произошла ошибка');
         if (data.attemptsLeft !== undefined) {
           setAttemptsLeft(data.attemptsLeft);

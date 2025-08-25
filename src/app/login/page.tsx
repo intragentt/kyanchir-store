@@ -38,22 +38,17 @@ export default function LoginPage() {
     }
 
     try {
-      // Мы используем стандартный `fetch`, чтобы имитировать отправку формы
-      // next-auth/react `signIn` здесь не так удобен для этой задачи
       const res = await fetch('/api/auth/signin/email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           email: identifier,
           callbackUrl: '/profile',
-          json: 'true', // Важный параметр, чтобы ответ был в JSON
+          json: 'true',
         }),
       });
 
       if (res.ok) {
-        // Всегда перенаправляем на страницу ввода кода
         router.push(
           `/login/verify-code?email=${encodeURIComponent(identifier)}`,
         );
@@ -132,7 +127,6 @@ export default function LoginPage() {
                 </button>
               )}
             </div>
-
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
@@ -149,7 +143,6 @@ export default function LoginPage() {
                 </label>
               </div>
             </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -161,7 +154,6 @@ export default function LoginPage() {
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
             )}
           </form>
-
           <div className="font-body text-center">
             <a
               href="#"
