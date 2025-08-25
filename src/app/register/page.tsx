@@ -37,16 +37,16 @@ export default function RegisterPage() {
       return;
     }
 
-    // Логика та же, что и при входе: next-auth сам создаст пользователя, если его нет
     try {
       const res = await signIn('email', {
         email,
         redirect: false,
-        callbackUrl: '/profile',
       });
 
       if (res?.ok && !res.error) {
-        router.push('/login/verify-request');
+        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+        router.push(`/login/verify-code?email=${encodeURIComponent(email)}`);
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       } else {
         setError(res?.error || 'Не удалось завершить регистрацию.');
       }

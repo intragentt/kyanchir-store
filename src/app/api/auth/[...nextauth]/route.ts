@@ -4,10 +4,9 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import EmailProvider from 'next-auth/providers/email';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { createTransport } from 'nodemailer'; // Импортируем nodemailer
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем `export`, делая эту константу локальной ---
 const authOptions: NextAuthOptions = {
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -40,6 +39,8 @@ const authOptions: NextAuthOptions = {
         return user || null;
       },
     }),
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
     EmailProvider({
       server: {
         host: process.env.EMAIL_SERVER_HOST,
@@ -50,7 +51,47 @@ const authOptions: NextAuthOptions = {
         },
       },
       from: process.env.EMAIL_FROM,
+
+      // Генерируем шестизначный код вместо стандартного токена
+      generateVerificationToken: async () => {
+        const token = Math.floor(100000 + Math.random() * 900000).toString();
+        return token;
+      },
+
+      // Создаем и отправляем наше кастомное письмо
+      sendVerificationRequest: async ({
+        identifier: email,
+        url,
+        token,
+        provider,
+      }) => {
+        const { host } = new URL(url);
+        const transport = createTransport(provider.server);
+
+        // Отправляем письмо с помощью nodemailer
+        await transport.sendMail({
+          to: email,
+          from: provider.from,
+          subject: `Ваш код для входа в Kyanchir`,
+          html: `
+            <div style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">
+              <h2 style="color: #333;">Ваш код для входа</h2>
+              <p style="color: #555; font-size: 16px;">Используйте этот код для завершения авторизации на сайте ${host}.</p>
+              <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; padding: 15px; background-color: #f2f2f2; border-radius: 8px;">
+                ${token}
+              </div>
+              <p style="color: #888; font-size: 14px;">Если вы не запрашивали этот код, просто проигнорируйте это письмо.</p>
+              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+              <p style="font-size: 14px;">Или войдите по ссылке:</p>
+              <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #6B80C5; color: white; text-decoration: none; border-radius: 5px;">
+                Войти в Kyanchir
+              </a>
+            </div>
+          `,
+        });
+      },
     }),
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   ],
   pages: {
     signIn: '/login',
@@ -58,8 +99,6 @@ const authOptions: NextAuthOptions = {
     error: '/login/error',
   },
   session: {
-    // В next-auth v4, при использовании адаптера, стратегия по умолчанию 'database',
-    // 'jwt' нужен только если вы хотите кастомизировать токен. Для нашей схемы лучше 'database'.
     strategy: 'database',
   },
 };

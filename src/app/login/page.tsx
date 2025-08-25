@@ -20,14 +20,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null); // Для сообщений об успехе
   const router = useRouter();
 
   const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setMessage(null);
 
     if (!identifier) {
       setError('Поле Email не может быть пустым.');
@@ -41,29 +39,20 @@ export default function LoginPage() {
     }
 
     try {
-      // --- НАШ "ШПИОНСКИЙ" ЗАПРОС ---
-      const checkUserRes = await fetch('/api/auth/check-user', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: identifier }),
-      });
-      const { exists } = await checkUserRes.json();
-
       const res = await signIn('email', {
         email: identifier,
         redirect: false,
       });
 
       if (res?.ok && !res.error) {
-        if (exists) {
-          // Если пользователь существует, показываем сообщение прямо здесь
-          setMessage('Ссылка для входа отправлена на вашу почту.');
-        } else {
-          // Если пользователь новый, перенаправляем на страницу приветствия
-          router.push('/login/verify-request');
-        }
+        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+        // Всегда перенаправляем на страницу ввода кода, передавая email в параметрах
+        router.push(
+          `/login/verify-code?email=${encodeURIComponent(identifier)}`,
+        );
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       } else {
-        setError(res?.error || 'Не удалось отправить ссылку для входа.');
+        setError(res?.error || 'Не удалось отправить код для входа.');
       }
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
@@ -89,91 +78,84 @@ export default function LoginPage() {
             </div>
           </Link>
 
-          {message ? (
-            <div className="font-body text-center text-zinc-800">
-              <p className="text-lg font-semibold">Проверьте вашу почту</p>
-              <p className="mt-2 text-sm">{message}</p>
-            </div>
-          ) : (
-            <form
-              className="font-body space-y-4 text-left"
-              onSubmit={handleLoginSubmit}
-              noValidate
-            >
-              <div className="relative">
-                <input
-                  id="identifier"
-                  name="identifier"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-                  placeholder="Email"
-                />
-                {identifier && (
-                  <button
-                    type="button"
-                    onClick={() => setIdentifier('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                    aria-label="Очистить поле Email"
-                  >
-                    <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-                  placeholder="Пароль"
-                />
-                {password && (
-                  <button
-                    type="button"
-                    onClick={() => setPassword('')}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                    aria-label="Очистить поле Пароль"
-                  >
-                    <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
-                  </button>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <label
-                    htmlFor="remember-me"
-                    className="ml-2 block text-sm text-zinc-700"
-                  >
-                    Запомнить меня
-                  </label>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
-              >
-                {isLoading ? 'Входим...' : 'Войти'}
-              </button>
-              {error && (
-                <p className="pt-2 text-center text-xs text-red-600">{error}</p>
+          <form
+            className="font-body space-y-4 text-left"
+            onSubmit={handleLoginSubmit}
+            noValidate
+          >
+            <div className="relative">
+              <input
+                id="identifier"
+                name="identifier"
+                type="email"
+                autoComplete="email"
+                required
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                placeholder="Email"
+              />
+              {identifier && (
+                <button
+                  type="button"
+                  onClick={() => setIdentifier('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  aria-label="Очистить поле Email"
+                >
+                  <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                </button>
               )}
-            </form>
-          )}
+            </div>
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                placeholder="Пароль"
+              />
+              {password && (
+                <button
+                  type="button"
+                  onClick={() => setPassword('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  aria-label="Очистить поле Пароль"
+                >
+                  <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  id="remember-me"
+                  name="remember-me"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label
+                  htmlFor="remember-me"
+                  className="ml-2 block text-sm text-zinc-700"
+                >
+                  Запомнить меня
+                </label>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+            >
+              {isLoading ? 'Отправка...' : 'Войти'}
+            </button>
+            {error && (
+              <p className="pt-2 text-center text-xs text-red-600">{error}</p>
+            )}
+          </form>
 
           <div className="font-body text-center">
             <a
