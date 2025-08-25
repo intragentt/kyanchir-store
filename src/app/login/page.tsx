@@ -7,9 +7,7 @@ import { useRouter } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
 import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-import ClearIcon from '@/components/icons/ClearIcon'; // Импортируем наш новый "инструмент"
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import ClearIcon from '@/components/icons/ClearIcon';
 
 const validateEmail = (email: string) => {
   const re =
@@ -81,7 +79,6 @@ export default function LoginPage() {
             onSubmit={handleLoginSubmit}
             noValidate
           >
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
             <div className="relative">
               <input
                 id="identifier"
@@ -126,7 +123,6 @@ export default function LoginPage() {
                 </button>
               )}
             </div>
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -185,13 +181,14 @@ export default function LoginPage() {
 
         <div className="font-body mt-6 rounded-lg border border-zinc-200 bg-white p-6 text-center text-sm">
           <p className="text-zinc-600">
-            Нет аккаунта?{' '}
-            <a
-              href="#"
+            Нет аккаунта? {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            <Link
+              href="/register"
               className="hover:text-opacity-80 font-semibold text-[#6B80C5]"
             >
               Регистрация
-            </a>
+            </Link>
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </p>
         </div>
       </div>
