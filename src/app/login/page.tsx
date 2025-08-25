@@ -5,15 +5,12 @@ import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import PageContainer from '@/components/layout/PageContainer';
-// --- НАЧАЛО ИЗМЕНЕНИЙ (TypeScript) ---
-// Исправляем импорт на 'default'
 import Logo from '@/components/icons/Logo';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
-    width="24"
-    height="24"
+    width="22"
+    height="22"
     viewBox="0 0 24 24"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
@@ -37,20 +34,22 @@ const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
+  const [identifier, setIdentifier] = useState(''); // Поле для email/username/phone
+  const [password, setPassword] = useState(''); // Поле для пароля (пока визуальное)
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email) return;
-    setIsEmailSubmitting(true);
+    if (!identifier) return;
+    setIsLoading(true);
     setError(null);
 
+    // ВРЕМЕННАЯ ЛОГИКА: Используем identifier как email для беспарольного входа
     try {
       const res = await signIn('email', {
-        email,
+        email: identifier,
         redirect: false,
         callbackUrl: '/profile',
       });
@@ -58,56 +57,91 @@ export default function LoginPage() {
       if (res?.ok && !res.error) {
         router.push('/login/verify-request');
       } else {
-        setError(res?.error || 'Не удалось отправить ссылку.');
+        setError(res?.error || 'Не удалось отправить ссылку для входа.');
       }
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
     } finally {
-      setIsEmailSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   const redirectToTelegramBot = () => {
-    window.location.href = 'https://t.me/kyanchir_bot'; // Указываем реальное имя бота
+    window.location.href = 'https://t.me/kyanchir_bot';
   };
 
   return (
     <main>
       <PageContainer className="flex min-h-[80vh] items-center justify-center bg-zinc-50 py-12">
         <div className="w-full max-w-sm">
-          <div className="space-y-6 rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
+          <div className="space-y-5 rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto h-12 w-auto text-indigo-600">
               <Logo />
             </div>
 
-            <form className="space-y-4" onSubmit={handleEmailSubmit}>
+            <form className="space-y-4 text-left" onSubmit={handleLoginSubmit}>
               <div>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
+                  id="identifier"
+                  name="identifier"
+                  type="text"
                   autoComplete="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-center text-sm placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-                  placeholder="Введите ваш email"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-sm placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                  placeholder="Email, телефон или имя пользователя"
+                />
+              </div>
+              <div>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-sm placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                  placeholder="Пароль"
                 />
               </div>
 
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ (Tailwind) --- */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <label
+                    htmlFor="remember-me"
+                    className="ml-2 block text-xs text-zinc-700"
+                  >
+                    Сохранить вход
+                  </label>
+                </div>
+              </div>
+
               <button
                 type="submit"
-                disabled={isEmailSubmitting}
+                disabled={isLoading}
                 className="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
               >
-                {isEmailSubmitting
-                  ? 'Отправка...'
-                  : 'Получить ссылку для входа'}
+                {isLoading ? 'Входим...' : 'Войти'}
               </button>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-              {error && <p className="text-xs text-red-600">{error}</p>}
+              {error && (
+                <p className="pt-2 text-center text-xs text-red-600">{error}</p>
+              )}
             </form>
+
+            <div className="text-center">
+              <a
+                href="#"
+                className="text-xs font-semibold text-indigo-600 hover:text-indigo-500"
+              >
+                Забыли пароль?
+              </a>
+            </div>
 
             <div className="flex items-center gap-x-3">
               <div className="h-px w-full bg-zinc-200" />
@@ -115,23 +149,24 @@ export default function LoginPage() {
               <div className="h-px w-full bg-zinc-200" />
             </div>
 
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ (Tailwind) --- */}
             <button
               onClick={redirectToTelegramBot}
-              className="flex w-full items-center justify-center gap-x-2 rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500"
+              className="flex w-full items-center justify-center gap-x-2 rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
             >
-              <TelegramIcon />
+              <TelegramIcon className="text-sky-500" />
               Войти через Telegram
             </button>
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
 
           <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6 text-center text-sm">
             <p className="text-zinc-600">
               Нет аккаунта?{' '}
-              <span className="font-semibold text-indigo-600">
-                Вход и регистрация происходят автоматически.
-              </span>
+              <a
+                href="#"
+                className="font-semibold text-indigo-600 hover:text-indigo-500"
+              >
+                Регистрация
+              </a>
             </p>
           </div>
         </div>
