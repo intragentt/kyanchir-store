@@ -12,21 +12,28 @@ const authOptions: NextAuthOptions = {
     CredentialsProvider({
       id: 'telegram-credentials',
       name: 'Telegram Login',
-      credentials: { token: { label: 'Login Token', type: 'text' } },
+      credentials: {
+        token: { label: 'Login Token', type: 'text' },
+      },
       async authorize(credentials) {
         if (!credentials?.token) return null;
+
         const loginToken = await prisma.loginToken.findUnique({
           where: { token: credentials.token },
         });
+
         if (
           !loginToken ||
           !loginToken.userId ||
           loginToken.expires < new Date()
-        )
+        ) {
           return null;
+        }
+
         const user = await prisma.user.findUnique({
           where: { id: loginToken.userId },
         });
+
         return user || null;
       },
     }),
@@ -41,32 +48,23 @@ const authOptions: NextAuthOptions = {
         },
       },
       from: process.env.EMAIL_FROM,
+
       generateVerificationToken: async () => {
         return Math.floor(100000 + Math.random() * 900000).toString();
       },
+
       sendVerificationRequest: async ({
         identifier: email,
         url,
         token,
         provider,
       }) => {
-        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-        // Создаем транспорт напрямую с "железобетонными" данными из process.env
-        const transport = createTransport({
-          host: process.env.EMAIL_SERVER_HOST,
-          port: Number(process.env.EMAIL_SERVER_PORT),
-          auth: {
-            user: process.env.EMAIL_SERVER_USER,
-            pass: process.env.EMAIL_SERVER_PASSWORD,
-          },
-        });
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
         const { host } = new URL(url);
+        const transport = createTransport(provider.server);
 
         await transport.sendMail({
           to: email,
-          from: provider.from, // "From" оставляем из провайдера, он отформатирован правильно
+          from: provider.from,
           subject: `Ваш код для входа в Kyanchir`,
           html: `
             <div style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">
@@ -92,6 +90,7 @@ const authOptions: NextAuthOptions = {
     error: '/login/error',
   },
   session: {
+    // Эта сессия теперь используется только для EmailProvider, наша основная - JWT в cookie
     strategy: 'database',
   },
 };
