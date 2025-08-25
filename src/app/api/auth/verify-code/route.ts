@@ -17,63 +17,64 @@ export async function POST(req: Request) {
       );
     }
 
-    // Ищем токен, который соответствует email и еще не истек
-    const verificationToken = await prisma.verificationToken.findFirst({
-      where: {
-        identifier: email,
-        expires: { gte: new Date() },
-      },
+    // --- НАЧАЛО ИСПРАВЛЕНИЙ ---
+    // Ищем токен по его уникальному значению. Он должен быть один.
+    const verificationToken = await prisma.verificationToken.findUnique({
+      where: { token },
     });
 
-    // Если токен для этого email не найден или уже истек
+    // Если токен вообще не найден
     if (!verificationToken) {
       return NextResponse.json(
-        { error: 'Код устарел. Запросите новый.', attemptsLeft: 0 },
+        { error: 'Неверный код.', attemptsLeft: 0 },
         { status: 401 },
       );
     }
 
-    // Если код не совпадает
-    if (verificationToken.token !== token) {
-      const attempts = verificationToken.attempts + 1;
-      await prisma.verificationToken.update({
-        where: { token: verificationToken.token },
-        data: { attempts },
-      });
-
-      const attemptsLeft = MAX_ATTEMPTS - attempts;
-      if (attemptsLeft <= 0) {
-        // Удаляем токен, если попытки исчерпаны
-        await prisma.verificationToken.delete({
-          where: { token: verificationToken.token },
-        });
-        return NextResponse.json(
-          { error: 'Попытки исчерпаны. Запросите новый код.', attemptsLeft: 0 },
-          { status: 401 },
-        );
-      }
-
+    // Если токен найден, но он для другого email или просрочен
+    if (
+      verificationToken.identifier !== email ||
+      verificationToken.expires < new Date()
+    ) {
       return NextResponse.json(
         {
-          error: `Неверный код. Осталось попыток: ${attemptsLeft}`,
-          attemptsLeft,
+          error: 'Код устарел или недействителен. Запросите новый.',
+          attemptsLeft: 0,
         },
         { status: 401 },
       );
     }
 
-    // --- УСПЕШНАЯ ВЕРИФИКАЦИЯ ---
+    // Если попытки исчерпаны
+    if (verificationToken.attempts >= MAX_ATTEMPTS) {
+      await prisma.verificationToken.delete({ where: { token } });
+      return NextResponse.json(
+        {
+          error: 'Превышено количество попыток. Запросите новый код.',
+          attemptsLeft: 0,
+        },
+        { status: 401 },
+      );
+    }
+    // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
 
+    // --- УСПЕШНАЯ ВЕРИФИКАЦИЯ ---
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
     if (!user) {
+      // Такого быть не должно, т.к. next-auth создает юзера при отправке письма, но проверим
       return NextResponse.json(
         { error: 'Пользователь не найден.' },
         { status: 404 },
       );
     }
+
+    // Удаляем использованный токен
+    await prisma.verificationToken.delete({
+      where: { token: verificationToken.token },
+    });
 
     // Создаем долгосрочную сессию
     const sessionPayload = {
@@ -82,11 +83,6 @@ export async function POST(req: Request) {
       email: user.email,
     };
     const session = await encrypt(sessionPayload);
-
-    // Удаляем использованный токен
-    await prisma.verificationToken.delete({
-      where: { token: verificationToken.token },
-    });
 
     const response = NextResponse.json({ success: true });
     response.cookies.set('session', session, {

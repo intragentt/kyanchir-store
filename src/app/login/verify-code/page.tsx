@@ -42,7 +42,6 @@ function VerifyCodePage() {
     setIsLoading(true);
     setError(null);
     try {
-      // signIn с email провайдером просто отправит новый токен
       await fetch('/api/auth/signin/email', {
         method: 'POST',
         headers: {
@@ -55,8 +54,8 @@ function VerifyCodePage() {
         }),
       });
       setCode('');
-      setAttemptsLeft(5);
-      setError('Мы отправили новый код на вашу почту.'); // Используем поле error для инфо-сообщений
+      setAttemptsLeft(5); // Сбрасываем счетчик на фронтенде
+      setError('Мы отправили новый код на вашу почту.');
     } catch (err) {
       setError('Не удалось отправить новый код.');
     } finally {
@@ -92,7 +91,7 @@ function VerifyCodePage() {
         setCode('');
         inputRef.current?.focus();
       } else {
-        // Если код верный, перенаправляем на профиль
+        // Успешный вход, перенаправляем в профиль
         router.push('/profile');
       }
     } catch (err) {
