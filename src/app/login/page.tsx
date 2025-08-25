@@ -7,10 +7,7 @@ import { useRouter } from 'next/navigation';
 import PageContainer from '@/components/layout/PageContainer';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Заменяем старую иконку на нашу новую, фирменную
 import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
@@ -66,6 +63,7 @@ export default function LoginPage() {
             onSubmit={handleLoginSubmit}
           >
             <div>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ (Зум) --- */}
               <input
                 id="identifier"
                 name="identifier"
@@ -74,20 +72,23 @@ export default function LoginPage() {
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-sm placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
                 placeholder="Email, телефон или имя пользователя"
               />
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
             <div>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ (Зум) --- */}
               <input
                 id="password"
                 name="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-sm placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
                 placeholder="Пароль"
               />
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
 
             <div className="flex items-center justify-between">
@@ -140,9 +141,7 @@ export default function LoginPage() {
             onClick={redirectToTelegramBot}
             className="font-body flex w-full items-center justify-center gap-x-2 rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
           >
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
             <TelegramOfficialIcon className="h-6 w-6" />
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             Войти через Telegram
           </button>
         </div>
