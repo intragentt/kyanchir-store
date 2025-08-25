@@ -1,45 +1,35 @@
 // Местоположение: src/app/login/verify-request/page.tsx
-// Метафора: "Приемная", где пользователь ожидает письмо-пропуск.
+import EmailIcon from '@/components/icons/EmailIcon';
+import Link from 'next/link';
 
-import PageContainer from '@/components/layout/PageContainer';
-import React from 'react';
-
-// Простая иконка конверта для наглядности.
-const MailIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    strokeWidth={1.5}
-    stroke="currentColor"
-    {...props}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
-    />
-  </svg>
-);
-
-// Это простой серверный компонент, так как здесь нет никакой интерактивности.
 export default function VerifyRequestPage() {
   return (
-    <main>
-      <PageContainer className="flex min-h-[70vh] items-center justify-center py-12">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <div className="mx-auto h-12 w-12 text-indigo-600">
-            <MailIcon />
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-12">
+      <div className="w-full max-w-md text-center">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100">
+          <EmailIcon className="h-8 w-8 text-indigo-600" />
+        </div>
+        <div className="mt-6">
+          <div className="font-heading text-3xl font-bold tracking-tight text-zinc-900">
+            Добро пожаловать!
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900">
-            Проверьте вашу почту
-          </h2>
-          <p className="text-gray-600">
-            Мы отправили ссылку для входа на ваш email адрес. Пожалуйста,
-            откройте письмо и перейдите по ссылке, чтобы завершить авторизацию.
+          <p className="font-body mt-4 text-base text-zinc-600">
+            Мы отправили ссылку для подтверждения на ваш email. Это необходимо
+            сделать в течение 24 часов, чтобы активировать аккаунт.
+          </p>
+          <p className="font-body mt-2 text-base text-zinc-600">
+            А пока — можно начать знакомство с магазином!
           </p>
         </div>
-      </PageContainer>
-    </main>
+        <div className="mt-8">
+          <Link
+            href="/"
+            className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-8 py-3 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          >
+            За покупками
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
