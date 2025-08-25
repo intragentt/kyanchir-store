@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import PageContainer from '@/components/layout/PageContainer';
 
 const TelegramIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -27,20 +27,35 @@ export default function LoginPage() {
   const [isEmailSubmitting, setIsEmailSubmitting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('Вход / Регистрация');
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
-    // Проверяем, есть ли в URL "пропуск", выданный ботом
     const token = searchParams.get('token');
     if (token) {
       setStatusMessage('Автоматический вход...');
-      // Если есть, немедленно предъявляем его нашему "Пропускному Пункту"
-      signIn('telegram-credentials', {
-        token,
-        callbackUrl: '/profile',
-        redirect: true, // Убеждаемся, что редирект произойдет
-      });
+
+      const exchangeTokenForSession = async () => {
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token }),
+          });
+
+          if (response.ok) {
+            router.push('/profile');
+          } else {
+            setStatusMessage('Ссылка для входа недействительна или устарела');
+          }
+        } catch (error) {
+          console.error('Failed to exchange token', error);
+          setStatusMessage('Произошла ошибка при входе');
+        }
+      };
+
+      exchangeTokenForSession();
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const handleEmailSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -61,9 +76,7 @@ export default function LoginPage() {
           </div>
 
           <form className="mt-8 space-y-6" onSubmit={handleEmailSubmit}>
-            <p className="text-center text-sm text-gray-600">
-              Через email
-            </p>
+            <p className="text-center text-sm text-gray-600">Через email</p>
             <div>
               <input
                 id="email"
@@ -73,20 +86,18 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+                className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
                 placeholder="you@example.com"
               />
             </div>
             <button
               type="submit"
               disabled={isEmailSubmitting}
-              className="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+              className="group relative flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
             >
               {isEmailSubmitting ? 'Отправка...' : 'Отправить ссылку'}
             </button>
           </form>
-
-          {/* Мы убрали кнопку Telegram, так как флоу теперь начинается в боте. */}
         </div>
       </PageContainer>
     </main>

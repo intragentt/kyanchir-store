@@ -1,19 +1,29 @@
+// Местоположение: src/app/profile/page.tsx
 import PageContainer from '@/components/layout/PageContainer';
-import { getServerSession } from 'next-auth/next';
+import SignOutButton from './SignOutButton';
+import { cookies } from 'next/headers';
+import { decrypt } from '@/lib/session';
 import { redirect } from 'next/navigation';
-import { signOut } from 'next-auth/react';
-import SignOutButton from './SignOutButton'; // Мы вынесем кнопку в клиентский компонент
+import { JWTPayload } from 'jose';
+
+interface UserPayload extends JWTPayload {
+  userId?: string;
+  name?: string | null;
+  email?: string | null;
+}
 
 export default async function ProfilePage() {
-  // 1. Получаем "пропуск" пользователя на сервере.
-  const session = await getServerSession();
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // Дожидаемся выполнения Promise от cookies() ПЕРЕД вызовом .get()
+  const sessionCookie = (await cookies()).get('session')?.value;
 
-  // 2. "Фейс-контроль": если "пропуска" нет, отправляем на страницу входа.
-  if (!session || !session.user) {
+  const user = (await decrypt(sessionCookie)) as UserPayload | null;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  if (!user) {
     redirect('/login');
   }
 
-  // 3. Если пользователь на месте, показываем его данные.
   return (
     <main>
       <PageContainer className="py-12">
@@ -23,7 +33,7 @@ export default async function ProfilePage() {
               Личный кабинет
             </h1>
             <p className="mt-2 text-lg text-gray-600">
-              Добро пожаловать, {session.user.name || 'Пользователь'}!
+              Добро пожаловать, {user.name || 'Пользователь'}!
             </p>
           </div>
 
@@ -31,18 +41,16 @@ export default async function ProfilePage() {
             <div className="space-y-4">
               <div>
                 <h3 className="font-semibold">Имя</h3>
-                <p>{session.user.name || 'Не указано'}</p>
+                <p>{user.name || 'Не указано'}</p>
               </div>
               <div>
                 <h3 className="font-semibold">Email</h3>
-                <p>{session.user.email || 'Не указан'}</p>
+                <p>{user.email || 'Не указан'}</p>
               </div>
-              {/* Здесь в будущем появятся K-Coins, история заказов и т.д. */}
             </div>
           </div>
 
           <div className="mt-6">
-            {/* 4. Кнопка "Выйти", вынесенная в клиентский компонент */}
             <SignOutButton />
           </div>
         </div>
