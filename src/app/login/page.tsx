@@ -46,14 +46,14 @@ export default function LoginPage() {
   };
 
   return (
-    <PageContainer className="flex min-h-screen items-center justify-center bg-zinc-50 py-12">
+    <PageContainer className="flex min-h-screen items-start justify-center bg-zinc-50 pt-24 sm:pt-32">
       <div className="w-full max-w-sm">
         <div className="space-y-5 rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
           <Link
             href="/"
             className="mx-auto flex h-12 w-auto justify-center text-[#6B80C5] transition-transform hover:scale-105"
           >
-            <div className="scale-125 transform">
+            <div className="mt-2 scale-125 transform">
               <Logo />
             </div>
           </Link>
@@ -63,7 +63,6 @@ export default function LoginPage() {
             onSubmit={handleLoginSubmit}
           >
             <div>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ (Зум) --- */}
               <input
                 id="identifier"
                 name="identifier"
@@ -73,12 +72,10 @@ export default function LoginPage() {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-                placeholder="Email, телефон или имя пользователя"
+                placeholder="Email, телефон или юзернейм"
               />
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
             <div>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ (Зум) --- */}
               <input
                 id="password"
                 name="password"
@@ -88,7 +85,6 @@ export default function LoginPage() {
                 className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
                 placeholder="Пароль"
               />
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
 
             <div className="flex items-center justify-between">
