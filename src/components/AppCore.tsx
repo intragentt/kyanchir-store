@@ -19,6 +19,8 @@ import NotificationManager from '@/components/NotificationManager';
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
+  // --- НОВОЕ ПРАВИЛО: Определяем, находимся ли мы на странице входа ---
+  const isAuthPage = pathname.startsWith('/login');
 
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
   const [headerHeight, setHeaderHeight] = useState(0);
@@ -35,21 +37,11 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
-
-      // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем правильные, "узаконенные" команды ---
       tg.expand();
-
-      // Используем кодовое имя 'bg_color', чтобы вернуть стандартную белую шапку
       tg.setHeaderColor('bg_color');
-
-      // Показываем стандартную кнопку "Закрыть"
       tg.BackButton.show();
-
-      // Обучаем ее, что делать при нажатии
       tg.BackButton.onClick(() => tg.close());
-
       tg.ready();
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     }
   }, []);
 
@@ -118,6 +110,12 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     setIsMenuOpen,
   };
 
+  // --- НОВЫЙ РЕНДЕРИНГ: Если это страница входа, показываем ТОЛЬКО ее содержимое ---
+  if (isAuthPage) {
+    return <main>{children}</main>;
+  }
+
+  // В противном случае, собираем полный интерфейс
   return (
     <StickyHeaderContext.Provider value={contextValue}>
       <FooterProvider>
