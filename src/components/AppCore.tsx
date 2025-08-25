@@ -19,7 +19,6 @@ import NotificationManager from '@/components/NotificationManager';
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  // --- НОВОЕ ПРАВИЛО: Определяем, находимся ли мы на странице входа ---
   const isAuthPage = pathname.startsWith('/login');
 
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
@@ -44,6 +43,26 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       tg.ready();
     }
   }, []);
+
+  // --- НОВЫЙ БЛОК: "Сторож", блокирующий жест масштабирования ---
+  useEffect(() => {
+    const preventGesture = (e: Event) => {
+      e.preventDefault();
+    };
+
+    // Вешаем "замки" на события, отвечающие за pinch-to-zoom в Safari
+    document.addEventListener('gesturestart', preventGesture);
+    document.addEventListener('gesturechange', preventGesture);
+    document.addEventListener('gestureend', preventGesture);
+
+    // Когда компонент будет убран, снимаем "замки", чтобы не было утечек памяти
+    return () => {
+      document.removeEventListener('gesturestart', preventGesture);
+      document.removeEventListener('gesturechange', preventGesture);
+      document.removeEventListener('gestureend', preventGesture);
+    };
+  }, []);
+  // --- КОНЕЦ НОВОГО БЛОКА ---
 
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
@@ -110,12 +129,10 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     setIsMenuOpen,
   };
 
-  // --- НОВЫЙ РЕНДЕРИНГ: Если это страница входа, показываем ТОЛЬКО ее содержимое ---
   if (isAuthPage) {
     return <main>{children}</main>;
   }
 
-  // В противном случае, собираем полный интерфейс
   return (
     <StickyHeaderContext.Provider value={contextValue}>
       <FooterProvider>
