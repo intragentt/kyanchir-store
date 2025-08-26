@@ -1,5 +1,6 @@
 // Местоположение: src/app/api/auth/[...nextauth]/route.ts
 import NextAuth, { NextAuthOptions } from 'next-auth';
+// ... (остальные импорты)
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import EmailProvider from 'next-auth/providers/email';
@@ -7,8 +8,8 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Добавляем `export`, чтобы сделать правила доступными для других файлов
-export const authOptions: NextAuthOptions = {
+// Убираем `export`, делая константу снова локальной
+const authOptions: NextAuthOptions = {
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   adapter: PrismaAdapter(prisma),
   providers: [

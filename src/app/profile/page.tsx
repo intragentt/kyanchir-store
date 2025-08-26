@@ -1,22 +1,24 @@
 // Местоположение: src/app/profile/page.tsx
 import PageContainer from '@/components/layout/PageContainer';
 import SignOutButton from './SignOutButton';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Импортируем наши "правила"
-import { redirect } from 'next/navigation';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// У нас больше нет прямого экспорта `authOptions`, но `next-auth` все равно найдет его
+// по стандартному пути. Для большей надежности, можно было бы передать authOptions
+// сюда, но getServerSession достаточно умен, чтобы найти его сам.
+// Для чистоты кода, мы уберем импорт authOptions, так как он больше не экспортируется.
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import { redirect } from 'next/navigation';
 
 export default async function ProfilePage() {
   // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Получаем сессию официальным способом
-  const session = await getServerSession(authOptions);
+  // getServerSession сам найдет authOptions в ...nextauth/route.ts
+  const session = await getServerSession();
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // "Фейс-контроль": middleware уже должен был это сделать, но это дополнительная защита
   if (!session?.user) {
     redirect('/login');
   }
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
@@ -27,7 +29,7 @@ export default async function ProfilePage() {
               Личный кабинет
             </h1>
             <p className="mt-2 text-lg text-gray-600">
-              Добро пожаловать, {session.user.name || 'Пользователь'}!
+              Добро пожаловать, {session.user.name || session.user.email}!
             </p>
           </div>
 
