@@ -1,11 +1,10 @@
 // Местоположение: src/components/FloatingMenuOverlay.tsx
 'use client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// ИСПРАВЛЕНО: Устранена синтаксическая ошибка в импортах.
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useSession, signOut } from 'next-auth/react';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { useAppStore } from '@/store/useAppStore'; // Импортируем "сейф"
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import BurgerIcon from './icons/BurgerIcon';
 import SearchIcon from './icons/SearchIcon';
@@ -21,14 +20,15 @@ export default function FloatingMenuOverlay({
   onClose,
 }: FloatingMenuOverlayProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const { data: session, status } = useSession();
-  const isAuthenticated = status === 'authenticated';
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  const user = useAppStore((state) => state.user);
+  const isAuthenticated = !!user;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!isOpen) {
     return null;
   }
 
-  // Вся остальная JSX-разметка остается без изменений.
   return (
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col bg-white p-6 duration-300">
       {isHelpOpen && (
@@ -90,15 +90,13 @@ export default function FloatingMenuOverlay({
             >
               Личный кабинет
             </Link>
-            <p className="truncate text-sm text-gray-500">
-              {session?.user?.email}
-            </p>
-            <button
-              onClick={() => signOut()}
+            <p className="truncate text-sm text-gray-500">{user?.email}</p>
+            <a
+              href="/api/auth/logout"
               className="font-body text-left text-base font-medium text-red-600 transition-colors hover:text-red-800"
             >
               Выход
-            </button>
+            </a>
           </div>
         ) : (
           <Link

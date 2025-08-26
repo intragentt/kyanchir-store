@@ -1,20 +1,23 @@
 // Местоположение: src/components/ClientInteractivity.tsx
-
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import FloatingLogoButton from './FloatingLogoButton';
 import FloatingMenuOverlay from './FloatingMenuOverlay';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Подключаем "мозговой центр" ---
 import { useFooter } from '@/context/FooterContext';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { useAppStore } from '@/store/useAppStore'; // Импортируем "сейф"
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function ClientInteractivity() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const scrollYRef = useRef(0);
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Слушаем" команды от футера ---
-  const { footerHeight, isFooterVisible } = useFooter();
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // Получаем состояние и функцию управления меню из глобального "сейфа"
+  const isMenuOpen = useAppStore((state) => state.isFloatingMenuOpen);
+  const setMenuOpen = useAppStore((state) => state.setFloatingMenuOpen);
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  const scrollYRef = useRef(0);
+  const { footerHeight, isFooterVisible } = useFooter();
 
   useEffect(() => {
     if (isMenuOpen) {
@@ -28,7 +31,6 @@ export default function ClientInteractivity() {
       document.body.style.top = '';
       window.scrollTo(0, scrollYRef.current);
     }
-
     return () => {
       document.body.style.position = '';
       document.body.style.width = '';
@@ -36,16 +38,17 @@ export default function ClientInteractivity() {
     };
   }, [isMenuOpen]);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // Простая функция-переключатель
   const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+    setMenuOpen(!isMenuOpen);
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Вычисляем динамическую позицию для кнопки "Закрыть" ---
-  const BASE_CLOSE_BUTTON_OFFSET_PX = 96; // 6rem в пикселях (6 * 16px)
+  const BASE_CLOSE_BUTTON_OFFSET_PX = 96;
   const currentFooterHeight = isFooterVisible ? footerHeight : 0;
   const closeButtonBottomPosition =
     BASE_CLOSE_BUTTON_OFFSET_PX + currentFooterHeight;
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <>
@@ -54,10 +57,8 @@ export default function ClientInteractivity() {
       {isMenuOpen && (
         <button
           onClick={toggleMenu}
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем статический класс 'bottom' и применяем динамический стиль ---
           style={{ bottom: `${closeButtonBottomPosition}px` }}
           className="animate-in fade-in zoom-in-75 fixed right-[calc(7rem+env(safe-area-inset-right))] z-[110] flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#E6E7EE] bg-white/70 backdrop-blur-sm transition-[bottom] duration-300"
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           aria-label="Закрыть меню"
         >
           <svg
@@ -77,7 +78,13 @@ export default function ClientInteractivity() {
         </button>
       )}
 
-      <FloatingMenuOverlay isOpen={isMenuOpen} onClose={toggleMenu} />
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+      {/* Передаем правильные пропсы */}
+      <FloatingMenuOverlay
+        isOpen={isMenuOpen}
+        onClose={() => setMenuOpen(false)}
+      />
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </>
   );
 }

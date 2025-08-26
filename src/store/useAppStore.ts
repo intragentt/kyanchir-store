@@ -1,6 +1,6 @@
 // Местоположение: src/store/useAppStore.ts
 import { create } from 'zustand';
-import { UserPayload } from '@/app/layout'; // Импортируем наш тип пользователя
+import { UserPayload } from '@/app/layout';
 
 interface NotificationState {
   isVisible: boolean;
@@ -21,10 +21,13 @@ interface AppState {
   ) => void;
   hideNotification: () => void;
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Добавляем новые "ячейки" для пользователя
   user: UserPayload | null;
   setUser: (user: UserPayload | null) => void;
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // Добавляем состояние и функцию для управления глобальным меню
+  isFloatingMenuOpen: boolean;
+  setFloatingMenuOpen: (isOpen: boolean) => void;
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
@@ -42,15 +45,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   showNotification: (message, type, Icon) => {
-    if (notificationTimeout) {
-      clearTimeout(notificationTimeout);
-    }
-    set({
-      notification: { isVisible: true, message, type, Icon },
-    });
-    notificationTimeout = setTimeout(() => {
-      get().hideNotification();
-    }, 3000);
+    if (notificationTimeout) clearTimeout(notificationTimeout);
+    set({ notification: { isVisible: true, message, type, Icon } });
+    notificationTimeout = setTimeout(() => get().hideNotification(), 3000);
   },
 
   hideNotification: () => {
@@ -59,9 +56,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     }));
   },
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Добавляем реализацию для новых "ячеек"
   user: null,
   setUser: (user) => set({ user }),
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // Реализуем новые "ячейки"
+  isFloatingMenuOpen: false,
+  setFloatingMenuOpen: (isOpen) => set({ isFloatingMenuOpen: isOpen }),
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }));
