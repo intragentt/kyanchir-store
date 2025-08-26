@@ -1,17 +1,16 @@
 // Местоположение: src/components/Header.tsx
 'use client';
 
-import { useState } from 'react'; // Убираем useEffect
+import { useState } from 'react';
 import Link from 'next/link';
-
 import Logo from './icons/Logo';
 import CloseIcon from './icons/CloseIcon';
 import BurgerIcon from './icons/BurgerIcon';
 import SearchIcon from './icons/SearchIcon';
 import DesktopNav from './header/DesktopNav';
 import MobileNav from './header/MobileNav';
+import { useAppStore } from '@/store/useAppStore';
 
-// --- ИЗМЕНЕНИЕ 1: Добавляем управление меню в пропсы ---
 interface HeaderProps {
   className?: string;
   isSearchActive: boolean;
@@ -27,12 +26,11 @@ export default function Header({
   isMenuOpen,
   onMenuToggle,
 }: HeaderProps) {
-  // --- ИЗМЕНЕНИЕ 2: УДАЛЯЕМ СОБСТВЕННОЕ СОСТОЯНИЕ МЕНЮ ---
-  // const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const user = useAppStore((state) => state.user);
 
-  // --- ИЗМЕНЕНИЕ 3: ПОЛНОСТЬЮ УДАЛЯЕМ КОНФЛИКТУЮЩИЙ useEffect ДЛЯ БЛОКИРОВКИ СКРОЛЛА ---
-  // Вся эта логика теперь централизована в layout.tsx, и здесь она больше не нужна.
+  // Мы используем onMenuToggle из пропсов, чтобы управлять локальным меню шапки
+  // (которое отличается от глобального FloatingMenuOverlay)
 
   return (
     <>
@@ -43,14 +41,12 @@ export default function Header({
               <div className="flex w-full items-center justify-between">
                 <Link
                   href="/"
-                  // --- ИЗМЕНЕНИЕ 4: Используем onMenuToggle для закрытия меню ---
                   onClick={() => onMenuToggle(false)}
                   aria-label="На главную"
                   className="-mt-1"
                 >
                   <Logo className="logo-brand-color h-[10px] w-auto" />
                 </Link>
-
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => onSearchToggle(true)}
@@ -59,7 +55,6 @@ export default function Header({
                   >
                     <SearchIcon className="h-6 w-6" />
                   </button>
-                  {/* --- ИЗМЕНЕНИЕ 5: Кнопка меню теперь тоже сообщает наверх --- */}
                   <button
                     onClick={() => onMenuToggle(!isMenuOpen)}
                     className="relative z-50 p-2 text-gray-700"
@@ -84,7 +79,6 @@ export default function Header({
                 >
                   <CloseIcon className="h-6 w-6" />
                 </button>
-
                 <div className="relative flex-grow">
                   <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2">
                     <SearchIcon className="h-5 w-5 text-gray-400" />
@@ -98,7 +92,6 @@ export default function Header({
                     autoFocus
                   />
                 </div>
-                {/* Эта кнопка тоже сообщает наверх */}
                 <button
                   onClick={() => onMenuToggle(!isMenuOpen)}
                   className="relative z-50 p-2 text-gray-700"
@@ -122,12 +115,21 @@ export default function Header({
             >
               <Logo className="logo-brand-color h-[10px] w-auto" />
             </Link>
-            <DesktopNav />
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            <DesktopNav user={user} />
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
         </div>
       </header>
 
-      <MobileNav isOpen={isMenuOpen} onClose={() => onMenuToggle(false)} />
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+      {/* Передаем пользователя в MobileNav */}
+      <MobileNav
+        isOpen={isMenuOpen}
+        onClose={() => onMenuToggle(false)}
+        user={user}
+      />
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </>
   );
 }

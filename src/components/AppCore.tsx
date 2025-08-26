@@ -15,13 +15,36 @@ import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { UserPayload } from '@/app/layout'; // Импортируем наш тип пользователя
+import { useAppStore } from '@/store/useAppStore'; // Импортируем наш "сейф"
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-export default function AppCore({ children }: { children: React.ReactNode }) {
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Обучаем компонент принимать `initialUser`
+interface AppCoreProps {
+  children: React.ReactNode;
+  initialUser: UserPayload | null;
+}
+export default function AppCore({ children, initialUser }: AppCoreProps) {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const pathname = usePathname();
   const isHomePage = pathname === '/';
   const isAuthPage = pathname.startsWith('/login');
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // Получаем доступ к "сейфу" и функции для сохранения пользователя
+  const setUser = useAppStore((state) => state.setUser);
+  const user = useAppStore((state) => state.user);
+
+  // При первой загрузке приложения, сохраняем "пропуск" в "сейф"
+  useEffect(() => {
+    setUser(initialUser);
+  }, [initialUser, setUser]);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
+  // ... (остальной код компонента без изменений) ...
   const [headerHeight, setHeaderHeight] = useState(0);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -44,25 +67,19 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // --- НОВЫЙ БЛОК: "Сторож", блокирующий жест масштабирования ---
   useEffect(() => {
     const preventGesture = (e: Event) => {
       e.preventDefault();
     };
-
-    // Вешаем "замки" на события, отвечающие за pinch-to-zoom в Safari
     document.addEventListener('gesturestart', preventGesture);
     document.addEventListener('gesturechange', preventGesture);
     document.addEventListener('gestureend', preventGesture);
-
-    // Когда компонент будет убран, снимаем "замки", чтобы не было утечек памяти
     return () => {
       document.removeEventListener('gesturestart', preventGesture);
       document.removeEventListener('gesturechange', preventGesture);
       document.removeEventListener('gestureend', preventGesture);
     };
   }, []);
-  // --- КОНЕЦ НОВОГО БЛОКА ---
 
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;

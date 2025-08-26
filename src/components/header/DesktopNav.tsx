@@ -2,22 +2,23 @@
 import Link from 'next/link';
 import SearchIcon from '../icons/SearchIcon';
 import CartIcon from '../icons/CartIcon';
-
-// 1. Импортируем наш массив ссылок
 import { NAV_LINKS } from '@/config/navigation';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { UserPayload } from '@/app/layout'; // Импортируем наш тип пользователя
+import UserIcon from '../icons/UserIcon'; // Предполагаем, что у вас есть иконка пользователя
 
-export default function DesktopNav() {
+interface DesktopNavProps {
+  user: UserPayload | null;
+}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+export default function DesktopNav({ user }: DesktopNavProps) {
   return (
     <>
       <nav className="flex items-center space-x-6">
-        {/* 
-          2. Вместо жестко прописанных ссылок, мы используем .map().
-          Эта функция "пробегается" по каждому элементу массива NAV_LINKS
-          и для каждого из них создает компонент <Link>.
-        */}
         {NAV_LINKS.map((link) => (
           <Link
-            key={link.href} // React требует уникальный ключ для каждого элемента списка
+            key={link.href}
             href={link.href}
             className="hover:text-brand-lilac text-lg text-gray-500"
           >
@@ -25,7 +26,8 @@ export default function DesktopNav() {
           </Link>
         ))}
       </nav>
-      {/* Этот блок остается без изменений */}
+
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
       <div className="flex items-center space-x-4">
         <button className="text-text-primary hover:text-brand-lilac p-2">
           <SearchIcon className="h-6 w-6" />
@@ -33,7 +35,25 @@ export default function DesktopNav() {
         <button className="text-text-primary hover:text-brand-lilac p-2">
           <CartIcon className="h-6 w-6" />
         </button>
+
+        {/* Добавляем условный рендеринг для иконки профиля */}
+        {user ? (
+          <Link
+            href="/profile"
+            className="text-text-primary hover:text-brand-lilac p-2"
+          >
+            <UserIcon className="h-6 w-6" />
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="text-sm font-semibold text-gray-700 hover:text-indigo-600"
+          >
+            Войти
+          </Link>
+        )}
       </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </>
   );
 }
