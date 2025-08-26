@@ -30,10 +30,6 @@ function VerifyCodePage() {
   const email = searchParams.get('email');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Убираем state для подсчета попыток, next-auth управляет этим на сервере
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (/^[0-9]{0,6}$/.test(value)) {
@@ -46,15 +42,7 @@ function VerifyCodePage() {
     setIsLoading(true);
     setError(null);
     try {
-      await fetch('/api/auth/signin/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          email,
-          callbackUrl: '/profile',
-          json: 'true',
-        }),
-      });
+      await signIn('email', { email, redirect: false });
       setCode('');
       setError('Мы отправили новый код на вашу почту.');
     } catch (err) {
@@ -76,19 +64,18 @@ function VerifyCodePage() {
     }
 
     try {
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-      // Используем signIn напрямую для верификации. Это надежный, официальный способ.
       const res = await signIn('email', {
         email,
-        token: code, // Передаем код как токен
-        redirect: false, // Управляем редиректом вручную
+        token: code,
+        redirect: false,
       });
 
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
       if (res?.ok && !res.error) {
-        // Успех! next-auth создал сессию. Перенаправляем.
-        router.push('/profile');
+        // Если res.url существует, используем его, иначе - /profile
+        router.push(res.url || '/profile');
       } else {
-        // next-auth вернул ошибку - значит, код неверный или устарел.
+        // Если есть ошибка, просто показываем ее, НЕ делая редирект
         setError('Неверный или устаревший код. Попробуйте еще раз.');
         setCode('');
         inputRef.current?.focus();
@@ -176,7 +163,6 @@ function VerifyCodePage() {
             {error && (
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
             )}
-            {/* Логика кнопки "Отправить новый код" может быть добавлена позже как улучшение */}
             <div className="text-center">
               <button
                 type="button"
