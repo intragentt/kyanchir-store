@@ -3,15 +3,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-
 import Logo from '../icons/Logo';
 import CloseIcon from '../icons/CloseIcon';
 import BurgerIcon from '../icons/BurgerIcon';
 import SearchIcon from '../icons/SearchIcon';
 import DesktopNav from '../header/DesktopNav';
 import MobileNav from '../header/MobileNav';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { useAppStore } from '@/store/useAppStore'; // Импортируем наш "сейф"
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-// --- ИЗМЕНЕНИЕ 1: Определяем типы для пропсов, которые будут управлять этим компонентом ---
 interface StickyHeaderProps {
   isVisible: boolean;
   isTransitionEnabled: boolean;
@@ -24,9 +25,11 @@ export default function StickyHeader({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  const user = useAppStore((state) => state.user); // Достаем пользователя из "сейфа"
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
-    // Вся внутренняя логика остается без изменений
     const originalOverflow = document.body.style.overflow;
     const originalPosition = document.body.style.position;
     const originalWidth = document.body.style.width;
@@ -48,10 +51,9 @@ export default function StickyHeader({
     };
   }, [isMenuOpen]);
 
-  // --- ИЗМЕНЕНИЕ 2: Динамически генерируем классы для анимации ---
   const headerClasses = [
     'fixed top-0 right-0 left-0 z-152 w-full border-b border-gray-200 bg-white',
-    'will-change-transform', // Подсказка для Safari для плавной анимации
+    'will-change-transform',
     isTransitionEnabled ? 'transition-transform duration-300 ease-in-out' : '',
     isVisible ? 'transform-none' : '-translate-y-full',
   ]
@@ -65,9 +67,7 @@ export default function StickyHeader({
           {!isSearchActive && (
             <Link
               href="/"
-              onClick={() => {
-                setIsMenuOpen(false);
-              }}
+              onClick={() => setIsMenuOpen(false)}
               aria-label="На главную"
               className="-mt-1"
             >
@@ -76,7 +76,9 @@ export default function StickyHeader({
           )}
 
           <div className="hidden items-center space-x-6 lg:flex">
-            <DesktopNav />
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            <DesktopNav user={user} />
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
 
           <div className="flex items-center space-x-2 lg:hidden">
@@ -126,9 +128,13 @@ export default function StickyHeader({
         </div>
       </header>
 
-      {/* Клону не нужна распорка */}
-      
-      <MobileNav isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+      <MobileNav
+        isOpen={isMenuOpen}
+        onClose={() => setIsMenuOpen(false)}
+        user={user}
+      />
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </>
   );
 }
