@@ -1,12 +1,11 @@
 // Местоположение: src/components/HomePageClient.tsx
-// Метафора: "Терпеливый Дирижер Анимаций".
-// Компонент научился управлять очередностью анимаций, чтобы избежать
-// конфликтов. Он сначала запускает одну, ждет ее завершения,
-// и только потом дает команду на запуск второй.
-
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { useSearchParams, useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import CatalogContent from '@/components/CatalogContent';
 import SmartStickyCategoryFilter from '@/components/SmartStickyCategoryFilter';
 import { ProductWithInfo } from '@/lib/types';
@@ -30,13 +29,38 @@ export default function HomePageClient({
     useState<ProductWithInfo[]>(initialProducts);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-
   const filterContainerRef = useRef<HTMLDivElement>(null);
   const productGridRef = useRef<HTMLDivElement>(null);
-
-  // Ref для отслеживания процесса скролла.
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Этот useEffect будет "слушать" URL и обменивать токен на сессию
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      const handleTelegramLogin = async () => {
+        const res = await signIn('telegram-credentials', {
+          token,
+          redirect: false,
+        });
+
+        if (res?.ok) {
+          // Успешный вход, перезагружаем страницу, чтобы обновить состояние на сервере
+          router.refresh();
+        } else {
+          // Можно добавить уведомление об ошибке
+          console.error('Telegram login failed:', res?.error);
+        }
+      };
+
+      handleTelegramLogin();
+    }
+  }, [searchParams, router]);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     let productsToFilter = [...allProducts];
@@ -52,43 +76,31 @@ export default function HomePageClient({
     setFilteredProducts(productsToFilter);
   }, [searchTerm, activeCategory, allProducts]);
 
-  // --- ОБНОВЛЕНО: "Терпеливый" обработчик выбора категории ---
   const handleSelectCategory = useCallback(
     (categoryId: string) => {
       if (activeCategory === categoryId || scrollingToFilter.current) return;
 
       if (filterContainerRef.current) {
-        // Шаг 1: Запускаем скролл страницы.
         const destination = filterContainerRef.current.offsetTop;
-        scrollingToFilter.current = true; // Поднимаем флаг "скроллимся".
-        window.scrollTo({
-          top: destination,
-          behavior: 'smooth',
-        });
+        scrollingToFilter.current = true;
+        window.scrollTo({ top: destination, behavior: 'smooth' });
 
-        // Шаг 2: Создаем "слушателя", который будет следить за окончанием скролла.
         const scrollEndListener = () => {
-          // Если скролл остановился (больше не меняется), считаем его завершенным.
           if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
           scrollTimeout.current = setTimeout(() => {
             window.removeEventListener('scroll', scrollEndListener);
-            scrollingToFilter.current = false; // Опускаем флаг.
-            // Шаг 3: Только теперь, когда скролл страницы завершен,
-            // мы обновляем категорию, что запустит вторую анимацию (центрирование).
+            scrollingToFilter.current = false;
             setActiveCategory(categoryId);
-          }, 100); // 100ms - таймаут для определения "остановки" скролла.
+          }, 100);
         };
-
         window.addEventListener('scroll', scrollEndListener);
       } else {
-        // Если что-то пошло не так, просто меняем категорию.
         setActiveCategory(categoryId);
       }
     },
     [activeCategory],
   );
 
-  // Очистка таймеров при размонтировании
   useEffect(() => {
     return () => {
       if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
