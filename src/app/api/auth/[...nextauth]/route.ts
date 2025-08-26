@@ -4,14 +4,45 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import EmailProvider from 'next-auth/providers/email';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import bcrypt from 'bcrypt';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Мы полностью убираем кастомную логику отправки.
-// next-auth теперь отвечает ТОЛЬКО за проверку токена, но не за его отправку.
 const authOptions: NextAuthOptions = {
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   adapter: PrismaAdapter(prisma),
   providers: [
+    // Провайдер для входа по Email + Пароль
+    CredentialsProvider({
+      id: 'credentials',
+      name: 'Credentials',
+      credentials: {
+        email: { label: 'Email', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Необходимо ввести Email и пароль');
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user || !user.passwordHash) {
+          throw new Error('Пользователь с таким Email не найден');
+        }
+
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.passwordHash,
+        );
+
+        if (!isValid) {
+          throw new Error('Неверный пароль');
+        }
+
+        return user;
+      },
+    }),
+
     CredentialsProvider({
       id: 'telegram-credentials',
       name: 'Telegram Login',
@@ -34,6 +65,7 @@ const authOptions: NextAuthOptions = {
       },
     }),
 
+    // EmailProvider оставляем для возможности восстановления пароля в будущем
     EmailProvider({
       server: {
         host: process.env.EMAIL_SERVER_HOST,
@@ -44,20 +76,16 @@ const authOptions: NextAuthOptions = {
         },
       },
       from: process.env.EMAIL_FROM,
-      // Мы по-прежнему просим его генерировать 6-значный токен
-      generateVerificationToken: async () => {
-        return Math.floor(100000 + Math.random() * 900000).toString();
-      },
-      // НО! Функцию sendVerificationRequest мы УДАЛЯЕМ.
     }),
   ],
   pages: {
     signIn: '/login',
-    error: '/login/error',
+    error: '/login',
   },
   session: {
-    strategy: 'database',
+    strategy: 'jwt',
   },
+  secret: process.env.AUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
