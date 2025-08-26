@@ -2,6 +2,7 @@
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
@@ -38,23 +39,23 @@ export default function LoginPage() {
     }
 
     try {
-      const res = await fetch('/api/auth/signin/email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          email: identifier,
-          callbackUrl: '/profile',
-          json: 'true',
-        }),
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      // Используем signIn - официальный и единственный правильный способ инициировать отправку
+      const res = await signIn('email', {
+        email: identifier,
+        redirect: false, // Говорим signIn не перенаправлять, мы сделаем это сами
       });
 
-      if (res.ok) {
+      if (res?.ok && !res.error) {
+        // Если signIn успешно инициировал отправку, перенаправляем на страницу ввода кода
         router.push(
           `/login/verify-code?email=${encodeURIComponent(identifier)}`,
         );
       } else {
-        setError('Не удалось отправить код для входа.');
+        // Если signIn вернул ошибку (например, проблемы с сервером)
+        setError(res?.error || 'Не удалось отправить код для входа.');
       }
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
     } finally {
