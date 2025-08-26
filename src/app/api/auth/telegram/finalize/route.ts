@@ -2,7 +2,11 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { cookies } from 'next/headers';
-import { encrypt } from '@/lib/session';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Мы не можем напрямую создать сессию next-auth отсюда, это небезопасно.
+// Вместо этого, мы создадим ОДНОРАЗОВЫЙ токен, который фронтенд обменяет на сессию.
+import { randomBytes } from 'crypto';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export async function POST(request: Request) {
   try {
@@ -19,18 +23,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: 'User not found' }, { status: 404 });
     }
 
-    const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    const session = await encrypt({ user, expires });
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    // 1. Генерируем новый, безопасный, одноразовый токен
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date(Date.now() + 10 * 60 * 1000); // Токен живет 10 минут
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: "Хитрый Адаптер" ---
-    // TypeScript в среде сборки Vercel по какой-то причине считает, что cookies()
-    // возвращает Promise. Мы "подыгрываем" ему, добавляя `await`.
-    // Это не сломает логику, но удовлетворит проверку типов.
-    const cookieStore = await cookies();
-    cookieStore.set('session', session, { expires, httpOnly: true });
+    // 2. Сохраняем этот токен в базу, привязав к пользователю
+    await prisma.loginToken.create({
+      data: {
+        userId,
+        token,
+        expires,
+      },
+    });
+
+    // 3. Отправляем этот токен на фронтенд
+    return NextResponse.json({ status: 'success', token });
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
-    return NextResponse.json({ status: 'success' });
   } catch (error) {
     console.error('Error finalizing login:', error);
     return NextResponse.json(
