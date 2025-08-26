@@ -3,9 +3,8 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-import { useAppStore } from '@/store/useAppStore'; // Импортируем "сейф"
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import { useAppStore } from '@/store/useAppStore';
+import { useRouter } from 'next/navigation'; // Импортируем роутер
 import BurgerIcon from './icons/BurgerIcon';
 import SearchIcon from './icons/SearchIcon';
 import HeartIcon from './icons/HeartIcon';
@@ -20,9 +19,17 @@ export default function FloatingMenuOverlay({
   onClose,
 }: FloatingMenuOverlayProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
+  const router = useRouter(); // Инициализируем роутер
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  const handleSignOut = async () => {
+    onClose(); // Сначала закрываем меню
+    await fetch('/api/auth/logout', { method: 'POST' });
+    // Перезагружаем страницу, чтобы обновить состояние на сервере
+    router.refresh();
+  };
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!isOpen) {
@@ -31,6 +38,7 @@ export default function FloatingMenuOverlay({
 
   return (
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col bg-white p-6 duration-300">
+      {/* ... (верхняя часть без изменений) ... */}
       {isHelpOpen && (
         <div className="animate-in slide-in-from-top-5 flex flex-col space-y-3 duration-300">
           <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
@@ -44,7 +52,6 @@ export default function FloatingMenuOverlay({
           </div>
         </div>
       )}
-
       <div
         className={`flex w-full flex-none items-center space-x-4 transition-all duration-300 ${isHelpOpen ? 'mt-8' : 'mt-0'}`}
       >
@@ -91,12 +98,15 @@ export default function FloatingMenuOverlay({
               Личный кабинет
             </Link>
             <p className="truncate text-sm text-gray-500">{user?.email}</p>
-            <a
-              href="/api/auth/logout"
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            {/* Заменяем ссылку на кнопку */}
+            <button
+              onClick={handleSignOut}
               className="font-body text-left text-base font-medium text-red-600 transition-colors hover:text-red-800"
             >
               Выход
-            </a>
+            </button>
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
         ) : (
           <Link
@@ -108,6 +118,7 @@ export default function FloatingMenuOverlay({
           </Link>
         )}
 
+        {/* ... (остальная часть без изменений) ... */}
         <div className="mt-10 flex items-center space-x-3">
           <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
           <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
