@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useRef, useEffect, Suspense } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
@@ -25,10 +24,20 @@ function VerifyCodePage() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attemptsLeft, setAttemptsLeft] = useState(5);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -38,12 +47,22 @@ function VerifyCodePage() {
   };
 
   const handleResendCode = async () => {
-    if (!email) return;
+    if (!email || isLoading) return;
     setIsLoading(true);
     setError(null);
     try {
-      await signIn('email', { email, redirect: false });
+      await fetch('/api/auth/signin/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          email,
+          callbackUrl: '/profile',
+          json: 'true',
+        }),
+      });
       setCode('');
+      setAttemptsLeft(5);
+      setResendCooldown(60); // Блокируем кнопку на 60 секунд
       setError('Мы отправили новый код на вашу почту.');
     } catch (err) {
       setError('Не удалось отправить новый код.');
@@ -54,6 +73,10 @@ function VerifyCodePage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (attemptsLeft <= 0) {
+      setError('Попытки исчерпаны. Запросите новый код.');
+      return;
+    }
     setIsLoading(true);
     setError(null);
 
@@ -64,23 +87,24 @@ function VerifyCodePage() {
     }
 
     try {
-      const res = await signIn('email', {
-        email,
-        token: code,
-        redirect: false,
+      const verifyRes = await fetch('/api/auth/verify-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token: code }),
       });
 
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-      if (res?.ok && !res.error) {
-        // Если res.url существует, используем его, иначе - /profile
-        router.push(res.url || '/profile');
-      } else {
-        // Если есть ошибка, просто показываем ее, НЕ делая редирект
-        setError('Неверный или устаревший код. Попробуйте еще раз.');
+      const data = await verifyRes.json();
+
+      if (!verifyRes.ok) {
+        setError(data.error || 'Произошла ошибка');
+        if (data.attemptsLeft !== undefined) {
+          setAttemptsLeft(data.attemptsLeft);
+        }
         setCode('');
         inputRef.current?.focus();
+      } else {
+        router.push('/profile');
       }
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
     } finally {
@@ -155,7 +179,7 @@ function VerifyCodePage() {
 
             <button
               type="submit"
-              disabled={isLoading || code.length !== 6}
+              disabled={isLoading || code.length !== 6 || attemptsLeft <= 0}
               className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
             >
               {isLoading ? 'Проверка...' : 'Подтвердить'}
@@ -163,14 +187,17 @@ function VerifyCodePage() {
             {error && (
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
             )}
-            <div className="text-center">
+
+            <div className="pt-2 text-center">
               <button
                 type="button"
                 onClick={handleResendCode}
-                disabled={isLoading}
-                className="hover:text-opacity-80 text-xs font-semibold text-[#6B80C5]"
+                disabled={isLoading || resendCooldown > 0}
+                className="hover:text-opacity-80 text-xs font-semibold text-[#6B80C5] disabled:cursor-not-allowed disabled:text-zinc-400"
               >
-                Отправить код еще раз
+                {resendCooldown > 0
+                  ? `Отправить снова через ${resendCooldown}с`
+                  : 'Отправить код еще раз'}
               </button>
             </div>
           </form>
