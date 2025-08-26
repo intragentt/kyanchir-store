@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect, Suspense } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
@@ -24,11 +25,14 @@ function VerifyCodePage() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attemptsLeft, setAttemptsLeft] = useState(5);
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // Убираем state для подсчета попыток, next-auth управляет этим на сервере
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -42,7 +46,6 @@ function VerifyCodePage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Просто вызываем стандартный endpoint next-auth для отправки письма
       await fetch('/api/auth/signin/email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -53,7 +56,6 @@ function VerifyCodePage() {
         }),
       });
       setCode('');
-      setAttemptsLeft(5); // Сбрасываем счетчик на фронтенде
       setError('Мы отправили новый код на вашу почту.');
     } catch (err) {
       setError('Не удалось отправить новый код.');
@@ -74,24 +76,24 @@ function VerifyCodePage() {
     }
 
     try {
-      const verifyRes = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token: code }),
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      // Используем signIn напрямую для верификации. Это надежный, официальный способ.
+      const res = await signIn('email', {
+        email,
+        token: code, // Передаем код как токен
+        redirect: false, // Управляем редиректом вручную
       });
 
-      if (!verifyRes.ok) {
-        const data = await verifyRes.json();
-        setError(data.error || 'Произошла ошибка');
-        if (data.attemptsLeft !== undefined) {
-          setAttemptsLeft(data.attemptsLeft);
-        }
+      if (res?.ok && !res.error) {
+        // Успех! next-auth создал сессию. Перенаправляем.
+        router.push('/profile');
+      } else {
+        // next-auth вернул ошибку - значит, код неверный или устарел.
+        setError('Неверный или устаревший код. Попробуйте еще раз.');
         setCode('');
         inputRef.current?.focus();
-      } else {
-        // Успешный вход, перенаправляем в профиль
-        router.push('/profile');
       }
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
     } finally {
@@ -166,7 +168,7 @@ function VerifyCodePage() {
 
             <button
               type="submit"
-              disabled={isLoading || code.length !== 6 || attemptsLeft <= 0}
+              disabled={isLoading || code.length !== 6}
               className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
             >
               {isLoading ? 'Проверка...' : 'Подтвердить'}
@@ -174,16 +176,17 @@ function VerifyCodePage() {
             {error && (
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
             )}
-            {attemptsLeft <= 0 && (
+            {/* Логика кнопки "Отправить новый код" может быть добавлена позже как улучшение */}
+            <div className="text-center">
               <button
                 type="button"
                 onClick={handleResendCode}
                 disabled={isLoading}
-                className="mt-2 w-full rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 disabled:opacity-50"
+                className="hover:text-opacity-80 text-xs font-semibold text-[#6B80C5]"
               >
-                {isLoading ? 'Отправка...' : 'Отправить новый код'}
+                Отправить код еще раз
               </button>
-            )}
+            </div>
           </form>
         </div>
       </div>
