@@ -38,15 +38,14 @@ export default function LoginPage() {
     }
 
     try {
-      const res = await fetch('/api/auth/signin/email', {
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      // Обращаемся к нашей новой, надежной "почтовой службе"
+      const res = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          email: identifier,
-          callbackUrl: '/profile',
-          json: 'true',
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: identifier }),
       });
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
       if (res.ok) {
         router.push(

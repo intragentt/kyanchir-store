@@ -4,9 +4,12 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import EmailProvider from 'next-auth/providers/email';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { createTransport } from 'nodemailer';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Мы полностью убираем кастомную логику отправки.
+// next-auth теперь отвечает ТОЛЬКО за проверку токена, но не за его отправку.
 const authOptions: NextAuthOptions = {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -41,56 +44,11 @@ const authOptions: NextAuthOptions = {
         },
       },
       from: process.env.EMAIL_FROM,
+      // Мы по-прежнему просим его генерировать 6-значный токен
       generateVerificationToken: async () => {
         return Math.floor(100000 + Math.random() * 900000).toString();
       },
-      sendVerificationRequest: async ({
-        identifier: email,
-        url,
-        token,
-        provider,
-      }) => {
-        // --- НАЧАЛО ИЗМЕНЕНИЙ (ДИАГНОСТИКА) ---
-        console.log('--- НАЧАЛО ДИАГНОСТИКИ ОТПРАВКИ EMAIL ---');
-        console.log(`Цель: ${email}`);
-        console.log(
-          `Хост: ${process.env.EMAIL_SERVER_HOST}, Порт: ${process.env.EMAIL_SERVER_PORT}`,
-        );
-        console.log(`Пользователь: ${process.env.EMAIL_SERVER_USER}`);
-
-        try {
-          const transport = createTransport({
-            host: process.env.EMAIL_SERVER_HOST,
-            port: Number(process.env.EMAIL_SERVER_PORT),
-            auth: {
-              user: process.env.EMAIL_SERVER_USER,
-              pass: process.env.EMAIL_SERVER_PASSWORD,
-            },
-            // Добавляем опции для отладки
-            debug: true,
-            logger: true,
-          });
-
-          console.log('Транспорт создан. Начинаю отправку...');
-
-          const result = await transport.sendMail({
-            to: email,
-            from: provider.from,
-            subject: `Ваш код для входа в Kyanchir`,
-            html: `<div>Ваш код: ${token}</div>`, // Упрощаем HTML для теста
-          });
-
-          console.log('Письмо успешно отправлено! Результат:', result);
-        } catch (error) {
-          // Если есть ЛЮБАЯ ошибка, мы ОБЯЗАНЫ увидеть ее в логах Vercel
-          console.error('!!! КРИТИЧЕСКАЯ ОШИБКА ПРИ ОТПРАВКЕ EMAIL:', error);
-          // Выбрасываем ошибку, чтобы Vercel точно ее залогировал как 500
-          throw new Error('Не удалось отправить email. Смотри логи функции.');
-        } finally {
-          console.log('--- КОНЕЦ ДИАГНОСТИКИ ОТПРАВКИ EMAIL ---');
-        }
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-      },
+      // НО! Функцию sendVerificationRequest мы УДАЛЯЕМ.
     }),
   ],
   pages: {

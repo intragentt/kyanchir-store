@@ -38,15 +38,13 @@ export default function RegisterPage() {
     }
 
     try {
-      const res = await fetch('/api/auth/signin/email', {
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      const res = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          email: email,
-          callbackUrl: '/profile',
-          json: 'true',
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email }),
       });
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
       if (res.ok) {
         router.push(`/login/verify-code?email=${encodeURIComponent(email)}`);
@@ -76,7 +74,6 @@ export default function RegisterPage() {
               <Logo />
             </div>
           </Link>
-
           <form
             className="font-body space-y-4 text-left"
             onSubmit={handleRegisterSubmit}
@@ -124,7 +121,6 @@ export default function RegisterPage() {
                 </button>
               )}
             </div>
-
             <button
               type="submit"
               disabled={isLoading}
@@ -136,7 +132,6 @@ export default function RegisterPage() {
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
             )}
           </form>
-
           <div className="flex items-center gap-x-3">
             <div className="h-px w-full bg-zinc-200" />
             <div className="font-body text-sm font-medium text-zinc-400">
@@ -144,7 +139,6 @@ export default function RegisterPage() {
             </div>
             <div className="h-px w-full bg-zinc-200" />
           </div>
-
           <button
             onClick={redirectToTelegramBot}
             className="font-body flex w-full items-center justify-center gap-x-2 rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
@@ -153,7 +147,6 @@ export default function RegisterPage() {
             Войти через Telegram
           </button>
         </div>
-
         <div className="font-body mt-6 rounded-lg border border-zinc-200 bg-white p-6 text-center text-sm">
           <p className="text-zinc-600">
             Уже есть аккаунт?{' '}
