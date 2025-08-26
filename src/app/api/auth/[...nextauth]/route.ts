@@ -6,10 +6,12 @@ import EmailProvider from 'next-auth/providers/email';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
 
-const authOptions: NextAuthOptions = {
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Добавляем `export`, чтобы сделать правила доступными для других файлов
+export const authOptions: NextAuthOptions = {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   adapter: PrismaAdapter(prisma),
   providers: [
-    // Провайдер для входа по Email + Пароль
     CredentialsProvider({
       id: 'credentials',
       name: 'Credentials',
@@ -21,28 +23,22 @@ const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Необходимо ввести Email и пароль');
         }
-
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
-
         if (!user || !user.passwordHash) {
           throw new Error('Пользователь с таким Email не найден');
         }
-
         const isValid = await bcrypt.compare(
           credentials.password,
           user.passwordHash,
         );
-
         if (!isValid) {
           throw new Error('Неверный пароль');
         }
-
         return user;
       },
     }),
-
     CredentialsProvider({
       id: 'telegram-credentials',
       name: 'Telegram Login',
@@ -64,8 +60,6 @@ const authOptions: NextAuthOptions = {
         return user || null;
       },
     }),
-
-    // EmailProvider оставляем для возможности восстановления пароля в будущем
     EmailProvider({
       server: {
         host: process.env.EMAIL_SERVER_HOST,

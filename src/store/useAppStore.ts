@@ -1,6 +1,8 @@
 // Местоположение: src/store/useAppStore.ts
 import { create } from 'zustand';
-import { UserPayload } from '@/app/layout';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { Session } from 'next-auth'; // Импортируем тип Session
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface NotificationState {
   isVisible: boolean;
@@ -21,14 +23,13 @@ interface AppState {
   ) => void;
   hideNotification: () => void;
 
-  user: UserPayload | null;
-  setUser: (user: UserPayload | null) => void;
-
   // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Добавляем состояние и функцию для управления глобальным меню
+  user: Session['user'] | null; // Используем официальный тип пользователя
+  setUser: (user: Session['user'] | null) => void;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   isFloatingMenuOpen: boolean;
   setFloatingMenuOpen: (isOpen: boolean) => void;
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
 let notificationTimeout: NodeJS.Timeout;
@@ -59,9 +60,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   user: null,
   setUser: (user) => set({ user }),
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Реализуем новые "ячейки"
   isFloatingMenuOpen: false,
   setFloatingMenuOpen: (isOpen) => set({ isFloatingMenuOpen: isOpen }),
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }));

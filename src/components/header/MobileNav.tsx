@@ -1,13 +1,15 @@
 // Местоположение: src/components/header/MobileNav.tsx
 import Link from 'next/link';
 import { NAV_LINKS } from '@/config/navigation';
-import { UserPayload } from '@/app/layout'; // Импортируем наш тип пользователя
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { Session } from 'next-auth'; // Импортируем тип Session
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type MobileNavProps = {
   isOpen: boolean;
   onClose: () => void;
   // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  user: UserPayload | null; // Обучаем компонент принимать пользователя
+  user: Session['user'] | null; // Используем официальный тип пользователя
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 };
 
@@ -34,8 +36,6 @@ export default function MobileNav({ isOpen, onClose, user }: MobileNavProps) {
           </div>
         </nav>
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
-        {/* Добавляем условный рендеринг */}
         <div className="flex-shrink-0 border-t border-gray-100 p-10">
           {user ? (
             <Link
@@ -55,7 +55,6 @@ export default function MobileNav({ isOpen, onClose, user }: MobileNavProps) {
             </Link>
           )}
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
     </div>
   );

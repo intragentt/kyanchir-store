@@ -1,28 +1,22 @@
 // Местоположение: src/app/profile/page.tsx
 import PageContainer from '@/components/layout/PageContainer';
 import SignOutButton from './SignOutButton';
-import { cookies } from 'next/headers';
-import { decrypt } from '@/lib/session';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'; // Импортируем наши "правила"
 import { redirect } from 'next/navigation';
-import { JWTPayload } from 'jose';
-
-interface UserPayload extends JWTPayload {
-  userId?: string;
-  name?: string | null;
-  email?: string | null;
-}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default async function ProfilePage() {
   // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Дожидаемся выполнения Promise от cookies() ПЕРЕД вызовом .get()
-  const sessionCookie = (await cookies()).get('session')?.value;
+  // Получаем сессию официальным способом
+  const session = await getServerSession(authOptions);
 
-  const user = (await decrypt(sessionCookie)) as UserPayload | null;
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
-  if (!user) {
+  // "Фейс-контроль": middleware уже должен был это сделать, но это дополнительная защита
+  if (!session?.user) {
     redirect('/login');
   }
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
@@ -33,7 +27,7 @@ export default async function ProfilePage() {
               Личный кабинет
             </h1>
             <p className="mt-2 text-lg text-gray-600">
-              Добро пожаловать, {user.name || 'Пользователь'}!
+              Добро пожаловать, {session.user.name || 'Пользователь'}!
             </p>
           </div>
 
@@ -41,11 +35,11 @@ export default async function ProfilePage() {
             <div className="space-y-4">
               <div>
                 <h3 className="font-semibold">Имя</h3>
-                <p>{user.name || 'Не указано'}</p>
+                <p>{session.user.name || 'Не указано'}</p>
               </div>
               <div>
                 <h3 className="font-semibold">Email</h3>
-                <p>{user.email || 'Не указан'}</p>
+                <p>{session.user.email || 'Не указан'}</p>
               </div>
             </div>
           </div>

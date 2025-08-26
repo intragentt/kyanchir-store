@@ -4,31 +4,17 @@
 import './globals.css';
 import { fontHeading, fontBody, fontMono } from './fonts';
 import AuthProvider from '@/components/providers/AuthProvider';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-import AppCore from '@/components/AppCore'; // Убираем дефис
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import AppCore from '@/components/AppCore';
 import Script from 'next/script';
-import { cookies } from 'next/headers';
-import { decrypt } from '@/lib/session';
-import { JWTPayload } from 'jose';
-
-export interface UserPayload extends JWTPayload {
-  userId?: string;
-  name?: string | null;
-  email?: string | null;
-}
 
 export const metadata = {
   title: 'Kyanchir',
   description: 'Мини-приложение / сайт',
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const sessionCookie = (await cookies()).get('session')?.value;
-  const user = (await decrypt(sessionCookie)) as UserPayload | null;
-
   return (
     <html
       lang="ru"
@@ -55,9 +41,12 @@ export default async function RootLayout({
           Для работы приложения требуется включить JavaScript.
         </noscript>
 
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+        {/* Возвращаем AuthProvider к его стандартной форме. AppCore будет получать сессию через хук. */}
         <AuthProvider>
-          <AppCore initialUser={user}>{children}</AppCore>
+          <AppCore>{children}</AppCore>
         </AuthProvider>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </body>
     </html>
   );

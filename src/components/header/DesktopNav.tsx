@@ -4,11 +4,13 @@ import SearchIcon from '../icons/SearchIcon';
 import CartIcon from '../icons/CartIcon';
 import { NAV_LINKS } from '@/config/navigation';
 // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-import { UserPayload } from '@/app/layout'; // Импортируем наш тип пользователя
-import UserIcon from '../icons/UserIcon'; // Предполагаем, что у вас есть иконка пользователя
+import { Session } from 'next-auth'; // Импортируем тип Session
+import UserIcon from '../icons/UserIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 interface DesktopNavProps {
-  user: UserPayload | null;
+  user: Session['user'] | null; // Используем официальный тип пользователя
 }
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
@@ -27,7 +29,6 @@ export default function DesktopNav({ user }: DesktopNavProps) {
         ))}
       </nav>
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
       <div className="flex items-center space-x-4">
         <button className="text-text-primary hover:text-brand-lilac p-2">
           <SearchIcon className="h-6 w-6" />
@@ -36,7 +37,6 @@ export default function DesktopNav({ user }: DesktopNavProps) {
           <CartIcon className="h-6 w-6" />
         </button>
 
-        {/* Добавляем условный рендеринг для иконки профиля */}
         {user ? (
           <Link
             href="/profile"
@@ -53,7 +53,6 @@ export default function DesktopNav({ user }: DesktopNavProps) {
           </Link>
         )}
       </div>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </>
   );
 }

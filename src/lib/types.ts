@@ -7,8 +7,21 @@ import {
   Image as PrismaImage,
   Inventory,
   Category,
-  Tag, // --- ИЗМЕНЕНИЕ: Импортируем Tag ---
+  Tag,
+  User as PrismaUser, // --- НАЧАЛО ИЗМЕНЕНИЙ ---
 } from '@prisma/client';
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Расширяем стандартный тип User из next-auth, чтобы TypeScript знал о наших полях
+declare module 'next-auth' {
+  interface Session {
+    user: PrismaUser;
+  }
+}
+
+// Этот тип больше не нужен, так как мы используем Session['user']
+// export type UserPayload = PrismaUser;
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 // Этот тип используется для карточек товаров в каталоге (без изменений)
 export type ProductWithInfo = Product & {
@@ -33,5 +46,5 @@ export type UpdateProductPayload = {
   images: PrismaImage[];
   inventory: Inventory[];
   categories: Category[];
-  tags: Tag[]; // --- ИЗМЕНЕНИЕ: Добавляем теги в контракт ---
+  tags: Tag[];
 };

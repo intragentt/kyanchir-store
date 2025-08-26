@@ -3,6 +3,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react'; // Импортируем хук для получения сессии
+import { useAppStore } from '@/store/useAppStore'; // Импортируем наш "сейф"
 import {
   StickyHeaderContext,
   HeaderStatus,
@@ -15,36 +17,28 @@ import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-import { UserPayload } from '@/app/layout'; // Импортируем наш тип пользователя
-import { useAppStore } from '@/store/useAppStore'; // Импортируем наш "сейф"
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Обучаем компонент принимать `initialUser`
-interface AppCoreProps {
-  children: React.ReactNode;
-  initialUser: UserPayload | null;
-}
-export default function AppCore({ children, initialUser }: AppCoreProps) {
+// Убираем initialUser. Компонент теперь самостоятельный.
+export default function AppCore({ children }: { children: React.ReactNode }) {
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  const isAuthPage = pathname.startsWith('/login');
+  // Добавляем /register, чтобы на этой странице тоже не было шапки
+  const isAuthPage =
+    pathname.startsWith('/login') || pathname.startsWith('/register');
 
   // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Получаем доступ к "сейфу" и функции для сохранения пользователя
+  const { data: session } = useSession(); // Получаем сессию от AuthProvider
   const setUser = useAppStore((state) => state.setUser);
-  const user = useAppStore((state) => state.user);
 
-  // При первой загрузке приложения, сохраняем "пропуск" в "сейф"
+  // Этот useEffect будет автоматически синхронизировать сессию с нашим "сейфом"
   useEffect(() => {
-    setUser(initialUser);
-  }, [initialUser, setUser]);
+    setUser(session?.user ?? null);
+  }, [session, setUser]);
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
-  // ... (остальной код компонента без изменений) ...
   const [headerHeight, setHeaderHeight] = useState(0);
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -68,9 +62,7 @@ export default function AppCore({ children, initialUser }: AppCoreProps) {
   }, []);
 
   useEffect(() => {
-    const preventGesture = (e: Event) => {
-      e.preventDefault();
-    };
+    const preventGesture = (e: Event) => e.preventDefault();
     document.addEventListener('gesturestart', preventGesture);
     document.addEventListener('gesturechange', preventGesture);
     document.addEventListener('gestureend', preventGesture);
@@ -113,9 +105,8 @@ export default function AppCore({ children, initialUser }: AppCoreProps) {
       if (isScrollingDown) {
         if (currentScrollY > headerHeight) setHeaderStatus('unpinned');
         scrollUpAnchor.current = null;
-        if (scrollDownAnchor.current === null) {
+        if (scrollDownAnchor.current === null)
           scrollDownAnchor.current = currentScrollY;
-        }
       } else {
         if (scrollUpAnchor.current === null)
           scrollUpAnchor.current = currentScrollY;
