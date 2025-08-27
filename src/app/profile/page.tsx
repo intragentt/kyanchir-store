@@ -2,21 +2,23 @@
 import PageContainer from '@/components/layout/PageContainer';
 import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 import prisma from '@/lib/prisma';
-import ProfileClient from './ProfileClient'; // Импортируем наш новый клиентский компонент
+import ProfileClient from './ProfileClient';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// 1. Импортируем наши экспортированные authOptions.
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default async function ProfilePage() {
-  const session = await getServerSession();
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // 2. Явно передаем authOptions в getServerSession для максимальной надежности.
+  const session = await getServerSession(authOptions);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!session?.user?.id) {
     redirect('/login');
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Глубокий запрос: получаем ПОЛНЫЕ данные пользователя из БД, а не только из сессии.
-  // Это дает нам доступ к `emailVerified` и другим полям.
   const user = await prisma.user.findUnique({
     where: {
       id: session.user.id,
@@ -24,18 +26,13 @@ export default async function ProfilePage() {
   });
 
   if (!user) {
-    // Если по какой-то причине пользователь из сессии не найден в БД, выкидываем на логин.
     redirect('/login');
   }
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
       <PageContainer className="py-12">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
-        {/* Всю логику отображения и взаимодействия передаем в "Зал" (клиентский компонент) */}
         <ProfileClient user={user} />
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </PageContainer>
     </main>
   );

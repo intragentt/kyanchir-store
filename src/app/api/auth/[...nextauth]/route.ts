@@ -6,7 +6,10 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
 import { createTransport } from 'nodemailer';
 
-const authOptions: NextAuthOptions = {
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Добавляем 'export', чтобы сделать эту конфигурацию доступной для импорта в других файлах.
+export const authOptions: NextAuthOptions = {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -105,24 +108,17 @@ const authOptions: NextAuthOptions = {
   secret: process.env.AUTH_SECRET,
   callbacks: {
     async jwt({ token, user }) {
-      // Этот коллбэк правильно добавляет id в JWT токен. Он остается без изменений.
       if (user) {
         token.id = user.id;
       }
       return token;
     },
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // Переписываем session callback, чтобы он был более явным и надежным.
     async session({ session, token }) {
-      // `token` здесь - это расшифрованный JWT, который мы собрали в коллбэке `jwt`.
-      // Мы берем `id` из токена и **гарантированно** помещаем его в объект `session.user`.
-      // Эта версия более надежна, чем простое присваивание.
       if (session.user) {
         session.user.id = token.id as string;
       }
       return session;
     },
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   },
 };
 
