@@ -4,6 +4,10 @@
 import { useState } from 'react';
 import type { User } from '@prisma/client';
 import SignOutButton from './SignOutButton';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Импортируем useRouter для принудительного обновления
+import { useRouter } from 'next/navigation';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface ProfileClientProps {
   user: User;
@@ -12,31 +16,24 @@ interface ProfileClientProps {
 export default function ProfileClient({
   user: initialUser,
 }: ProfileClientProps) {
-  // --- ОБЩИЕ СОСТОЯНИЯ ---
+  const router = useRouter(); // Добавляем хук
+
+  // ... все остальные состояния остаются без изменений ...
   const [user, setUser] = useState(initialUser);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
-  // --- СОСТОЯНИЯ ДЛЯ РЕДАКТИРОВАНИЯ ИМЕНИ ---
   const [name, setName] = useState(initialUser.name || '');
   const [isEditingName, setIsEditingName] = useState(false);
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: СОСТОЯНИЯ ДЛЯ EMAIL И ПАРОЛЯ ---
-  // --- СОСТОЯНИЯ ДЛЯ РЕДАКТИРОВАНИЯ EMAIL ---
   const [email, setEmail] = useState(initialUser.email || '');
   const [isEditingEmail, setIsEditingEmail] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-
-  // --- СОСТОЯНИЯ ДЛЯ РЕДАКТИРОВАНИЯ ПАРОЛЯ ---
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isEditingPassword, setIsEditingPassword] = useState(false);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // --- ОБРАБОТЧИКИ ДЕЙСТВИЙ ---
-
+  // ... handleUpdateName остается без изменений ...
   const handleUpdateName = async () => {
     if (name === user.name) {
       setIsEditingName(false);
@@ -63,7 +60,6 @@ export default function ProfileClient({
     }
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: НОВЫЕ ОБРАБОТЧИКИ ---
   const handleUpdateEmail = async () => {
     if (email === user.email) {
       setIsEditingEmail(false);
@@ -80,9 +76,15 @@ export default function ProfileClient({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Не удалось обновить email.');
-      setUser(data);
-      setSuccess('Email успешно обновлен! Теперь его нужно подтвердить.');
+      // setUser(data); // Обновление state теперь произойдет после перезагрузки
+      setSuccess('Email успешно обновлен! Страница сейчас перезагрузится.');
       setIsEditingEmail(false);
+
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      // Ключевое действие: принудительно перезагружаем данные с сервера.
+      // Это обновит сессию и `user` prop свежими данными из БД.
+      router.refresh();
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -90,6 +92,7 @@ export default function ProfileClient({
     }
   };
 
+  // ... остальные обработчики остаются без изменений ...
   const handleUpdatePassword = async () => {
     if (!currentPassword || !newPassword) {
       setError('Все поля пароля должны быть заполнены.');
@@ -112,7 +115,6 @@ export default function ProfileClient({
       if (!res.ok) throw new Error(data.error || 'Не удалось изменить пароль.');
       setSuccess('Пароль успешно изменен!');
       setIsEditingPassword(false);
-      // Очищаем поля после успеха
       setCurrentPassword('');
       setNewPassword('');
       setConfirmNewPassword('');
@@ -122,7 +124,6 @@ export default function ProfileClient({
       setIsLoading(false);
     }
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSendVerificationEmail = async () => {
     setIsSendingEmail(true);
@@ -143,6 +144,7 @@ export default function ProfileClient({
     }
   };
 
+  // ... JSX остается без изменений ...
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div className="text-center">
@@ -165,7 +167,6 @@ export default function ProfileClient({
         </div>
       )}
 
-      {/* --- Секция "Имя" --- */}
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -211,7 +212,6 @@ export default function ProfileClient({
         </div>
       </div>
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ОБНОВЛЕННАЯ СЕКЦИЯ EMAIL --- */}
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -272,9 +272,7 @@ export default function ProfileClient({
           <div className="mt-2 text-sm text-green-600">Email подтвержден.</div>
         )}
       </div>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ОБНОВЛЕННАЯ СЕКЦИЯ ПАРОЛЯ --- */}
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         {!isEditingPassword ? (
           <div className="flex items-center justify-between">
@@ -336,7 +334,6 @@ export default function ProfileClient({
           </div>
         )}
       </div>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       <div className="mt-6">
         <SignOutButton />
