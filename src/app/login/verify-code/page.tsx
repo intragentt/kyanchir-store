@@ -1,6 +1,10 @@
 // Местоположение: src/app/login/verify-code/page.tsx
 'use client';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// 1. Импортируем "официанта" - функцию signIn из next-auth.
+import { signIn } from 'next-auth/react';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
@@ -24,7 +28,7 @@ function VerifyCodePage() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [attemptsLeft, setAttemptsLeft] = useState(5);
+  // Убираем state для attemptsLeft, так как эта логика теперь полностью на сервере
   const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,17 +55,13 @@ function VerifyCodePage() {
     setIsLoading(true);
     setError(null);
     try {
-      await fetch('/api/auth/signin/email', {
+      // Логика переотправки кода остается прежней, так как она связана с другим API
+      await fetch('/api/auth/send-verification-code', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          email,
-          callbackUrl: '/profile',
-          json: 'true',
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       });
       setCode('');
-      setAttemptsLeft(5);
       setResendCooldown(60); // Блокируем кнопку на 60 секунд
       setError('Мы отправили новый код на вашу почту.');
     } catch (err) {
@@ -73,10 +73,6 @@ function VerifyCodePage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (attemptsLeft <= 0) {
-      setError('Попытки исчерпаны. Запросите новый код.');
-      return;
-    }
     setIsLoading(true);
     setError(null);
 
@@ -86,30 +82,37 @@ function VerifyCodePage() {
       return;
     }
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    // 2. Заменяем старый fetch на вызов signIn.
     try {
-      const verifyRes = await fetch('/api/auth/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, token: code }),
+      // Мы вызываем нашего "специалиста" с id 'email-code'.
+      const result = await signIn('email-code', {
+        // Передаем ему "ингредиенты", которые он ожидает.
+        email,
+        token: code,
+        // Говорим ему не перезагружать страницу после ответа. Мы сами решим, что делать.
+        redirect: false,
       });
 
-      const data = await verifyRes.json();
-
-      if (!verifyRes.ok) {
-        setError(data.error || 'Произошла ошибка');
-        if (data.attemptsLeft !== undefined) {
-          setAttemptsLeft(data.attemptsLeft);
-        }
-        setCode('');
+      // 3. Анализируем ответ от "официанта".
+      if (result?.error) {
+        // Если next-auth вернул ошибку (например, authorize вернул null), показываем ее.
+        setError('Неверный или просроченный код. Попробуйте еще раз.');
+        setCode(''); // Очищаем поле для новой попытки
         inputRef.current?.focus();
-      } else {
+      } else if (result?.ok) {
+        // Если все прошло успешно (authorize вернул пользователя), перенаправляем в профиль.
         router.push('/profile');
+      } else {
+        // На случай непредвиденных ответов.
+        setError('Произошла неизвестная ошибка.');
       }
     } catch (err) {
-      setError('Произошла непредвиденная ошибка.');
+      setError('Произошла ошибка при подключении к серверу.');
     } finally {
       setIsLoading(false);
     }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   };
 
   const focusInput = () => inputRef.current?.focus();
@@ -179,7 +182,7 @@ function VerifyCodePage() {
 
             <button
               type="submit"
-              disabled={isLoading || code.length !== 6 || attemptsLeft <= 0}
+              disabled={isLoading || code.length !== 6}
               className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
             >
               {isLoading ? 'Проверка...' : 'Подтвердить'}
