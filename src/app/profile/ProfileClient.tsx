@@ -4,10 +4,7 @@
 import { useState } from 'react';
 import type { User } from '@prisma/client';
 import SignOutButton from './SignOutButton';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Импортируем useRouter для принудительного обновления
 import { useRouter } from 'next/navigation';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface ProfileClientProps {
   user: User;
@@ -16,9 +13,8 @@ interface ProfileClientProps {
 export default function ProfileClient({
   user: initialUser,
 }: ProfileClientProps) {
-  const router = useRouter(); // Добавляем хук
+  const router = useRouter();
 
-  // ... все остальные состояния остаются без изменений ...
   const [user, setUser] = useState(initialUser);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -33,7 +29,6 @@ export default function ProfileClient({
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [isEditingPassword, setIsEditingPassword] = useState(false);
 
-  // ... handleUpdateName остается без изменений ...
   const handleUpdateName = async () => {
     if (name === user.name) {
       setIsEditingName(false);
@@ -76,23 +71,20 @@ export default function ProfileClient({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Не удалось обновить email.');
-      // setUser(data); // Обновление state теперь произойдет после перезагрузки
+
       setSuccess('Email успешно обновлен! Страница сейчас перезагрузится.');
       setIsEditingEmail(false);
 
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-      // Ключевое действие: принудительно перезагружаем данные с сервера.
-      // Это обновит сессию и `user` prop свежими данными из БД.
-      router.refresh();
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+      // Добавляем задержку перед перезагрузкой
+      setTimeout(() => {
+        router.refresh();
+      }, 1500);
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setIsLoading(false);
     }
   };
 
-  // ... остальные обработчики остаются без изменений ...
   const handleUpdatePassword = async () => {
     if (!currentPassword || !newPassword) {
       setError('Все поля пароля должны быть заполнены.');
@@ -144,7 +136,6 @@ export default function ProfileClient({
     }
   };
 
-  // ... JSX остается без изменений ...
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div className="text-center">
