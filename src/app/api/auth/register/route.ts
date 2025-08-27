@@ -2,61 +2,52 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcrypt';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-import { cookies } from 'next/headers';
-import { encrypt } from '@/lib/session'; // Мы снова используем нашу "шифровальную машину"
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export async function POST(req: Request) {
   try {
-    const { email, password }: { email?: string; password?: string } =
-      await req.json();
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    // 1. Принимаем все три поля из запроса.
+    const {
+      name,
+      email,
+      password,
+    }: { name?: string; email?: string; password?: string } = await req.json();
 
-    if (!email || !password) {
+    // 2. Обновляем валидацию.
+    if (!name || !email || !password) {
       return NextResponse.json(
-        { error: 'Email и пароль обязательны' },
+        { error: 'Имя, Email и пароль обязательны' },
         { status: 400 },
       );
     }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json(
         { error: 'Пользователь с таким email уже существует' },
-        { status: 409 },
+        { status: 409 }, // 409 Conflict - более правильный статус для этого случая
       );
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // 3. Создаем пользователя с именем.
     const user = await prisma.user.create({
       data: {
+        name, // Добавляем имя
         email,
         passwordHash,
       },
     });
 
     // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // Сразу после создания пользователя, создаем для него сессию
-    const sessionPayload = {
-      userId: user.id,
-      name: user.name,
-      email: user.email,
-    };
-    const session = await encrypt(sessionPayload);
-
-    const response = NextResponse.json(
+    // 4. Убираем всю логику ручного создания сессии.
+    // Единственная задача этого роута - создать пользователя и сообщить об успехе.
+    return NextResponse.json(
       { success: true, userId: user.id },
-      { status: 201 },
+      { status: 201 }, // 201 Created - стандартный статус для успешного создания ресурса
     );
-    response.cookies.set('session', session, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 24 * 30, // 30 дней
-      path: '/',
-    });
-
-    return response;
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   } catch (error) {
     console.error('Register API error:', error);

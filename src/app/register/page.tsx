@@ -1,6 +1,10 @@
 // Местоположение: src/app/register/page.tsx
 'use client';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// 1. Импортируем signIn для автоматического входа.
+import { signIn } from 'next-auth/react';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
@@ -15,8 +19,13 @@ const validateEmail = (email: string) => {
 };
 
 export default function RegisterPage() {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // 2. Добавляем state для новых полей.
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -26,8 +35,10 @@ export default function RegisterPage() {
     setIsLoading(true);
     setError(null);
 
-    if (!email) {
-      setError('Поле Email не может быть пустым.');
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    // 3. Добавляем новую, более строгую валидацию.
+    if (!name || !email || !password || !confirmPassword) {
+      setError('Все поля обязательны для заполнения.');
       setIsLoading(false);
       return;
     }
@@ -36,33 +47,62 @@ export default function RegisterPage() {
       setIsLoading(false);
       return;
     }
-    if (!password || password.length < 8) {
+    if (password.length < 8) {
       setError('Пароль должен содержать не менее 8 символов.');
       setIsLoading(false);
       return;
     }
+    if (password !== confirmPassword) {
+      setError('Пароли не совпадают.');
+      setIsLoading(false);
+      return;
+    }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     try {
+      // Этап 1: Регистрация (отправка данных на "Кухню")
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        // 4. Отправляем все данные, включая имя.
+        body: JSON.stringify({ name, email, password }),
       });
 
-      if (res.ok) {
-        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-        // Сразу перенаправляем в профиль, так как сессия создана на сервере
-        router.push('/profile');
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-      } else {
+      if (!res.ok) {
+        // Если регистрация не удалась (например, email занят)
         const data = await res.json();
         setError(data.error || 'Не удалось завершить регистрацию.');
+        setIsLoading(false); // Важно остановить загрузку здесь
+        return;
       }
+
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      // Этап 2: Мгновенный Вход (вызов "Швейцара")
+      // Если регистрация прошла успешно, сразу же пытаемся войти.
+      const signInResult = await signIn('credentials', {
+        email,
+        password,
+        redirect: false, // Мы сами управляем перенаправлением
+      });
+
+      if (signInResult?.error) {
+        // Этот случай маловероятен, но лучше его обработать.
+        // Означает, что аккаунт создан, но войти не удалось.
+        setError(
+          'Аккаунт создан, но не удалось войти. Попробуйте на странице входа.',
+        );
+        // Перенаправляем на страницу входа с сообщением
+        router.push('/login?message=registration_success');
+      } else {
+        // Успех! Пользователь зарегистрирован и вошел. Перенаправляем на главную.
+        router.push('/');
+      }
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
-    } finally {
       setIsLoading(false);
     }
+    // Убираем finally, так как isLoading управляется внутри логики
   };
 
   const redirectToTelegramBot = () => {
@@ -86,6 +126,32 @@ export default function RegisterPage() {
             onSubmit={handleRegisterSubmit}
             noValidate
           >
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            {/* 5. Добавляем новые поля в JSX. */}
+            <div className="relative">
+              <input
+                id="name"
+                name="name"
+                type="text"
+                autoComplete="name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                placeholder="Имя"
+              />
+              {name && (
+                <button
+                  type="button"
+                  onClick={() => setName('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                </button>
+              )}
+            </div>
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
             <div className="relative">
               <input
                 id="email"
@@ -116,7 +182,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
-                placeholder="Пароль"
+                placeholder="Пароль (мин. 8 символов)"
               />
               {password && (
                 <button
@@ -128,6 +194,30 @@ export default function RegisterPage() {
                 </button>
               )}
             </div>
+
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            <div className="relative">
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                placeholder="Подтвердите пароль"
+              />
+              {confirmPassword && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmPassword('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                </button>
+              )}
+            </div>
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
             <button
               type="submit"
               disabled={isLoading}
