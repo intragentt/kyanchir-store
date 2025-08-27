@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
@@ -25,14 +24,8 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Показываем сообщение после успешной регистрации
     if (searchParams.get('status') === 'registered') {
       setSuccessMessage('Аккаунт успешно создан! Теперь вы можете войти.');
-    }
-    // Показываем ошибку, если next-auth перенаправил сюда
-    const authError = searchParams.get('error');
-    if (authError) {
-      setError('Неверный Email или пароль.');
     }
   }, [searchParams]);
 
@@ -50,21 +43,33 @@ export default function LoginPage() {
 
     try {
       // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-      // Используем signIn с 'credentials' провайдером
-      const res = await signIn('credentials', {
-        email,
-        password,
-        redirect: false, // Управляем редиректом вручную
+      // Этап 1: Проверяем учетные данные
+      const validateRes = await fetch('/api/auth/validate-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-      if (res?.ok) {
-        // Успешный вход, перенаправляем в профиль
-        router.push('/profile');
-      } else {
-        // Ошибка от next-auth (неверный email или пароль)
-        setError('Неверный Email или пароль.');
+      if (!validateRes.ok) {
+        const data = await validateRes.json();
+        setError(data.error || 'Неверные учетные данные.');
+        setIsLoading(false);
+        return;
       }
+
+      // Этап 2: Если все верно, отправляем код
+      const sendCodeRes = await fetch('/api/auth/send-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (sendCodeRes.ok) {
+        router.push(`/login/verify-code?email=${encodeURIComponent(email)}`);
+      } else {
+        setError('Не удалось отправить код подтверждения.');
+      }
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
     } finally {
@@ -88,13 +93,11 @@ export default function LoginPage() {
               <Logo />
             </div>
           </Link>
-
           {successMessage && (
             <p className="pt-2 text-center text-sm text-green-600">
               {successMessage}
             </p>
           )}
-
           <form
             className="font-body space-y-4 text-left"
             onSubmit={handleLoginSubmit}
@@ -156,7 +159,7 @@ export default function LoginPage() {
                   htmlFor="remember-me"
                   className="ml-2 block text-sm text-zinc-700"
                 >
-                  Запомнить браузер на 30 дней
+                  Запомнить меня
                 </label>
               </div>
             </div>
@@ -165,7 +168,7 @@ export default function LoginPage() {
               disabled={isLoading}
               className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
             >
-              {isLoading ? 'Входим...' : 'Войти'}
+              {isLoading ? 'Проверка...' : 'Войти'}
             </button>
             {error && (
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>

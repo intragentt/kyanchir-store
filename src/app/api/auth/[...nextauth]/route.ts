@@ -1,45 +1,13 @@
 // Местоположение: src/app/api/auth/[...nextauth]/route.ts
 import NextAuth, { NextAuthOptions } from 'next-auth';
-// ... (остальные импорты)
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
-import EmailProvider from 'next-auth/providers/email';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcrypt';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Убираем `export`, делая константу снова локальной
-const authOptions: NextAuthOptions = {
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
-    CredentialsProvider({
-      id: 'credentials',
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Необходимо ввести Email и пароль');
-        }
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-        if (!user || !user.passwordHash) {
-          throw new Error('Пользователь с таким Email не найден');
-        }
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.passwordHash,
-        );
-        if (!isValid) {
-          throw new Error('Неверный пароль');
-        }
-        return user;
-      },
-    }),
+    // Оставляем только провайдер для входа через Telegram
     CredentialsProvider({
       id: 'telegram-credentials',
       name: 'Telegram Login',
@@ -61,24 +29,14 @@ const authOptions: NextAuthOptions = {
         return user || null;
       },
     }),
-    EmailProvider({
-      server: {
-        host: process.env.EMAIL_SERVER_HOST,
-        port: Number(process.env.EMAIL_SERVER_PORT),
-        auth: {
-          user: process.env.EMAIL_SERVER_USER,
-          pass: process.env.EMAIL_SERVER_PASSWORD,
-        },
-      },
-      from: process.env.EMAIL_FROM,
-    }),
   ],
   pages: {
     signIn: '/login',
     error: '/login',
   },
   session: {
-    strategy: 'jwt',
+    // Эта стратегия больше не используется для входа по паролю, но оставим ее для Telegram
+    strategy: 'database',
   },
   secret: process.env.AUTH_SECRET,
 };

@@ -36,28 +36,24 @@ export default function RegisterPage() {
       setIsLoading(false);
       return;
     }
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // Добавляем проверку на длину пароля
     if (!password || password.length < 8) {
       setError('Пароль должен содержать не менее 8 символов.');
       setIsLoading(false);
       return;
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     try {
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-      // Обращаемся к нашему новому API для регистрации
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
       if (res.ok) {
-        // После успешной регистрации, отправляем пользователя на страницу входа
-        router.push('/login?status=registered');
+        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+        // Сразу перенаправляем в профиль, так как сессия создана на сервере
+        router.push('/profile');
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       } else {
         const data = await res.json();
         setError(data.error || 'Не удалось завершить регистрацию.');
