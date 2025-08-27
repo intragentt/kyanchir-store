@@ -42,7 +42,6 @@ export default function LoginPage() {
     }
 
     try {
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
       // Этап 1: Проверяем учетные данные
       const validateRes = await fetch('/api/auth/validate-credentials', {
         method: 'POST',
@@ -69,7 +68,6 @@ export default function LoginPage() {
       } else {
         setError('Не удалось отправить код подтверждения.');
       }
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     } catch (err) {
       setError('Произошла непредвиденная ошибка.');
     } finally {
