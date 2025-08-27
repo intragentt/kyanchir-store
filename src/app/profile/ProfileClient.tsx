@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { User } from '@prisma/client'; // Импортируем тип User для пропсов
+import type { User } from '@prisma/client';
 import SignOutButton from './SignOutButton';
 
 interface ProfileClientProps {
@@ -12,32 +12,54 @@ interface ProfileClientProps {
 export default function ProfileClient({
   user: initialUser,
 }: ProfileClientProps) {
-  // --- Состояния для управления данными и UI ---
   const [user, setUser] = useState(initialUser);
   const [name, setName] = useState(initialUser.name || '');
   const [isEditingName, setIsEditingName] = useState(false);
 
-  // Состояния для ошибок и уведомлений
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // --- Обработчики действий ---
-
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
   const handleUpdateName = async () => {
+    // 1. Проверяем, изменилось ли имя, чтобы не отправлять лишних запросов.
+    if (name === user.name) {
+      setIsEditingName(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setSuccess(null);
-    // TODO: Здесь будет вызов API для обновления имени
-    // const res = await fetch('/api/user/profile', { method: 'PATCH', body: JSON.stringify({ name }) });
-    // Пока просто имитируем успех для проверки UI
-    setTimeout(() => {
-      setUser({ ...user, name: name });
-      setIsEditingName(false);
-      setIsLoading(false);
+
+    try {
+      // 2. Отправляем запрос на наш новый API-роут.
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // 3. Если сервер вернул ошибку, показываем ее.
+        throw new Error(data.error || 'Не удалось обновить имя.');
+      }
+
+      // 4. В случае успеха, обновляем состояние пользователя данными с сервера.
+      setUser(data);
       setSuccess('Имя успешно обновлено!');
-    }, 1000);
+      setIsEditingName(false);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSendVerificationEmail = () => {
     // TODO: Здесь будет вызов API для отправки письма
@@ -47,7 +69,6 @@ export default function ProfileClient({
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <div className="text-center">
-        {/* Используем div вместо h1, как вы просили */}
         <div className="font-body text-3xl font-bold tracking-tight">
           Личный кабинет
         </div>
@@ -56,7 +77,6 @@ export default function ProfileClient({
         </div>
       </div>
 
-      {/* Блок с уведомлениями */}
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
@@ -68,7 +88,6 @@ export default function ProfileClient({
         </div>
       )}
 
-      {/* --- Секция "Имя" --- */}
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
@@ -113,7 +132,6 @@ export default function ProfileClient({
         </div>
       </div>
 
-      {/* --- Секция "Email" --- */}
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <div className="font-body font-semibold text-gray-500">Email</div>
         <div className="flex items-center justify-between">
@@ -139,14 +157,12 @@ export default function ProfileClient({
         )}
       </div>
 
-      {/* --- Секция "Пароль" --- */}
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
             <div className="font-body font-semibold text-gray-500">Пароль</div>
             <div className="font-body text-lg">************</div>
           </div>
-          {/* TODO: Добавить кнопку "Изменить" для пароля */}
           <button className="font-body text-sm font-semibold text-indigo-600 hover:text-indigo-500">
             Изменить
           </button>
