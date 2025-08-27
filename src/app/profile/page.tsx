@@ -1,19 +1,16 @@
 // Местоположение: src/app/profile/page.tsx
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Исправляем опечатку в пути: 'Page-container' -> 'PageContainer'
 import PageContainer from '@/components/layout/PageContainer';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import ProfileClient from './ProfileClient';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// 1. Импортируем наши экспортированные authOptions.
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import { authOptions } from '@/lib/auth';
 
 export default async function ProfilePage() {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // 2. Явно передаем authOptions в getServerSession для максимальной надежности.
   const session = await getServerSession(authOptions);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!session?.user?.id) {
     redirect('/login');
