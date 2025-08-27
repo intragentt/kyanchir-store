@@ -7,9 +7,10 @@ import { useAppStore } from '@/store/useAppStore';
 import { useRouter } from 'next/navigation';
 import SearchIcon from './icons/SearchIcon';
 import HeartIcon from './icons/HeartIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Убираем BurgerIcon, импортируем ChevronIcon
 import ChevronIcon from './icons/ChevronIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// 1. Импортируем профессионального "Швейцара"
+import { signOut } from 'next-auth/react';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
@@ -26,11 +27,16 @@ export default function FloatingMenuOverlay({
   const isAuthenticated = !!user;
   const router = useRouter();
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // 2. УДАЛЯЕМ старого, "самодельного швейцара" - функция handleSignOut больше не нужна.
+  /*
   const handleSignOut = async () => {
     onClose();
     await fetch('/api/auth/logout', { method: 'POST' });
     router.refresh();
   };
+  */
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!isOpen) {
     return null;
@@ -60,8 +66,6 @@ export default function FloatingMenuOverlay({
           <div className="font-body text-base text-gray-500">Поиск...</div>
         </div>
         <div className="flex flex-none items-center">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
-          {/* Заменяем старую логику на новый компонент-трансформер */}
           <button
             aria-label="Основное меню"
             className="p-2"
@@ -72,7 +76,6 @@ export default function FloatingMenuOverlay({
               className="h-7 w-7 text-gray-800"
             />
           </button>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </div>
       </div>
 
@@ -87,12 +90,18 @@ export default function FloatingMenuOverlay({
               Личный кабинет
             </Link>
             <p className="truncate text-sm text-gray-500">{user?.email}</p>
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            {/* 3. Даем команду новому "Швейцару". */}
             <button
-              onClick={handleSignOut}
+              onClick={() => {
+                onClose(); // Сначала закрываем меню
+                signOut({ callbackUrl: '/' }); // Затем вызываем выход
+              }}
               className="font-body text-left text-base font-medium text-red-600 transition-colors hover:text-red-800"
             >
               Выход
             </button>
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
         ) : (
           <Link
