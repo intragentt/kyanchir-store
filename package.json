@@ -2,12 +2,17 @@
   "name": "kyanchir-store",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma db push && prisma generate && next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "prisma:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset -f --skip-generate --skip-seed && prisma db seed",
+    "prisma:studio": "prisma studio",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -55,7 +60,7 @@
     "prettier-plugin-tailwindcss": "0.6.13",
     "prisma": "^6.13.0",
     "tailwindcss": "^4",
-    "ts-node": "^10.9.2",
+    "tsx": "^4.0.0",
     "typescript": "^5"
   }
 }
