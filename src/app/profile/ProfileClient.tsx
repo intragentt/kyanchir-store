@@ -9,9 +9,12 @@ interface ProfileClientProps {
   user: User;
 }
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Добавляем ключевое слово "default", чтобы этот компонент можно было импортировать по умолчанию.
 export default function ProfileClient({
   user: initialUser,
 }: ProfileClientProps) {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const [user, setUser] = useState(initialUser);
   const [name, setName] = useState(initialUser.name || '');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -19,37 +22,24 @@ export default function ProfileClient({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
   const handleUpdateName = async () => {
-    // 1. Проверяем, изменилось ли имя, чтобы не отправлять лишних запросов.
     if (name === user.name) {
       setIsEditingName(false);
       return;
     }
-
     setIsLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
-      // 2. Отправляем запрос на наш новый API-роут.
       const res = await fetch('/api/user/profile', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        // 3. Если сервер вернул ошибку, показываем ее.
-        throw new Error(data.error || 'Не удалось обновить имя.');
-      }
-
-      // 4. В случае успеха, обновляем состояние пользователя данными с сервера.
+      if (!res.ok) throw new Error(data.error || 'Не удалось обновить имя.');
       setUser(data);
       setSuccess('Имя успешно обновлено!');
       setIsEditingName(false);
@@ -59,11 +49,24 @@ export default function ProfileClient({
       setIsLoading(false);
     }
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  const handleSendVerificationEmail = () => {
-    // TODO: Здесь будет вызов API для отправки письма
-    setSuccess('Письмо с подтверждением отправлено на ваш email.');
+  const handleSendVerificationEmail = async () => {
+    setIsSendingEmail(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await fetch('/api/auth/send-verification-link', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok)
+        throw new Error(data.error || 'Не удалось отправить письмо.');
+      setSuccess('Письмо с подтверждением отправлено на ваш email.');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   return (
@@ -146,9 +149,10 @@ export default function ProfileClient({
               </div>
               <button
                 onClick={handleSendVerificationEmail}
-                className="font-body text-sm font-semibold whitespace-nowrap text-indigo-600 hover:text-indigo-500"
+                disabled={isSendingEmail}
+                className="font-body text-sm font-semibold whitespace-nowrap text-indigo-600 hover:text-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Отправить письмо
+                {isSendingEmail ? 'Отправка...' : 'Отправить письмо'}
               </button>
             </div>
           </div>
