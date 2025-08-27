@@ -23,7 +23,15 @@ export async function POST(req: Request) {
       create: { email },
     });
 
-    // 3. Создаем новый токен верификации
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    // 3. ПРАВИЛО ГИГИЕНЫ: Перед созданием нового токена, удаляем все старые для этого email.
+    // Это гарантирует, что только самый последний код будет действителен.
+    await prisma.verificationToken.deleteMany({
+      where: { identifier: email },
+    });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+    // 4. Создаем новый, единственно верный токен верификации
     await prisma.verificationToken.create({
       data: {
         identifier: email,
@@ -32,7 +40,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // 4. Отправляем письмо с "диагностическими зондами"
+    // 5. Отправляем письмо
     console.log('--- НАЧАЛО ОТПРАВКИ EMAIL (КАСТОМНЫЙ API) ---');
     console.log(`Цель: ${email}, Код: ${token}`);
 
@@ -43,11 +51,9 @@ export async function POST(req: Request) {
         user: process.env.EMAIL_SERVER_USER,
         pass: process.env.EMAIL_SERVER_PASSWORD,
       },
-      debug: true,
-      logger: true,
     });
 
-    const result = await transport.sendMail({
+    await transport.sendMail({
       to: email,
       from: process.env.EMAIL_FROM,
       subject: `Ваш код для входа в Kyanchir: ${token}`,
@@ -59,10 +65,6 @@ export async function POST(req: Request) {
              </div>`,
     });
 
-    console.log(
-      'Письмо успешно отправлено через кастомный API. Результат:',
-      result.messageId,
-    );
     console.log('--- КОНЕЦ ОТПРАВКИ EMAIL ---');
 
     return NextResponse.json({ success: true });
