@@ -2,42 +2,39 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { createTransport } from 'nodemailer';
 import { randomBytes } from 'crypto';
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id || !session.user.email) {
       return NextResponse.json({ error: 'Не авторизован' }, { status: 401 });
     }
-
+    const userId = session.user.id;
     const email = session.user.email;
 
-    // 1. Генерируем безопасный, случайный токен.
     const token = randomBytes(32).toString('hex');
-    // 2. Устанавливаем срок жизни токена (например, 24 часа).
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    // 3. Удаляем старые токены этого пользователя, чтобы избежать путаницы.
+    // Удаляем старые токены по userId
     await prisma.verificationToken.deleteMany({
-      where: { identifier: email },
+      where: { identifier: userId },
     });
 
-    // 4. Сохраняем новый токен в базу данных.
+    // Сохраняем новый токен, используя userId как идентификатор
     await prisma.verificationToken.create({
       data: {
-        identifier: email,
+        identifier: userId,
         token,
         expires,
       },
     });
 
-    // 5. Создаем уникальную ссылку для верификации.
     const verificationLink = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
 
-    // 6. Настраиваем и отправляем письмо.
     const transport = createTransport({
       host: process.env.EMAIL_SERVER_HOST,
       port: Number(process.env.EMAIL_SERVER_PORT),
@@ -51,6 +48,7 @@ export async function POST(req: Request) {
       to: email,
       from: process.env.EMAIL_FROM,
       subject: 'Подтвердите ваш email для Kyanchir',
+      // --- ИСПРАВЛЕНИЕ: ВОССТАНОВЛЕН ПОЛНЫЙ HTML БЛОК ---
       html: `<div style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">
                <h2 style="color: #333;">Подтверждение Email</h2>
                <p>Пожалуйста, нажмите на кнопку ниже, чтобы подтвердить ваш email адрес.</p>

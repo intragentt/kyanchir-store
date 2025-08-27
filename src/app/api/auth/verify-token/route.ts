@@ -27,24 +27,25 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Находим пользователя, которому принадлежит этот токен.
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    // 3. Находим пользователя по ID, который мы теперь храним в `identifier`.
     const user = await prisma.user.findUnique({
-      where: { email: verificationToken.identifier },
+      where: { id: verificationToken.identifier }, // <<< КЛЮЧЕВОЕ ИЗМЕНЕНИЕ
     });
 
     if (!user) {
-      // Этот случай маловероятен, но лучше его обработать.
       return NextResponse.json(
         { error: 'Связанный пользователь не найден' },
         { status: 404 },
       );
     }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     // 4. Обновляем пользователя, устанавливая флаг верификации.
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        emailVerified: new Date(), // Устанавливаем текущую дату как подтверждение
+        emailVerified: new Date(),
       },
     });
 
