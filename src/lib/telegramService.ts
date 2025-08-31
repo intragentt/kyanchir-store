@@ -34,9 +34,7 @@ export const setWebhook = async () => {
   }
 
   try {
-    await bot.setWebHook(webhookUrl, {
-      secret_token: secretToken,
-    });
+    await bot.setWebHook(webhookUrl, { secret_token: secretToken });
     console.log(
       `✅ Вебхук для админ-бота успешно установлен на URL: ${webhookUrl}`,
     );
@@ -45,13 +43,19 @@ export const setWebhook = async () => {
   }
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ОБНОВЛЕННАЯ ФУНКЦИЯ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 /**
  * Отправляет уведомления о новом тикете с интерактивными кнопками.
  */
 export const notifyAgents = async (
-  ticket: { id: string; subject: string; clientEmail: string },
-  assignedRole: AgentRole,
+  // Добавляем новое поле в описание `ticket`
+  ticket: {
+    id: string;
+    subject: string;
+    clientEmail: string;
+    assignedEmail: string | null;
+  },
+  assignedRole: AgentRole, // Пока оставим это для распределения
 ) => {
   const bot = getBotInstance();
 
@@ -70,8 +74,10 @@ export const notifyAgents = async (
   }
 
   const ticketUrl = `https://t.me/kyanchir_uw_maill_bot?start=ticket_${ticket.id}`;
+
+  // Обновляем текст, чтобы показывать, на какую почту пришел тикет
   const messageText = `
-📬 **Новое обращение!** <a href="${ticketUrl}">&#8203;</a>
+📬 **Новое обращение!** (на ${ticket.assignedEmail || 'support'}) <a href="${ticketUrl}">&#8203;</a>
 
 <b>От:</b> ${ticket.clientEmail}
 <b>Тема:</b> ${ticket.subject}
@@ -79,7 +85,6 @@ export const notifyAgents = async (
 <i>Чтобы ответить, используйте функцию "Ответить" (Reply) на это сообщение.</i>
   `;
 
-  // Создаем клавиатуру с кнопками
   const keyboard: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
       [
@@ -90,7 +95,6 @@ export const notifyAgents = async (
         },
       ],
       [
-        // ВАЖНО: убедись, что на сайте существует (или будет существовать) такая админ-панель
         {
           text: 'Посмотреть тикет на сайте ↗️',
           url: `${process.env.NEXTAUTH_URL}/admin/tickets/${ticket.id}`,
@@ -102,7 +106,6 @@ export const notifyAgents = async (
   for (const agent of agentsToNotify) {
     try {
       if (agent.telegramId) {
-        // Добавляем reply_markup в опции при отправке
         await bot.sendMessage(agent.telegramId, messageText, {
           parse_mode: 'HTML',
           reply_markup: keyboard,

@@ -10,7 +10,7 @@ import {
 } from '@prisma/client';
 import formidable from 'formidable';
 import { NextApiRequest } from 'next';
-import { notifyAgents } from '@/lib/telegramService'; // --- НАЧАЛО ИЗМЕНЕНИЙ: ИМПОРТ ---
+import { notifyAgents } from '@/lib/telegramService';
 
 async function parseForm(
   req: Request,
@@ -27,14 +27,11 @@ async function parseForm(
   });
 }
 
-// --- ИЗМЕНЕНИЕ: Старая заглушка `notifyAgentsViaTelegram` полностью удалена ---
-
 export async function POST(req: Request) {
   console.log('Получен входящий вебхук от SendGrid...');
 
   try {
     const { fields } = await parseForm(req);
-
     const getFieldAsString = (field: string | string[] | undefined): string => {
       if (Array.isArray(field)) {
         return field[0] || '';
@@ -76,15 +73,14 @@ export async function POST(req: Request) {
 
     if (!route) {
       console.error(
-        `Ошибка: не найден маршрут для email: ${toEmail}. Письмо не будет обработано.`,
+        `Ошибка: email ${toEmail} не найден в списке разрешенных маршрутов. Письмо не будет обработано.`,
       );
       return NextResponse.json({
         message: 'Маршрут не найден, письмо проигнорировано.',
       });
     }
 
-    const assignedRole: AgentRole = route.assignedRole;
-    console.log(`Назначенная роль для этого email: ${assignedRole}`);
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
 
     let ticket = await prisma.supportTicket.findFirst({
       where: {
@@ -101,6 +97,7 @@ export async function POST(req: Request) {
           subject: subject,
           status: TicketStatus.OPEN,
           source: TicketSource.EMAIL,
+          assignedEmail: toEmail, // <--- Запоминаем, на какую почту пришло письмо
         },
       });
       console.log(`Создан новый тикет: ${ticket.id}`);
@@ -108,6 +105,13 @@ export async function POST(req: Request) {
       console.log(
         `Найден существующий тикет: ${ticket.id}. Добавляем новое сообщение.`,
       );
+      // Если у старого тикета нет assignedEmail, можно обновить
+      if (!ticket.assignedEmail) {
+        await prisma.supportTicket.update({
+          where: { id: ticket.id },
+          data: { assignedEmail: toEmail },
+        });
+      }
     }
 
     await prisma.supportMessage.create({
@@ -119,12 +123,18 @@ export async function POST(req: Request) {
     });
 
     console.log(`Сообщение успешно сохранено в тикете ${ticket.id}`);
-    
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: ВЫЗЫВАЕМ НОВУЮ ФУНКЦИЮ ---
+
+    // ВРЕМЕННО: пока мы не реализовали логику ролей по email, будем отправлять всем админам
     await notifyAgents(
-      { id: ticket.id, subject: ticket.subject, clientEmail: ticket.clientEmail },
-      assignedRole
+      {
+        id: ticket.id,
+        subject: ticket.subject,
+        clientEmail: ticket.clientEmail,
+        assignedEmail: toEmail,
+      },
+      AgentRole.ADMIN, // Уведомляем админов, так как логики распределения по почтам еще нет
     );
+
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json(

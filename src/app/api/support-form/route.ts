@@ -7,10 +7,8 @@ import {
   SenderType,
   TicketStatus,
   AgentRole,
-} from '@prisma/client'; // Добавил AgentRole
-import { notifyAgents } from '@/lib/telegramService'; // --- НАЧАЛО ИЗМЕНЕНИЙ: ИМПОРТ ---
-
-// --- ИЗМЕНЕНИЕ: Старая заглушка `notifyAgentsViaTelegram` полностью удалена ---
+} from '@prisma/client';
+import { notifyAgents } from '@/lib/telegramService';
 
 interface SupportFormRequestBody {
   email: string;
@@ -33,6 +31,11 @@ export async function POST(req: Request) {
       );
     }
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+
+    // Сообщениям с веб-формы по умолчанию присваиваем почту support@...
+    const assignedEmail = 'support@kyanchir.ru';
+
     let ticket = await prisma.supportTicket.findFirst({
       where: {
         clientEmail: email,
@@ -49,6 +52,7 @@ export async function POST(req: Request) {
           subject: subject,
           status: TicketStatus.OPEN,
           source: TicketSource.WEB_FORM,
+          assignedEmail: assignedEmail, // <--- Запоминаем email
         },
       });
       console.log(`Создан новый тикет: ${ticket.id}`);
@@ -70,13 +74,13 @@ export async function POST(req: Request) {
       `Сообщение от ${email} успешно сохранено в тикете ${ticket.id}`,
     );
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: ВЫЗЫВАЕМ НОВУЮ ФУНКЦИЮ ---
-    // Сообщения с веб-формы по умолчанию уходят роли SUPPORT
+    // Вызываем notifyAgents с новым полем
     await notifyAgents(
       {
         id: ticket.id,
         subject: ticket.subject,
         clientEmail: ticket.clientEmail,
+        assignedEmail: assignedEmail, // <--- Передаем email в уведомитель
       },
       AgentRole.SUPPORT,
     );
