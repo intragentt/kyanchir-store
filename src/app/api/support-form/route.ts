@@ -2,32 +2,19 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { TicketSource, SenderType, TicketStatus } from '@prisma/client';
+import {
+  TicketSource,
+  SenderType,
+  TicketStatus,
+  AgentRole,
+} from '@prisma/client'; // Добавил AgentRole
+import { notifyAgents } from '@/lib/telegramService'; // --- НАЧАЛО ИЗМЕНЕНИЙ: ИМПОРТ ---
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// --- ИЗМЕНЕНИЕ: Старая заглушка `notifyAgentsViaTelegram` полностью удалена ---
 
-// ЗАГЛУШКА: Эту функцию мы реализуем позже.
-// Она будет одинаковой для обоих эндпоинтов.
-// В идеале, её нужно вынести в отдельный сервис-файл, но пока оставим здесь для простоты.
-async function notifyAgentsViaTelegram(
-  ticketId: string,
-  subject: string,
-  from: string,
-) {
-  console.log(`--- TELEGRAM NOTIFICATION (from Web Form) ---`);
-  console.log(`Новый тикет/сообщение: ${ticketId}`);
-  console.log(`Тема: ${subject}`);
-  console.log(`От: ${from}`);
-  console.log(
-    `Необходимо уведомить агентов с ролью SUPPORT (т.к. это форма поддержки).`,
-  );
-  // Здесь будет логика поиска агентов по роли и отправки им сообщения через Telegram Bot API
-}
-
-// Определяем тип ожидаемых данных в теле запроса
 interface SupportFormRequestBody {
   email: string;
-  name?: string; // Имя опционально
+  name?: string;
   subject: string;
   content: string;
 }
@@ -36,7 +23,6 @@ export async function POST(req: Request) {
   console.log('Получен запрос на создание тикета через веб-форму...');
 
   try {
-    // 1. Парсинг и валидация входящего JSON
     const body: SupportFormRequestBody = await req.json();
     const { email, name, subject, content } = body;
 
@@ -47,8 +33,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 2. Поиск существующего тикета или создание нового
-    // Логика идентична эндпоинту для почты
     let ticket = await prisma.supportTicket.findFirst({
       where: {
         clientEmail: email,
@@ -61,10 +45,10 @@ export async function POST(req: Request) {
       ticket = await prisma.supportTicket.create({
         data: {
           clientEmail: email,
-          clientName: name, // Сохраняем имя, если оно было предоставлено
+          clientName: name,
           subject: subject,
           status: TicketStatus.OPEN,
-          source: TicketSource.WEB_FORM, // Указываем, что источник - веб-форма
+          source: TicketSource.WEB_FORM,
         },
       });
       console.log(`Создан новый тикет: ${ticket.id}`);
@@ -74,7 +58,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Создание нового сообщения в рамках тикета
     await prisma.supportMessage.create({
       data: {
         ticketId: ticket.id,
@@ -87,16 +70,23 @@ export async function POST(req: Request) {
       `Сообщение от ${email} успешно сохранено в тикете ${ticket.id}`,
     );
 
-    // 4. Отправка уведомления агентам (используем ту же заглушку)
-    await notifyAgentsViaTelegram(ticket.id, ticket.subject, email);
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: ВЫЗЫВАЕМ НОВУЮ ФУНКЦИЮ ---
+    // Сообщения с веб-формы по умолчанию уходят роли SUPPORT
+    await notifyAgents(
+      {
+        id: ticket.id,
+        subject: ticket.subject,
+        clientEmail: ticket.clientEmail,
+      },
+      AgentRole.SUPPORT,
+    );
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    // 5. Возвращаем успешный ответ
     return NextResponse.json(
       { message: 'Ваше обращение успешно отправлено', ticketId: ticket.id },
-      { status: 201 }, // 201 Created - более подходящий статус для создания новой сущности
+      { status: 201 },
     );
   } catch (error) {
-    // Обработка ошибок, включая некорректный JSON
     if (error instanceof SyntaxError) {
       return NextResponse.json(
         { error: 'Некорректный формат JSON' },
@@ -113,5 +103,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---

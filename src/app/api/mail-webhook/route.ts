@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import formidable from 'formidable';
 import { NextApiRequest } from 'next';
+import { notifyAgents } from '@/lib/telegramService'; // --- НАЧАЛО ИЗМЕНЕНИЙ: ИМПОРТ ---
 
 async function parseForm(
   req: Request,
@@ -26,17 +27,7 @@ async function parseForm(
   });
 }
 
-async function notifyAgentsViaTelegram(
-  ticketId: string,
-  subject: string,
-  from: string,
-) {
-  console.log(`--- TELEGRAM NOTIFICATION ---`);
-  console.log(`Новый тикет/сообщение: ${ticketId}`);
-  console.log(`Тема: ${subject}`);
-  console.log(`От: ${from}`);
-  console.log(`Необходимо уведомить агентов с соответствующей ролью.`);
-}
+// --- ИЗМЕНЕНИЕ: Старая заглушка `notifyAgentsViaTelegram` полностью удалена ---
 
 export async function POST(req: Request) {
   console.log('Получен входящий вебхук от SendGrid...');
@@ -44,14 +35,11 @@ export async function POST(req: Request) {
   try {
     const { fields } = await parseForm(req);
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ (БЕЗОПАСНОЕ ИЗВЛЕЧЕНИЕ ДАННЫХ) ---
-
-    // Функция-хелпер для безопасного извлечения строки из полей formidable
     const getFieldAsString = (field: string | string[] | undefined): string => {
       if (Array.isArray(field)) {
-        return field[0] || ''; // Берем первый элемент, если это массив
+        return field[0] || '';
       }
-      return field || ''; // Возвращаем само значение или пустую строку
+      return field || '';
     };
 
     const envelopeRaw = getFieldAsString(fields.envelope);
@@ -69,8 +57,6 @@ export async function POST(req: Request) {
 
     const envelope = JSON.parse(envelopeRaw);
     const toEmail = envelope.to[0];
-
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     console.log(`Письмо от: ${fromEmail} на: ${toEmail}`);
 
@@ -133,8 +119,13 @@ export async function POST(req: Request) {
     });
 
     console.log(`Сообщение успешно сохранено в тикете ${ticket.id}`);
-
-    await notifyAgentsViaTelegram(ticket.id, ticket.subject, fromEmail);
+    
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: ВЫЗЫВАЕМ НОВУЮ ФУНКЦИЮ ---
+    await notifyAgents(
+      { id: ticket.id, subject: ticket.subject, clientEmail: ticket.clientEmail },
+      assignedRole
+    );
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json(
       { message: 'Вебхук успешно обработан' },
