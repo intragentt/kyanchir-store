@@ -1,12 +1,11 @@
 // Местоположение: /src/lib/telegramService.ts
 
 import TelegramBot from 'node-telegram-bot-api';
-import prisma from '@/lib/prisma'; // Добавлен импорт prisma
-import { AgentRole } from '@prisma/client'; // Добавлен импорт AgentRole
+import prisma from '@/lib/prisma';
+import { AgentRole } from '@prisma/client';
 
 const token = process.env.TELEGRAM_SUPPORT_BOT_TOKEN;
 
-// Проверяем, что токен вообще существует
 if (!token) {
   throw new Error(
     'TELEGRAM_SUPPORT_BOT_TOKEN не найден в переменных окружения!',
@@ -15,9 +14,6 @@ if (!token) {
 
 let botInstance: TelegramBot | null = null;
 
-/**
- * Инициализирует и возвращает синглтон-экземпляр бота.
- */
 export const getBotInstance = (): TelegramBot => {
   if (!botInstance) {
     botInstance = new TelegramBot(token, { polling: false });
@@ -26,9 +22,6 @@ export const getBotInstance = (): TelegramBot => {
   return botInstance;
 };
 
-/**
- * Устанавливает вебхук для бота.
- */
 export const setWebhook = async () => {
   const bot = getBotInstance();
   const webhookUrl = `${process.env.NEXTAUTH_URL}/api/telegram-support-webhook`;
@@ -52,9 +45,9 @@ export const setWebhook = async () => {
   }
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: НОВАЯ ФУНКЦИЯ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ОБНОВЛЕННАЯ ФУНКЦИЯ ---
 /**
- * Отправляет уведомления о новом тикете или сообщении всем агентам с нужной ролью.
+ * Отправляет уведомления о новом тикете с интерактивными кнопками.
  */
 export const notifyAgents = async (
   ticket: { id: string; subject: string; clientEmail: string },
@@ -62,14 +55,10 @@ export const notifyAgents = async (
 ) => {
   const bot = getBotInstance();
 
-  // 1. Находим всех агентов, у которых есть telegramId и нужная роль (или роль ADMIN)
   const agentsToNotify = await prisma.supportAgent.findMany({
     where: {
-      telegramId: { not: null }, // У агента должен быть привязан Telegram
-      OR: [
-        { role: assignedRole }, // Уведомляем агентов с назначенной ролью
-        { role: AgentRole.ADMIN }, // Админы получают все уведомления
-      ],
+      telegramId: { not: null },
+      OR: [{ role: assignedRole }, { role: AgentRole.ADMIN }],
     },
   });
 
@@ -80,8 +69,6 @@ export const notifyAgents = async (
     return;
   }
 
-  // 2. Формируем сообщение
-  // "Прячем" ID тикета в скрытую ссылку. Это трюк, чтобы потом извлечь его при ответе.
   const ticketUrl = `https://t.me/kyanchir_uw_maill_bot?start=ticket_${ticket.id}`;
   const messageText = `
 📬 **Новое обращение!** <a href="${ticketUrl}">&#8203;</a>
@@ -92,12 +79,33 @@ export const notifyAgents = async (
 <i>Чтобы ответить, используйте функцию "Ответить" (Reply) на это сообщение.</i>
   `;
 
-  // 3. Рассылаем уведомление каждому агенту
+  // Создаем клавиатуру с кнопками
+  const keyboard: TelegramBot.InlineKeyboardMarkup = {
+    inline_keyboard: [
+      [
+        { text: 'Взять в работу ⏳', callback_data: `ticket_ack_${ticket.id}` },
+        {
+          text: 'Закрыть тикет ✅',
+          callback_data: `ticket_close_${ticket.id}`,
+        },
+      ],
+      [
+        // ВАЖНО: убедись, что на сайте существует (или будет существовать) такая админ-панель
+        {
+          text: 'Посмотреть тикет на сайте ↗️',
+          url: `${process.env.NEXTAUTH_URL}/admin/tickets/${ticket.id}`,
+        },
+      ],
+    ],
+  };
+
   for (const agent of agentsToNotify) {
     try {
       if (agent.telegramId) {
+        // Добавляем reply_markup в опции при отправке
         await bot.sendMessage(agent.telegramId, messageText, {
           parse_mode: 'HTML',
+          reply_markup: keyboard,
         });
       }
     } catch (error: any) {
