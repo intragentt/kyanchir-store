@@ -38,53 +38,52 @@ export const setWebhook = async () => {
     console.log(
       `✅ Вебхук для админ-бота успешно установлен на URL: ${webhookUrl}`,
     );
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    // Устанавливаем команды-подсказки в меню Telegram
+    await bot.setMyCommands([
+      { command: '/start', description: 'Перезапустить и показать клавиатуру' },
+      { command: '/tickets', description: 'Показать открытые тикеты' },
+    ]);
+    console.log('✅ Команды-подсказки для бота установлены.');
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   } catch (error) {
-    console.error('❌ Не удалось установить вебхук для админ-бота:', error);
+    console.error(
+      '❌ Не удалось установить вебхук или команды для админ-бота:',
+      error,
+    );
   }
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-/**
- * Отправляет уведомления о новом тикете с интерактивными кнопками.
- */
 export const notifyAgents = async (
-  // Добавляем новое поле в описание `ticket`
   ticket: {
     id: string;
     subject: string;
     clientEmail: string;
     assignedEmail: string | null;
   },
-  assignedRole: AgentRole, // Пока оставим это для распределения
+  assignedRole: AgentRole,
 ) => {
   const bot = getBotInstance();
-
   const agentsToNotify = await prisma.supportAgent.findMany({
     where: {
       telegramId: { not: null },
       OR: [{ role: assignedRole }, { role: AgentRole.ADMIN }],
     },
   });
-
   if (agentsToNotify.length === 0) {
     console.warn(
       `Нет агентов для уведомления о тикете ${ticket.id} с ролью ${assignedRole}`,
     );
     return;
   }
-
   const ticketUrl = `https://t.me/kyanchir_uw_maill_bot?start=ticket_${ticket.id}`;
-
-  // Обновляем текст, чтобы показывать, на какую почту пришел тикет
   const messageText = `
 📬 **Новое обращение!** (на ${ticket.assignedEmail || 'support'}) <a href="${ticketUrl}">&#8203;</a>
-
 <b>От:</b> ${ticket.clientEmail}
 <b>Тема:</b> ${ticket.subject}
-
 <i>Чтобы ответить, используйте функцию "Ответить" (Reply) на это сообщение.</i>
   `;
-
   const keyboard: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
       [
@@ -123,4 +122,3 @@ export const notifyAgents = async (
     `Уведомления о тикете ${ticket.id} отправлены ${agentsToNotify.length} агентам.`,
   );
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
