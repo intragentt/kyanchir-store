@@ -38,15 +38,11 @@ export const setWebhook = async () => {
     console.log(
       `✅ Вебхук для админ-бота успешно установлен на URL: ${webhookUrl}`,
     );
-
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // Устанавливаем команды-подсказки в меню Telegram
     await bot.setMyCommands([
       { command: '/start', description: 'Перезапустить и показать клавиатуру' },
       { command: '/tickets', description: 'Показать открытые тикеты' },
     ]);
     console.log('✅ Команды-подсказки для бота установлены.');
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   } catch (error) {
     console.error(
       '❌ Не удалось установить вебхук или команды для админ-бота:',
@@ -55,35 +51,39 @@ export const setWebhook = async () => {
   }
 };
 
-export const notifyAgents = async (
-  ticket: {
-    id: string;
-    subject: string;
-    clientEmail: string;
-    assignedEmail: string | null;
-  },
-  assignedRole: AgentRole,
-) => {
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+/**
+ * Отправляет уведомления о новом тикете всем релевантным агентам.
+ */
+export const notifyAgents = async (ticket: {
+  id: string;
+  subject: string;
+  clientEmail: string;
+  assignedEmail: string | null;
+}) => {
   const bot = getBotInstance();
+
+  // Теперь уведомляем всех, кроме тех, у кого нет роли. Админы и так включены.
   const agentsToNotify = await prisma.supportAgent.findMany({
     where: {
       telegramId: { not: null },
-      OR: [{ role: assignedRole }, { role: AgentRole.ADMIN }],
+      role: { in: [AgentRole.ADMIN, AgentRole.MANAGEMENT, AgentRole.SUPPORT] },
     },
   });
+
   if (agentsToNotify.length === 0) {
-    console.warn(
-      `Нет агентов для уведомления о тикете ${ticket.id} с ролью ${assignedRole}`,
-    );
+    console.warn(`Нет агентов для уведомления о тикете ${ticket.id}`);
     return;
   }
+
   const ticketUrl = `https://t.me/kyanchir_uw_maill_bot?start=ticket_${ticket.id}`;
   const messageText = `
 📬 **Новое обращение!** (на ${ticket.assignedEmail || 'support'}) <a href="${ticketUrl}">&#8203;</a>
 <b>От:</b> ${ticket.clientEmail}
 <b>Тема:</b> ${ticket.subject}
-<i>Чтобы ответить, используйте функцию "Ответить" (Reply) на это сообщение.</i>
+<i>Используйте "Ответить" (Reply), чтобы написать клиенту.</i>
   `;
+
   const keyboard: TelegramBot.InlineKeyboardMarkup = {
     inline_keyboard: [
       [
@@ -95,7 +95,7 @@ export const notifyAgents = async (
       ],
       [
         {
-          text: 'Посмотреть тикет на сайте ↗️',
+          text: 'Посмотреть на сайте ↗️',
           url: `${process.env.NEXTAUTH_URL}/admin/tickets/${ticket.id}`,
         },
       ],
@@ -122,3 +122,4 @@ export const notifyAgents = async (
     `Уведомления о тикете ${ticket.id} отправлены ${agentsToNotify.length} агентам.`,
   );
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---

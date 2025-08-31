@@ -2,12 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import {
-  AgentRole,
-  TicketSource,
-  SenderType,
-  TicketStatus,
-} from '@prisma/client';
+import { TicketSource, SenderType, TicketStatus } from '@prisma/client';
 import formidable from 'formidable';
 import { NextApiRequest } from 'next';
 import { notifyAgents } from '@/lib/telegramService';
@@ -29,7 +24,6 @@ async function parseForm(
 
 export async function POST(req: Request) {
   console.log('Получен входящий вебхук от SendGrid...');
-
   try {
     const { fields } = await parseForm(req);
     const getFieldAsString = (field: string | string[] | undefined): string => {
@@ -45,7 +39,6 @@ export async function POST(req: Request) {
     const text = getFieldAsString(fields.text);
 
     if (!envelopeRaw) {
-      console.error("Ошибка: поле 'envelope' отсутствует или пусто.");
       return NextResponse.json(
         { error: 'Некорректные данные: отсутствует envelope' },
         { status: 400 },
@@ -55,12 +48,7 @@ export async function POST(req: Request) {
     const envelope = JSON.parse(envelopeRaw);
     const toEmail = envelope.to[0];
 
-    console.log(`Письмо от: ${fromEmail} на: ${toEmail}`);
-
     if (!toEmail || !fromEmail || !text) {
-      console.error(
-        'Ошибка: не все обязательные поля (to, from, text) были найдены после парсинга.',
-      );
       return NextResponse.json(
         { error: 'Некорректные данные' },
         { status: 400 },
@@ -73,14 +61,12 @@ export async function POST(req: Request) {
 
     if (!route) {
       console.error(
-        `Ошибка: email ${toEmail} не найден в списке разрешенных маршрутов. Письмо не будет обработано.`,
+        `Ошибка: email ${toEmail} не найден в списке разрешенных маршрутов.`,
       );
       return NextResponse.json({
         message: 'Маршрут не найден, письмо проигнорировано.',
       });
     }
-
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
 
     let ticket = await prisma.supportTicket.findFirst({
       where: {
@@ -90,22 +76,16 @@ export async function POST(req: Request) {
     });
 
     if (!ticket) {
-      console.log(`Открытый тикет от ${fromEmail} не найден. Создаем новый.`);
       ticket = await prisma.supportTicket.create({
         data: {
           clientEmail: fromEmail,
           subject: subject,
           status: TicketStatus.OPEN,
           source: TicketSource.EMAIL,
-          assignedEmail: toEmail, // <--- Запоминаем, на какую почту пришло письмо
+          assignedEmail: toEmail,
         },
       });
-      console.log(`Создан новый тикет: ${ticket.id}`);
     } else {
-      console.log(
-        `Найден существующий тикет: ${ticket.id}. Добавляем новое сообщение.`,
-      );
-      // Если у старого тикета нет assignedEmail, можно обновить
       if (!ticket.assignedEmail) {
         await prisma.supportTicket.update({
           where: { id: ticket.id },
@@ -122,19 +102,13 @@ export async function POST(req: Request) {
       },
     });
 
-    console.log(`Сообщение успешно сохранено в тикете ${ticket.id}`);
-
-    // ВРЕМЕННО: пока мы не реализовали логику ролей по email, будем отправлять всем админам
-    await notifyAgents(
-      {
-        id: ticket.id,
-        subject: ticket.subject,
-        clientEmail: ticket.clientEmail,
-        assignedEmail: toEmail,
-      },
-      AgentRole.ADMIN, // Уведомляем админов, так как логики распределения по почтам еще нет
-    );
-
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    await notifyAgents({
+      id: ticket.id,
+      subject: ticket.subject,
+      clientEmail: ticket.clientEmail,
+      assignedEmail: toEmail,
+    });
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json(

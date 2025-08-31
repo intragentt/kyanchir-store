@@ -2,12 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import {
-  TicketSource,
-  SenderType,
-  TicketStatus,
-  AgentRole,
-} from '@prisma/client';
+import { TicketSource, SenderType, TicketStatus } from '@prisma/client';
 import { notifyAgents } from '@/lib/telegramService';
 
 interface SupportFormRequestBody {
@@ -31,9 +26,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
-    // Сообщениям с веб-формы по умолчанию присваиваем почту support@...
     const assignedEmail = 'support@kyanchir.ru';
 
     let ticket = await prisma.supportTicket.findFirst({
@@ -44,7 +36,6 @@ export async function POST(req: Request) {
     });
 
     if (!ticket) {
-      console.log(`Открытый тикет от ${email} не найден. Создаем новый.`);
       ticket = await prisma.supportTicket.create({
         data: {
           clientEmail: email,
@@ -52,14 +43,9 @@ export async function POST(req: Request) {
           subject: subject,
           status: TicketStatus.OPEN,
           source: TicketSource.WEB_FORM,
-          assignedEmail: assignedEmail, // <--- Запоминаем email
+          assignedEmail: assignedEmail,
         },
       });
-      console.log(`Создан новый тикет: ${ticket.id}`);
-    } else {
-      console.log(
-        `Найден существующий тикет: ${ticket.id}. Добавляем новое сообщение.`,
-      );
     }
 
     await prisma.supportMessage.create({
@@ -70,20 +56,13 @@ export async function POST(req: Request) {
       },
     });
 
-    console.log(
-      `Сообщение от ${email} успешно сохранено в тикете ${ticket.id}`,
-    );
-
-    // Вызываем notifyAgents с новым полем
-    await notifyAgents(
-      {
-        id: ticket.id,
-        subject: ticket.subject,
-        clientEmail: ticket.clientEmail,
-        assignedEmail: assignedEmail, // <--- Передаем email в уведомитель
-      },
-      AgentRole.SUPPORT,
-    );
+    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+    await notifyAgents({
+      id: ticket.id,
+      subject: ticket.subject,
+      clientEmail: ticket.clientEmail,
+      assignedEmail: assignedEmail,
+    });
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json(
