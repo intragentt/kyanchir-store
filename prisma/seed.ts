@@ -45,7 +45,6 @@ async function upsertCategory(
   });
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ФИНАЛЬНЫЙ, САМЫЙ НАДЕЖНЫЙ ХЕЛПЕР ---
 async function upsertSupportAgent(data: {
   name: string;
   email: string;
@@ -57,7 +56,6 @@ async function upsertSupportAgent(data: {
   const existingAgent = await prisma.supportAgent.findUnique({
     where: { email: data.email },
   });
-
   const agentData = {
     name: data.name,
     email: data.email,
@@ -66,29 +64,21 @@ async function upsertSupportAgent(data: {
     phone: data.phone,
     role: data.role,
   };
-
-  // Удаляем все ключи со значением `undefined`, Prisma их не любит в `create`
   Object.keys(agentData).forEach(
     (key) =>
       agentData[key as keyof typeof agentData] === undefined &&
       delete agentData[key as keyof typeof agentData],
   );
-
   if (existingAgent) {
-    // Если агент существует - обновляем
     return prisma.supportAgent.update({
       where: { email: data.email },
       data: agentData,
     });
   } else {
-    // Если не существует - создаем
-    // @ts-ignore Prisma's generated types can be tricky with optional null fields
-    return prisma.supportAgent.create({
-      data: agentData,
-    });
+    // @ts-ignore
+    return prisma.supportAgent.create({ data: agentData });
   }
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type VariantInput = {
   color: string;
@@ -98,7 +88,6 @@ type VariantInput = {
   images?: string[];
   stockBySize?: Record<string, number>;
 };
-
 type ProductInput = {
   sku?: string | null;
   name: string;
@@ -120,7 +109,6 @@ async function createProductWithRelations(data: ProductInput) {
       status: data.status ?? Status.PUBLISHED,
     },
   });
-
   if (data.alternativeNames?.length) {
     await prisma.alternativeName.createMany({
       data: data.alternativeNames.map((value) => ({
@@ -129,7 +117,6 @@ async function createProductWithRelations(data: ProductInput) {
       })),
     });
   }
-
   if (data.attributes?.length) {
     await prisma.attribute.createMany({
       data: data.attributes.map((a) => ({
@@ -140,7 +127,6 @@ async function createProductWithRelations(data: ProductInput) {
       })),
     });
   }
-
   if (data.categoryNames?.length) {
     const cats = await prisma.category.findMany({
       where: { name: { in: data.categoryNames } },
@@ -150,7 +136,6 @@ async function createProductWithRelations(data: ProductInput) {
       data: { categories: { connect: cats.map((c) => ({ id: c.id })) } },
     });
   }
-
   if (data.tagNames?.length) {
     const tags = await prisma.tag.findMany({
       where: { name: { in: data.tagNames } },
@@ -160,7 +145,6 @@ async function createProductWithRelations(data: ProductInput) {
       data: { tags: { connect: tags.map((t) => ({ id: t.id })) } },
     });
   }
-
   for (const v of data.variants) {
     const variant = await prisma.variant.create({
       data: {
@@ -171,7 +155,6 @@ async function createProductWithRelations(data: ProductInput) {
         isFeatured: v.isFeatured ?? false,
       },
     });
-
     if (v.images?.length) {
       await prisma.image.createMany({
         data: v.images.map((url, i) => ({
@@ -181,7 +164,6 @@ async function createProductWithRelations(data: ProductInput) {
         })),
       });
     }
-
     if (v.stockBySize) {
       const sizes = Object.keys(v.stockBySize);
       const dbSizes = await prisma.size.findMany({
@@ -196,7 +178,6 @@ async function createProductWithRelations(data: ProductInput) {
       await prisma.inventory.createMany({ data: inv });
     }
   }
-
   return product;
 }
 
@@ -242,19 +223,47 @@ async function main() {
     phone: null,
     role: AgentRole.MANAGEMENT,
   });
-
-  await prisma.supportRoute.create({
-    data: {
-      kyanchirEmail: 'support@kyanchir.ru',
-      assignedRole: AgentRole.SUPPORT,
-    },
+  await upsertSupportAgent({
+    name: 'Yana',
+    email: 'yana.manager@example.com',
+    username: 'yana_manager_tg',
+    role: AgentRole.MANAGEMENT,
+    telegramId: null,
+    phone: null,
   });
-
+  await upsertSupportAgent({
+    name: 'Artem',
+    email: 'artem.manager@example.com',
+    username: 'artem_manager_tg',
+    role: AgentRole.MANAGEMENT,
+    telegramId: null,
+    phone: null,
+  });
   await upsertSupportAgent({
     name: 'Anna Support',
     email: 'anna.support@example.com',
     username: 'kyanchir_support_anna',
     role: AgentRole.SUPPORT,
+    telegramId: null,
+    phone: null,
+  });
+
+  console.log('📧 Создание маршрутов для всех корпоративных почт...');
+  const emailsToSeed = [
+    'uw@kyanchir.ru',
+    'support@kyanchir.ru',
+    'manager@kyanchir.ru',
+    'admin@kyanchir.ru',
+    'yana@kyanchir.ru',
+    'artem@kyanchir.ru',
+    'intragentt@kyanchir.ru',
+    'promo@kyanchir.ru',
+    'hello@kyanchir.ru',
+  ];
+
+  await prisma.supportRoute.createMany({
+    data: emailsToSeed.map((email) => ({ kyanchirEmail: email })),
+    skipDuplicates: true,
   });
 
   console.log('📚 Создание справочников (размеры, категории, теги)...');
@@ -264,7 +273,6 @@ async function main() {
     upsertSize('L'),
     upsertSize('XL'),
   ]);
-
   const base = await upsertCategory('Базовая коллекция', { order: 1 });
   const sets = await upsertCategory('Комплекты', {
     parentId: base.id,
@@ -280,16 +288,13 @@ async function main() {
   });
   const body = await upsertCategory('Боди', { parentId: base.id, order: 4 });
   const home = await upsertCategory('Домашняя одежда', { order: 2 });
-
   const [newTag, topTag, saleTag, seamlessTag] = await Promise.all([
     upsertTag('Новинка', '#65D6AD', 1),
     upsertTag('Хит', '#A78BFA', 2),
     upsertTag('Скидка', '#F87171', 3),
     upsertTag('Бесшовное', '#9CA3AF', 4),
   ]);
-
   console.log('🍓 Создание реалистичных товаров...');
-
   await createProductWithRelations({
     sku: 'KY-SET-001',
     name: 'Комплект «Cloud Comfort»',
@@ -319,7 +324,6 @@ async function main() {
       },
     ],
   });
-
   await createProductWithRelations({
     sku: 'KY-BRA-015',
     name: 'Бра «Шелковый рассвет»',
@@ -344,7 +348,6 @@ async function main() {
       },
     ],
   });
-
   await createProductWithRelations({
     sku: 'KY-PNT-008',
     name: 'Трусики-слипы «Second Skin»',
@@ -374,7 +377,6 @@ async function main() {
       },
     ],
   });
-
   await createProductWithRelations({
     sku: 'KY-BODY-003',
     name: 'Боди «Полуночный бархат»',
@@ -400,12 +402,10 @@ async function main() {
       },
     ],
   });
-
   console.log('🎛 Создание пресета для фильтра на главной...');
   const preset = await prisma.filterPreset.create({
     data: { name: 'Главная витрина', isDefault: true },
   });
-
   await prisma.presetItem.createMany({
     data: [
       {
@@ -441,7 +441,6 @@ async function main() {
     ],
     skipDuplicates: true,
   });
-
   console.log('🌱 СИДИНГ УСПЕШНО ЗАВЕРШЕН');
 }
 

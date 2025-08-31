@@ -230,9 +230,7 @@ model SupportAgent {
   id               String           @id @default(cuid())
   name             String
   email            String           @unique
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  telegramId       String?          @unique // Возвращаем `?`, чтобы сделать поле необязательным
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  telegramId       String?          @unique
   internalUsername String           @unique
   phone            String?
   role             AgentRole
@@ -240,11 +238,13 @@ model SupportAgent {
   createdAt        DateTime         @default(now())
 }
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 model SupportRoute {
-  id            String    @id @default(cuid())
-  kyanchirEmail String    @unique
-  assignedRole  AgentRole
+  id            String @id @default(cuid())
+  // Просто список валидных email нашего проекта
+  kyanchirEmail String @unique
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 model SupportTicket {
   id          String           @id @default(cuid())
@@ -256,6 +256,11 @@ model SupportTicket {
   messages    SupportMessage[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  // На какой email изначально пришел тикет
+  assignedEmail String?
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
 model SupportMessage {

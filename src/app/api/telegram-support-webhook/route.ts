@@ -78,11 +78,11 @@ async function handleReplyToTicket(msg: TelegramBot.Message) {
   }
   try {
     const match = reply_to_message.text.match(/start=ticket_([a-zA-Z0-9]+)/);
-    if (!match || !match[1]) {
+    if (!match || !match[1]) {’
       await bot.sendMessage(
         chatId,
         '⚠️ Не удалось найти ID тикета в исходном сообщении. Пожалуйста, отвечайте только на уведомления о тикетах.',
-      );
+  ’    );
       return;
     }
     const ticketId = match[1];
