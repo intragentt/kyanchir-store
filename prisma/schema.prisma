@@ -8,7 +8,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ... (все ваши модели товаров остаются без изменений) ...
+// === МОДЕЛИ E-COMMERCE ===
+
 model Product {
   id               String            @id @default(cuid())
   sku              String?           @unique
@@ -34,7 +35,7 @@ model Variant {
   oldPrice           Int?
   discountPercentage Int?
   discountExpiresAt  DateTime?
-  bonusPoints        Int?
+  bonusPoints        Int?        // Бонусы за покупку конкретного варианта
   inventory          Inventory[]
   isFeatured         Boolean     @default(false)
   createdAt          DateTime    @default(now())
@@ -137,31 +138,11 @@ enum PresetItemType {
   TAG
 }
 
-// --- МОДЕЛИ ДЛЯ АУТЕНТИФИКАЦИИ ---
+// === МОДЕЛИ АУТЕНТИФИКАЦИИ И ПОЛЬЗОВАТЕЛЕЙ ===
 
-model Account {
-  id                       String  @id @default(cuid())
-  userId                   String
-  type                     String
-  provider                 String
-  providerAccountId        String
-  refresh_token            String? @db.Text
-  access_token             String? @db.Text
-  expires_at               Int?
-  token_type               String?
-  scope                    String?
-  id_token                 String? @db.Text
-  session_state            String?
-  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+enum UserRole {
+  CLIENT
+  ADMIN
 }
 
 model User {
@@ -172,12 +153,41 @@ model User {
   image         String?
   telegramId    String?   @unique
   phone         String?
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  passwordHash  String?   // Добавляем поле для хранения хэша пароля
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  passwordHash  String?
   accounts      Account[]
   sessions      Session[]
   loginTokens   LoginToken[]
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (добавления для будущего) ---
+  role          UserRole  @default(CLIENT)
+  bonusPoints   Int       @default(0)
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VerificationToken {
@@ -195,4 +205,69 @@ model LoginToken {
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+// === МОДЕЛИ СИСТЕМЫ ПОДДЕРЖКИ (SUPPORT DESK) ===
+
+enum AgentRole {
+  SUPPORT
+  MANAGEMENT
+  ADMIN
+}
+
+enum TicketStatus {
+  OPEN
+  PENDING
+  RESOLVED
+  CLOSED
+}
+
+enum TicketSource {
+  EMAIL
+  WEB_FORM
+  TELEGRAM_BOT
+}
+
+enum SenderType {
+  CLIENT
+  AGENT
+}
+
+model SupportAgent {
+  id         String           @id @default(cuid())
+  name       String
+  email      String           @unique
+  telegramId String           @unique
+  role       AgentRole
+  messages   SupportMessage[]
+  createdAt  DateTime         @default(now())
+}
+
+model SupportRoute {
+  id            String    @id @default(cuid())
+  kyanchirEmail String    @unique
+  assignedRole  AgentRole
+}
+
+model SupportTicket {
+  id          String           @id @default(cuid())
+  clientEmail String
+  clientName  String?
+  subject     String
+  status      TicketStatus     @default(OPEN)
+  source      TicketSource
+  messages    SupportMessage[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model SupportMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  content    String        @db.Text
+  senderType SenderType
+  agentId    String?
+  agent      SupportAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  createdAt  DateTime      @default(now())
 }
