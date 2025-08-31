@@ -4,23 +4,68 @@ import { NextResponse } from 'next/server';
 import { getBotInstance, setWebhook } from '@/lib/telegramService';
 import prisma from '@/lib/prisma';
 import TelegramBot from 'node-telegram-bot-api';
-import nodemailer from 'nodemailer'; // --- ИМПОРТ NODEMAILER ---
-import { SenderType } from '@prisma/client';
+import nodemailer from 'nodemailer';
+import { SenderType, TicketStatus } from '@prisma/client'; // --- ИЗМЕНЕНИЕ: Добавлен TicketStatus
 
 const bot = getBotInstance();
 setWebhook();
 
-// --- НОВАЯ ФУНКЦИЯ: ЛОГИКА ОТВЕТА НА ТИКЕТ ---
-async function handleReplyToTicket(msg: TelegramBot.Message) {
-  const { from, chat, text, reply_to_message } = msg;
+// --- НАЧАЛО ИЗМЕНЕНИЙ: НОВАЯ ФУНКЦИЯ ДЛЯ КОМАНДЫ /tickets ---
+async function handleTicketsCommand(msg: TelegramBot.Message) {
+  const { from, chat } = msg;
+  if (!from) return;
 
-  // 1. Проверяем, что все необходимые части на месте
+  // 1. Проверяем, что агент верифицирован
+  const agent = await prisma.supportAgent.findFirst({
+    where: { telegramId: String(from.id) },
+  });
+  if (!agent) {
+    await bot.sendMessage(
+      chat.id,
+      '❌ Сначала нужно верифицироваться. Введите /start',
+    );
+    return;
+  }
+
+  // 2. Ищем последние 10 открытых тикетов
+  const openTickets = await prisma.supportTicket.findMany({
+    where: {
+      status: { in: [TicketStatus.OPEN, TicketStatus.PENDING] },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  });
+
+  // 3. Формируем и отправляем ответ
+  if (openTickets.length === 0) {
+    await bot.sendMessage(
+      chat.id,
+      '🎉 Все тикеты обработаны! Новых обращений нет.',
+    );
+    return;
+  }
+
+  let responseText = '<b>📝 Последние открытые тикеты:</b>\n\n';
+
+  openTickets.forEach((ticket) => {
+    responseText += `<b>ID:</b> <code>${ticket.id}</code>\n`;
+    responseText += `<b>Тема:</b> ${ticket.subject}\n`;
+    responseText += `<b>От:</b> ${ticket.clientEmail}\n`;
+    responseText += `<b>Статус:</b> ${ticket.status === 'PENDING' ? '⏳ В работе' : '🆕 Новый'}\n`;
+    responseText += `--------------------\n`;
+  });
+
+  await bot.sendMessage(chat.id, responseText, { parse_mode: 'HTML' });
+}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+async function handleReplyToTicket(msg: TelegramBot.Message) {
+  // ... (эта функция остается без изменений)
+  const { from, chat, text, reply_to_message } = msg;
   if (!from || !text || !reply_to_message || !reply_to_message.text) {
-    return; // Не можем обработать, если чего-то не хватает
+    return;
   }
   const chatId = chat.id;
-
-  // 2. Убеждаемся, что отвечающий - верифицированный агент
   const agent = await prisma.supportAgent.findFirst({
     where: { telegramId: String(from.id) },
   });
@@ -31,10 +76,7 @@ async function handleReplyToTicket(msg: TelegramBot.Message) {
     );
     return;
   }
-
   try {
-    // 3. Извлекаем ID тикета из "спрятанной" ссылки в оригинальном сообщении
-    // Наш формат: `https://t.me/bot_name?start=ticket_THE_ID`
     const match = reply_to_message.text.match(/start=ticket_([a-zA-Z0-9]+)/);
     if (!match || !match[1]) {
       await bot.sendMessage(
@@ -44,12 +86,9 @@ async function handleReplyToTicket(msg: TelegramBot.Message) {
       return;
     }
     const ticketId = match[1];
-
-    // 4. Находим тикет в базе
     const ticket = await prisma.supportTicket.findUnique({
       where: { id: ticketId },
     });
-
     if (!ticket) {
       await bot.sendMessage(
         chatId,
@@ -57,8 +96,6 @@ async function handleReplyToTicket(msg: TelegramBot.Message) {
       );
       return;
     }
-
-    // 5. Отправляем email клиенту
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_SERVER_HOST,
       port: parseInt(process.env.EMAIL_SERVER_PORT!),
@@ -67,16 +104,13 @@ async function handleReplyToTicket(msg: TelegramBot.Message) {
         pass: process.env.EMAIL_SERVER_PASSWORD,
       },
     });
-
     await transporter.sendMail({
-      from: process.env.EMAIL_FROM, // e.g., "Kyanchir Support <support@kyanchir.ru>"
+      from: process.env.EMAIL_FROM,
       to: ticket.clientEmail,
       subject: `Re: ${ticket.subject}`,
-      text: text, // Текст ответа агента
-      html: `<p>${text.replace(/\n/g, '<br>')}</p>`, // Преобразуем переносы строк в <br> для HTML
+      text: text,
+      html: `<p>${text.replace(/\n/g, '<br>')}</p>`,
     });
-
-    // 6. Сохраняем ответ агента в нашей базе данных
     await prisma.supportMessage.create({
       data: {
         ticketId: ticket.id,
@@ -85,8 +119,6 @@ async function handleReplyToTicket(msg: TelegramBot.Message) {
         agentId: agent.id,
       },
     });
-
-    // 7. Сообщаем агенту об успехе
     await bot.sendMessage(
       chatId,
       `✅ Ответ успешно отправлен клиенту ${ticket.clientEmail}`,
@@ -146,21 +178,38 @@ export async function POST(req: Request) {
     const body = await req.json();
     const msg = body.message as TelegramBot.Message | undefined;
 
-    if (!msg || !msg.text) {
-      return NextResponse.json({ message: 'Update is not a message' });
+    // --- ИЗМЕНЕНИЕ: В ЭТОЙ ВЕРСИИ НУЖНО ОБРАБАТЫВАТЬ НЕ ТОЛЬКО СООБЩЕНИЯ, НО И НАЖАТИЯ КНОПОК
+    if (body.callback_query) {
+      // TODO: Обработка нажатий на кнопки
+      await bot.answerCallbackQuery(body.callback_query.id); // Сначала "отвечаем" телеграму, что получили нажатие
+      await bot.sendMessage(
+        body.callback_query.message.chat.id,
+        `(Заглушка) Вы нажали на кнопку. Скоро здесь будет логика.`,
+      );
+      return NextResponse.json({ status: 'ok' });
     }
 
+    if (!msg || !msg.text) {
+      return NextResponse.json({
+        message: 'Update is not a message or callback',
+      });
+    }
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: МАРШРУТИЗАЦИЯ КОМАНД ---
     if (msg.text.startsWith('/start')) {
       await handleStartCommand(msg);
+    } else if (msg.text.startsWith('/tickets')) {
+      // <-- Новая команда
+      await handleTicketsCommand(msg);
     } else if (msg.reply_to_message) {
-      // --- ЗАМЕНЯЕМ ЗАГЛУШКУ НА РЕАЛЬНЫЙ ВЫЗОВ ---
       await handleReplyToTicket(msg);
     } else {
       await bot.sendMessage(
         msg.chat.id,
-        'Для начала работы введите команду /start',
+        'Неизвестная команда. Доступные команды: /start, /tickets',
       );
     }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json({ status: 'ok' });
   } catch (error) {
