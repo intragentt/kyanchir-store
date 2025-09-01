@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts } from '@/lib/moysklad-api';
 
-// Интерфейсы (без изменений)
+// Интерфейсы и хелперы
 interface MoySkladPrice {
   value: number;
   priceType: { name: string };
@@ -19,21 +19,16 @@ interface MoySkladProduct {
   productFolder?: { meta: { href: string } };
   salePrices?: MoySkladPrice[];
 }
-
 function getUUIDFromHref(href: string): string {
   return href.split('/').pop() || '';
 }
-
-// === НОВАЯ ЛОГИКА ===
 
 interface ParsedProductInfo {
   baseName: string;
   size: string | null;
 }
-
-// 1. "Умный" парсер названий
 function parseProductName(name: string): ParsedProductInfo {
-  const sizeMatch = name.match(/\((S|M|L|XS|XL|XXL)\)$/);
+  const sizeMatch = name.match(/\s+\((S|M|L|XS|XL|XXL)\)$/);
   if (sizeMatch) {
     const baseName = name.replace(sizeMatch[0], '').trim();
     const size = sizeMatch[1];
@@ -45,12 +40,11 @@ function parseProductName(name: string): ParsedProductInfo {
 interface GroupedProductVariant {
   moyskladId: string;
   size: string | null;
-  price: number;
   description?: string;
   productFolder?: { meta: { href: string } };
+  // Теперь передаем все цены для анализа
+  rawSalePrices?: MoySkladPrice[];
 }
-
-// === КОНЕЦ НОВОЙ ЛОГИКИ ===
 
 export async function POST() {
   const session = await getServerSession(authOptions);
@@ -68,16 +62,10 @@ export async function POST() {
       return NextResponse.json({ message: 'Товары в МойСклад не найдены.' });
     }
 
-    // 2. Группируем товары по базовому имени
+    // 1. Группируем товары
     const groupedProducts = new Map<string, GroupedProductVariant[]>();
-
     for (const product of moySkladProducts) {
       const { baseName, size } = parseProductName(product.name);
-
-      const salePriceObject = (product.salePrices || []).find(
-        (p) => p.priceType.name === 'Цена продажи',
-      );
-      const price = salePriceObject ? Math.round(salePriceObject.value) : 0;
 
       if (!groupedProducts.has(baseName)) {
         groupedProducts.set(baseName, []);
@@ -86,9 +74,9 @@ export async function POST() {
       groupedProducts.get(baseName)!.push({
         moyskladId: product.id,
         size,
-        price,
         description: product.description,
         productFolder: product.productFolder,
+        rawSalePrices: product.salePrices,
       });
     }
 
@@ -100,7 +88,7 @@ export async function POST() {
       (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
     );
 
-    // 3. Запускаем "умный" upsert в транзакции
+    // 2. Запускаем "умный" upsert с логикой скидок
     const transactionPromises = [];
 
     for (const [baseName, variants] of groupedProducts.entries()) {
@@ -112,13 +100,10 @@ export async function POST() {
         ? categoryMap.get(categoryMoySkladId)
         : undefined;
 
-      // Ищем продукт по базовому имени
       let product = await prisma.product.findFirst({
         where: { name: baseName },
       });
-
       if (!product) {
-        // Если продукта нет - создаем
         product = await prisma.product.create({
           data: {
             name: baseName,
@@ -130,9 +115,37 @@ export async function POST() {
         });
       }
 
-      // Для каждого варианта размера делаем upsert
       for (const variantData of variants) {
-        // Сначала нужно найти или создать размер в нашей таблице `Size`
+        // --- НОВАЯ ЛОГИКА СКИДОК ---
+        const salePriceObj = (variantData.rawSalePrices || []).find(
+          (p) => p.priceType.name === 'Цена продажи',
+        );
+        // !!! ПРЕДПОЛОЖЕНИЕ: Название обычной цены - "Розничная цена". Если оно другое, поменяй здесь!
+        const regularPriceObj = (variantData.rawSalePrices || []).find(
+          (p) => p.priceType.name === 'Розничная цена',
+        );
+
+        let currentPrice = 0;
+        let oldPrice = null;
+
+        const regularPriceValue = regularPriceObj
+          ? Math.round(regularPriceObj.value)
+          : 0;
+        const salePriceValue = salePriceObj
+          ? Math.round(salePriceObj.value)
+          : 0;
+
+        if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
+          // Это скидка!
+          currentPrice = salePriceValue;
+          oldPrice = regularPriceValue;
+        } else {
+          // Скидки нет, основная цена - обычная.
+          currentPrice =
+            regularPriceValue > 0 ? regularPriceValue : salePriceValue;
+        }
+        // --- КОНЕЦ НОВОЙ ЛОГИКИ СКИДОК ---
+
         let sizeRecord = null;
         if (variantData.size) {
           sizeRecord = await prisma.size.upsert({
@@ -145,21 +158,16 @@ export async function POST() {
         const variantUpsert = prisma.variant.upsert({
           where: { moyskladId: variantData.moyskladId },
           update: {
-            price: variantData.price,
-            product: { connect: { id: product.id } },
+            price: currentPrice,
+            oldPrice: oldPrice,
           },
           create: {
-            price: variantData.price,
+            price: currentPrice,
+            oldPrice: oldPrice,
             product: { connect: { id: product.id } },
             moyskladId: variantData.moyskladId,
-            // Связываем инвентарь с размером, если он есть
             inventory: sizeRecord
-              ? {
-                  create: {
-                    sizeId: sizeRecord.id,
-                    stock: 0, // Пока ставим 0, потом будем синхронизировать остатки
-                  },
-                }
+              ? { create: { sizeId: sizeRecord.id, stock: 0 } }
               : undefined,
           },
         });
