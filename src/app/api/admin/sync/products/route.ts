@@ -42,7 +42,6 @@ interface GroupedProductVariant {
   size: string | null;
   description?: string;
   productFolder?: { meta: { href: string } };
-  // Теперь передаем все цены для анализа
   rawSalePrices?: MoySkladPrice[];
 }
 
@@ -62,15 +61,12 @@ export async function POST() {
       return NextResponse.json({ message: 'Товары в МойСклад не найдены.' });
     }
 
-    // 1. Группируем товары
     const groupedProducts = new Map<string, GroupedProductVariant[]>();
     for (const product of moySkladProducts) {
       const { baseName, size } = parseProductName(product.name);
-
       if (!groupedProducts.has(baseName)) {
         groupedProducts.set(baseName, []);
       }
-
       groupedProducts.get(baseName)!.push({
         moyskladId: product.id,
         size,
@@ -88,7 +84,6 @@ export async function POST() {
       (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
     );
 
-    // 2. Запускаем "умный" upsert с логикой скидок
     const transactionPromises = [];
 
     for (const [baseName, variants] of groupedProducts.entries()) {
@@ -116,13 +111,12 @@ export async function POST() {
       }
 
       for (const variantData of variants) {
-        // --- НОВАЯ ЛОГИКА СКИДОК ---
+        // --- ИЗМЕНЕНИЕ ЗДЕСЬ! Ищем правильные названия цен ---
         const salePriceObj = (variantData.rawSalePrices || []).find(
-          (p) => p.priceType.name === 'Цена продажи',
+          (p) => p.priceType.name === 'Скидка',
         );
-        // !!! ПРЕДПОЛОЖЕНИЕ: Название обычной цены - "Розничная цена". Если оно другое, поменяй здесь!
         const regularPriceObj = (variantData.rawSalePrices || []).find(
-          (p) => p.priceType.name === 'Розничная цена',
+          (p) => p.priceType.name === 'Цена продажи',
         );
 
         let currentPrice = 0;
@@ -136,15 +130,15 @@ export async function POST() {
           : 0;
 
         if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
-          // Это скидка!
+          // Скидка есть! Новая цена - "Скидка", старая - "Цена продажи"
           currentPrice = salePriceValue;
           oldPrice = regularPriceValue;
         } else {
-          // Скидки нет, основная цена - обычная.
+          // Скидки нет, показываем обычную "Цену продажи"
           currentPrice =
             regularPriceValue > 0 ? regularPriceValue : salePriceValue;
         }
-        // --- КОНЕЦ НОВОЙ ЛОГИКИ СКИДОК ---
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
         let sizeRecord = null;
         if (variantData.size) {
@@ -157,10 +151,7 @@ export async function POST() {
 
         const variantUpsert = prisma.variant.upsert({
           where: { moyskladId: variantData.moyskladId },
-          update: {
-            price: currentPrice,
-            oldPrice: oldPrice,
-          },
+          update: { price: currentPrice, oldPrice: oldPrice },
           create: {
             price: currentPrice,
             oldPrice: oldPrice,
