@@ -12,6 +12,12 @@ export default withAuth(
     const token = req.nextauth.token;
     const { pathname } = req.nextUrl;
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: "ЖУЧОК" ДЛЯ ОТЛАДКИ ---
+    console.log('--- [MIDDLEWARE DEBUG] ---');
+    console.log('Pathname:', pathname);
+    console.log('Token received:', JSON.stringify(token, null, 2)); // Выводим токен в виде красивого JSON
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     // --- НАША ЛОГИКА ДОСТУПА ---
     // Если пользователь залогинен, но не админ/менеджер, и пытается
     // зайти в админку, перенаправляем его.
@@ -20,24 +26,26 @@ export default withAuth(
       token?.role !== 'ADMIN' &&
       token?.role !== 'MANAGEMENT'
     ) {
-      // Можно редиректить на главную или на страницу с ошибкой "Доступ запрещен"
+      console.log(
+        `>>> ACCESS DENIED for role "${token?.role}". Redirecting to homepage.`,
+      );
       return NextResponse.redirect(new URL('/', req.url));
     }
 
     // Для всех остальных авторизованных пользователей просто пропускаем дальше.
+    console.log(
+      `>>> Access GRANTED for role "${token?.role}". Continuing to ${pathname}.`,
+    );
     return NextResponse.next();
   },
   {
     // --- НАСТРОЙКИ withAuth ---
     callbacks: {
       // Этот коллбэк определяет, "авторизован" ли пользователь в принципе.
-      // Если он вернет `true`, выполнится функция middleware выше.
-      // Если `false`, пользователя перенаправит на страницу логина.
       authorized: ({ token }) => !!token,
     },
 
     // Указываем, где наша кастомная страница логина,
-    // чтобы middleware знал, куда редиректить неавторизованных.
     pages: {
       signIn: '/login',
     },
@@ -45,8 +53,6 @@ export default withAuth(
 );
 
 // Конфигурация matcher остается прежней.
-// ВАЖНО: Мы НЕ добавляем сюда /api/admin/*,
-// так как защиту API мы делаем ВНУТРИ самого API-эндпоинта, а не здесь.
 export const config = {
   matcher: ['/profile/:path*', '/admin/:path*'],
 };
