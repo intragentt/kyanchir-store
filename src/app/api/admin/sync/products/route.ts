@@ -1,6 +1,6 @@
 // /src/app/api/admin/sync/products/route.ts
 
-import { NextResponse, NextRequest } from 'next/server'; // ИЗМЕНЕНИЕ: Добавляем NextRequest
+import { NextResponse, NextRequest } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts } from '@/lib/moysklad-api';
 
@@ -40,19 +40,21 @@ interface GroupedProductVariant {
   rawSalePrices?: MoySkladPrice[];
 }
 
-// --- ИЗМЕНЕНИЕ: Вся логика теперь в GET-обработчике ---
+// Вся логика теперь в GET-обработчике для работы с Vercel Cron
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const cronSecret = searchParams.get('cron_secret');
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Проверка секрета из заголовков ---
+  const authHeader = req.headers.get('authorization');
+  const expectedAuthHeader = `Bearer ${process.env.CRON_SECRET}`;
 
-  // 1. Проверяем секретный ключ
-  // Мы сравниваем ключ из запроса с тем, что хранится в переменных окружения на Vercel
-  if (process.env.CRON_SECRET !== cronSecret) {
-    // Если ключи не совпадают - отказываем в доступе
-    return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
-      status: 401,
-    }); // 401 Unauthorized
+  // Сравниваем полученный заголовок с ожидаемым
+  if (authHeader !== expectedAuthHeader) {
+    // Если заголовки не совпадают или отсутствуют - отказываем в доступе
+    return new NextResponse(
+      JSON.stringify({ error: 'Доступ запрещен: неверный токен авторизации' }),
+      { status: 401 },
+    );
   }
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   // Если проверка пройдена, запускаем синхронизацию
   try {
@@ -60,11 +62,9 @@ export async function GET(req: NextRequest) {
     const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];
 
     if (moySkladProducts.length === 0) {
-      // Важно возвращать JSON и успешный статус, даже если делать нечего
       return NextResponse.json({ message: 'Товары в МойСклад не найдены.' });
     }
 
-    // --- ВСЯ НАША "УМНАЯ" ЛОГИКА ОСТАЕТСЯ ЗДЕСЬ ---
     const groupedProducts = new Map<string, GroupedProductVariant[]>();
     for (const product of moySkladProducts) {
       const { baseName, size } = parseProductName(product.name);
@@ -167,14 +167,12 @@ export async function GET(req: NextRequest) {
 
     await prisma.$transaction(transactionPromises);
 
-    // Успешный ответ для логов Vercel Cron
     return NextResponse.json({
       message: `Синхронизация по расписанию успешно завершена.`,
       synchronizedProducts: groupedProducts.size,
     });
   } catch (error) {
     console.error('[CRON SYNC ERROR]:', error);
-    // Ответ с ошибкой для логов Vercel Cron
     return new NextResponse(
       JSON.stringify({
         error: 'Внутренняя ошибка сервера во время выполнения Cron Job.',
