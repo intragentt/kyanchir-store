@@ -1,23 +1,22 @@
 // Местоположение: /src/app/api/admin/tickets/[id]/route.ts
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server'; // <-- ИЗМЕНЕНИЕ: Используем NextRequest
 import prisma from '@/lib/prisma';
 import { authOptions } from '@/lib/auth';
 import { getServerSession } from 'next-auth/next';
 import { UserRole } from '@prisma/client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
 /**
  * API-эндпоинт для получения ВСЕХ сообщений для ОДНОГО тикета.
- * @param params Динамический параметр из URL, в нашем случае { id: '...' }
  */
 export async function GET(
-  req: Request,
+  request: NextRequest, // <-- ИЗМЕНЕНИЕ: Используем `request` и `NextRequest`
   { params }: { params: { id: string } },
 ) {
   try {
+    // Получение сессии остается прежним
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.id || !session.user.role) {
       return NextResponse.json(
         { error: 'Доступ запрещен. Вы не авторизованы.' },
@@ -35,7 +34,6 @@ export async function GET(
       );
     }
 
-    // Получаем ID тикета из параметров URL
     const ticketId = params.id;
     if (!ticketId) {
       return NextResponse.json(
@@ -44,16 +42,11 @@ export async function GET(
       );
     }
 
-    // Ищем все сообщения, связанные с этим тикетом
+    // Логика получения сообщений остается прежней
     const messages = await prisma.supportMessage.findMany({
-      where: {
-        ticketId: ticketId,
-      },
-      orderBy: {
-        createdAt: 'asc', // Сортируем по возрастанию, чтобы получился вид чата
-      },
+      where: { ticketId: ticketId },
+      orderBy: { createdAt: 'asc' },
       include: {
-        // Также подтягиваем информацию об агенте, если он был отправителем
         agent: {
           select: {
             name: true,
@@ -63,7 +56,6 @@ export async function GET(
       },
     });
 
-    // Можно также дополнительно проверить, существует ли сам тикет
     if (messages.length === 0) {
       const ticketExists = await prisma.supportTicket.findUnique({
         where: { id: ticketId },
@@ -85,5 +77,3 @@ export async function GET(
     );
   }
 }
-
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
