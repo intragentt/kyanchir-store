@@ -1,11 +1,12 @@
-// Местоположение: /src/app/admin/mail/MailClient.tsx
+// Местоположение: /src/app/admin/mail/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SupportTicket } from '@prisma/client';
 
+// Компонент-хелпер для отображения иконок источника
 const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
-  let icon = '📧';
+  let icon = '📧'; // Email по умолчанию
   let tooltip = 'Пришло с почты';
   if (source === 'WEB_FORM') {
     icon = '🌐';
@@ -21,26 +22,60 @@ const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
   );
 };
 
+// Функция для красивого форматирования даты
 const formatDate = (dateString: Date) => {
   const date = new Date(dateString);
   return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
 };
 
-// Определяем тип для пропсов компонента
-type MailClientProps = {
-  initialTickets: SupportTicket[];
-  initialError: string | null;
+// Тип для хранения состояния нашего компонента
+type TicketsState = {
+  tickets: SupportTicket[];
+  isLoading: boolean;
+  error: string | null;
 };
 
-export default function MailClient({
-  initialTickets,
-  initialError,
-}: MailClientProps) {
-  const [tickets, setTickets] = useState(initialTickets);
-  const [error, setError] = useState(initialError);
+export default function AdminMailPage() {
+  const [state, setState] = useState<TicketsState>({
+    tickets: [],
+    isLoading: true,
+    error: null,
+  });
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
-    initialTickets[0] || null,
+    null,
   );
+
+  // useEffect для загрузки данных при монтировании компонента
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        setState((prevState) => ({
+          ...prevState,
+          isLoading: true,
+          error: null,
+        }));
+
+        const response = await fetch('/api/admin/tickets'); // Простой fetch
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || `Ошибка сервера: ${response.status}`,
+          );
+        }
+
+        const data: SupportTicket[] = await response.json();
+        setState({ tickets: data, isLoading: false, error: null });
+
+        if (data.length > 0) {
+          setSelectedTicket(data[0]);
+        }
+      } catch (err: any) {
+        setState({ tickets: [], isLoading: false, error: err.message });
+      }
+    };
+    fetchTickets();
+  }, []); // Пустой массив зависимостей = выполнить 1 раз
 
   const availableEmails = [
     'support@kyanchir.ru',
@@ -50,7 +85,9 @@ export default function MailClient({
     'hello@kyanchir.ru',
   ];
 
-  const openTicketsCount = tickets.filter((t) => t.status === 'OPEN').length;
+  const openTicketsCount = state.tickets.filter(
+    (t) => t.status === 'OPEN',
+  ).length;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg bg-white shadow-md">
@@ -84,17 +121,20 @@ export default function MailClient({
             className="w-full rounded border p-2"
           />
         </div>
-        {error && (
+        {state.isLoading && (
+          <p className="p-4 text-center text-gray-500">Загрузка тикетов...</p>
+        )}
+        {state.error && (
           <div className="bg-red-50 p-4 text-center text-red-600">
             <b>Ошибка:</b>
-            <p>{error}</p>
+            <p>{state.error}</p>
           </div>
         )}
-        {tickets.length === 0 && !error && (
+        {!state.isLoading && state.tickets.length === 0 && !state.error && (
           <p className="p-4 text-center text-gray-500">Нет новых обращений.</p>
         )}
         <ul>
-          {tickets.map((ticket) => (
+          {state.tickets.map((ticket) => (
             <li
               key={ticket.id}
               onClick={() => setSelectedTicket(ticket)}
@@ -173,7 +213,11 @@ export default function MailClient({
           </>
         ) : (
           <div className="flex h-full items-center justify-center text-gray-500">
-            <p>{error ? '' : 'Выберите обращение из списка слева'}</p>
+            <p>
+              {state.isLoading
+                ? 'Загрузка...'
+                : 'Выберите обращение из списка слева'}
+            </p>
           </div>
         )}
       </main>
