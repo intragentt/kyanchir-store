@@ -26,16 +26,13 @@ const formatDate = (dateString: Date) => {
   return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
 };
 
-// Определяем тип для пропсов компонента
-type MailClientProps = {
-  initialTickets: SupportTicket[];
-  initialError: string | null;
-};
-
 export default function MailClient({
   initialTickets,
   initialError,
-}: MailClientProps) {
+}: {
+  initialTickets: SupportTicket[];
+  initialError: string | null;
+}) {
   const [tickets, setTickets] = useState(initialTickets);
   const [error, setError] = useState(initialError);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
