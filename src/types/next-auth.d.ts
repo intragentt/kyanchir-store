@@ -2,6 +2,7 @@
 
 import 'next-auth';
 import 'next-auth/jwt';
+import { UserRole } from '@prisma/client'; // <-- Импортируем наш Enum
 
 // Расширяем стандартные типы NextAuth
 
@@ -10,13 +11,14 @@ declare module 'next-auth' {
    * Возвращается хуками вроде `useSession` или `getServerSession`
    */
   interface Session {
-    user: {
-      /** Стандартные поля */
+    user?: {
+      id: string;
+      role: UserRole; // <-- НАШЕ НОВОЕ ПОЛЕ
+    } & {
+      // <-- Объединяем со стандартными полями
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      /** Наше кастомное поле */
-      id: string;
     };
   }
 
@@ -25,6 +27,7 @@ declare module 'next-auth' {
    */
   interface User {
     id: string;
+    role: UserRole; // <-- НАШЕ НОВОЕ ПОЛЕ
   }
 }
 
@@ -33,7 +36,7 @@ declare module 'next-auth/jwt' {
    * Возвращается, когда мы используем JWT-стратегию
    */
   interface JWT {
-    /** Наше кастомное поле в токене */
     id: string;
+    role: UserRole; // <-- НАШЕ НОВОЕ ПОЛЕ
   }
 }

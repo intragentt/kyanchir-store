@@ -138,10 +138,13 @@ enum PresetItemType {
 }
 
 // === МОДЕЛИ АУТЕНТИФИКАЦИИ И ПОЛЬЗОВАТЕЛЕЙ ===
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 enum UserRole {
   CLIENT
   ADMIN
+  MANAGEMENT // Добавили новую роль
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 model User {
   id            String    @id @default(cuid())
@@ -238,29 +241,22 @@ model SupportAgent {
   createdAt        DateTime         @default(now())
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 model SupportRoute {
   id            String @id @default(cuid())
-  // Просто список валидных email нашего проекта
   kyanchirEmail String @unique
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 model SupportTicket {
-  id          String           @id @default(cuid())
-  clientEmail String
-  clientName  String?
-  subject     String
-  status      TicketStatus     @default(OPEN)
-  source      TicketSource
-  messages    SupportMessage[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // На какой email изначально пришел тикет
+  id            String           @id @default(cuid())
+  clientEmail   String
+  clientName    String?
+  subject       String
+  status        TicketStatus     @default(OPEN)
+  source        TicketSource
+  messages      SupportMessage[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
   assignedEmail String?
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
 model SupportMessage {
