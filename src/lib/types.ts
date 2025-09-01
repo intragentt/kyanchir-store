@@ -8,20 +8,11 @@ import {
   Inventory,
   Category,
   Tag,
-  User as PrismaUser, // --- НАЧАЛО ИЗМЕНЕНИЙ ---
 } from '@prisma/client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Расширяем стандартный тип User из next-auth, чтобы TypeScript знал о наших полях
-declare module 'next-auth' {
-  interface Session {
-    user: PrismaUser;
-  }
-}
-
-// Этот тип больше не нужен, так как мы используем Session['user']
-// export type UserPayload = PrismaUser;
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+// ВАЖНО: Мы удалили все расширения типов `next-auth` и `User` отсюда,
+// так как вся эта логика теперь централизованно находится в /src/types/next-auth.d.ts
+// Это решает ошибку сборки "All declarations of 'User' must have identical modifiers".
 
 // Этот тип используется для карточек товаров в каталоге (без изменений)
 export type ProductWithInfo = Product & {
@@ -30,7 +21,7 @@ export type ProductWithInfo = Product & {
   imageUrls: string[];
 };
 
-// Это наш финальный "контракт" для API
+// Этот тип используется в API для обновления данных о товаре
 export type UpdateProductPayload = {
   name: string;
   status: Product['status'];
