@@ -1,81 +1,11 @@
 // Местоположение: /src/app/admin/mail/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { SupportTicket } from '@prisma/client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
-// Типы для моковых данных (добавили source)
-type TicketSource = 'EMAIL' | 'WEB_FORM' | 'TELEGRAM_BOT';
-type MockTicket = {
-  id: string;
-  from: string;
-  subject: string;
-  snippet: string;
-  timestamp: string;
-  status: 'OPEN' | 'PENDING' | 'RESOLVED';
-  source: TicketSource; // <--- НОВОЕ ПОЛЕ
-};
-
-// Моковые данные с разными источниками
-const mockTickets: MockTicket[] = [
-  {
-    id: '1',
-    from: 'elena.v@example.com',
-    subject: 'Вопрос по заказу #1234',
-    snippet: 'Здравствуйте, не могу отследить посылку...',
-    timestamp: '14:28',
-    status: 'OPEN',
-    source: 'EMAIL',
-  },
-  {
-    id: '2',
-    from: 'ivan.p@example.com',
-    subject: 'Проблема с оплатой',
-    snippet: 'Не проходит платеж по карте...',
-    timestamp: '12:05',
-    status: 'PENDING',
-    source: 'WEB_FORM',
-  },
-  {
-    id: '3',
-    from: 'olga.s@example.com',
-    subject: 'Предложение о сотрудничестве',
-    snippet: 'Добрый день, я представляю бренд...',
-    timestamp: 'Вчера',
-    status: 'OPEN',
-    source: 'EMAIL',
-  },
-  {
-    id: '4',
-    from: 'Telegram User',
-    subject: 'Не приходит код',
-    snippet: 'Написал в бота поддержки...',
-    timestamp: 'Вчера',
-    status: 'OPEN',
-    source: 'TELEGRAM_BOT',
-  },
-  {
-    id: '5',
-    from: 'petr.k@example.com',
-    subject: 'Возврат товара',
-    snippet: 'Хочу вернуть товар, который не подошел...',
-    timestamp: '29 авг',
-    status: 'RESOLVED',
-    source: 'WEB_FORM',
-  },
-];
-
-const availableEmails = [
-  'support@kyanchir.ru',
-  'yana@kyanchir.ru',
-  'artem@kyanchir.ru',
-  'promo@kyanchir.ru',
-  'hello@kyanchir.ru',
-];
-
-// Небольшой компонент-хелпер для отображения иконок
-const SourceIcon = ({ source }: { source: TicketSource }) => {
+// Компонент-хелпер для отображения иконок источника
+const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
   let icon = '📧'; // Email по умолчанию
   let tooltip = 'Пришло с почты';
   if (source === 'WEB_FORM') {
@@ -86,17 +16,86 @@ const SourceIcon = ({ source }: { source: TicketSource }) => {
     tooltip = 'Обращение из Telegram бота';
   }
   return (
-    <span title={tooltip} className="mr-2">
+    <span title={tooltip} className="mr-2 text-lg">
       {icon}
     </span>
   );
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+// Тип для хранения состояния нашего компонента
+type TicketsState = {
+  tickets: SupportTicket[];
+  isLoading: boolean;
+  error: string | null;
+};
 
 export default function AdminMailPage() {
-  const [selectedTicket, setSelectedTicket] = useState<MockTicket | null>(
-    mockTickets[0],
+  const [state, setState] = useState<TicketsState>({
+    tickets: [],
+    isLoading: true, // Начинаем с состояния загрузки
+    error: null,
+  });
+
+  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
+    null,
   );
+
+  // useEffect для загрузки данных при монтировании компонента
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        // Устанавливаем состояние загрузки
+        setState((prevState) => ({
+          ...prevState,
+          isLoading: true,
+          error: null,
+        }));
+
+        const response = await fetch('/api/admin/tickets');
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(
+            errorData.error || `Ошибка сервера: ${response.status}`,
+          );
+        }
+
+        const data: SupportTicket[] = await response.json();
+
+        // Устанавливаем полученные данные
+        setState({ tickets: data, isLoading: false, error: null });
+
+        // Автоматически выбираем первый тикет в списке, если он есть
+        if (data.length > 0) {
+          setSelectedTicket(data[0]);
+        }
+      } catch (err: any) {
+        // В случае ошибки обновляем состояние
+        setState({ tickets: [], isLoading: false, error: err.message });
+      }
+    };
+
+    fetchTickets();
+  }, []); // Пустой массив зависимостей означает, что эффект выполнится только один раз при загрузке страницы
+
+  const availableEmails = [
+    'support@kyanchir.ru',
+    'yana@kyanchir.ru',
+    'artem@kyanchir.ru',
+    'promo@kyanchir.ru',
+    'hello@kyanchir.ru',
+  ];
+
+  // Функция для красивого форматирования даты
+  const formatDate = (dateString: Date) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
+  };
+
+  // TODO: В будущем эти счетчики тоже будут динамическими
+  const openTicketsCount = state.tickets.filter(
+    (t) => t.status === 'OPEN',
+  ).length;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg bg-white shadow-md">
@@ -107,20 +106,17 @@ export default function AdminMailPage() {
           <ul>
             <li className="mb-2">
               <a href="#" className="font-semibold text-blue-600">
-                Входящие (
-                {mockTickets.filter((t) => t.status === 'OPEN').length})
+                Входящие ({openTicketsCount})
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="text-gray-700 hover:text-blue-600">
-                В работе (
-                {mockTickets.filter((t) => t.status === 'PENDING').length})
+                В работе (0)
               </a>
             </li>
             <li className="mb-2">
               <a href="#" className="text-gray-700 hover:text-blue-600">
-                Закрытые (
-                {mockTickets.filter((t) => t.status === 'RESOLVED').length})
+                Закрытые (0)
               </a>
             </li>
           </ul>
@@ -136,8 +132,20 @@ export default function AdminMailPage() {
             className="w-full rounded border p-2"
           />
         </div>
+        {state.isLoading && (
+          <p className="p-4 text-center text-gray-500">Загрузка тикетов...</p>
+        )}
+        {state.error && (
+          <div className="bg-red-50 p-4 text-center text-red-600">
+            <b>Ошибка:</b>
+            <p>{state.error}</p>
+          </div>
+        )}
+        {!state.isLoading && state.tickets.length === 0 && !state.error && (
+          <p className="p-4 text-center text-gray-500">Нет новых обращений.</p>
+        )}
         <ul>
-          {mockTickets.map((ticket) => (
+          {state.tickets.map((ticket) => (
             <li
               key={ticket.id}
               onClick={() => setSelectedTicket(ticket)}
@@ -145,20 +153,15 @@ export default function AdminMailPage() {
             >
               <div className="mb-1 flex items-center justify-between">
                 <span className="truncate font-bold text-gray-800">
-                  {ticket.from}
+                  {ticket.clientEmail}
                 </span>
                 <span className="flex-shrink-0 text-xs text-gray-500">
-                  {ticket.timestamp}
+                  {formatDate(ticket.createdAt)}
                 </span>
               </div>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ДОБАВЛЯЕМ ИКОНКУ --- */}
               <p className="flex items-center truncate text-sm text-gray-700">
                 <SourceIcon source={ticket.source} />
                 {ticket.subject}
-              </p>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-              <p className="mt-1 truncate text-xs text-gray-500">
-                {ticket.snippet}
               </p>
             </li>
           ))}
@@ -170,23 +173,30 @@ export default function AdminMailPage() {
         {selectedTicket ? (
           <>
             <div className="mb-4 border-b pb-4">
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ДОБАВЛЯЕМ ИКОНКУ В ЗАГОЛОВОК --- */}
               <h1 className="mb-1 flex items-center text-2xl font-bold">
                 <SourceIcon source={selectedTicket.source} />
                 {selectedTicket.subject}
               </h1>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <p className="text-sm text-gray-600">
-                От: <span className="font-semibold">{selectedTicket.from}</span>
+                От:{' '}
+                <span className="font-semibold">
+                  {selectedTicket.clientEmail}
+                </span>
+              </p>
+              <p className="text-sm text-gray-600">
+                На email:{' '}
+                <span className="font-semibold">
+                  {selectedTicket.assignedEmail || '-'}
+                </span>
               </p>
             </div>
-
             <div className="prose mb-4 flex-grow">
-              <p>Тело письма или переписки будет здесь...</p>
-              <br />
-              <p>{selectedTicket.snippet}</p>
+              {/* TODO: На следующем шаге будем загружать сюда историю переписки */}
+              <p>
+                Здесь будет отображаться вся история сообщений по этому
+                тикету...
+              </p>
             </div>
-
             <div className="mt-auto border-t pt-4">
               <textarea
                 placeholder="Напишите ваш ответ..."
@@ -217,7 +227,11 @@ export default function AdminMailPage() {
           </>
         ) : (
           <div className="flex h-full items-center justify-center text-gray-500">
-            <p>Выберите обращение из списка</p>
+            <p>
+              {state.isLoading
+                ? 'Загрузка...'
+                : 'Выберите обращение из списка слева'}
+            </p>
           </div>
         )}
       </main>
