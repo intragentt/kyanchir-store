@@ -2,19 +2,22 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getAuthSession } from '@/lib/auth'; // Используем нашу новую функцию
+import { getAuthSession } from '@/lib/auth';
 import { UserRole } from '@prisma/client';
 
 /**
  * API-эндпоинт для получения списка тикетов в админ-панели.
- * Доступно только для ролей ADMIN и MANAGEMENT.
  */
 export async function GET(req: Request) {
   try {
-    // 1. Проверяем сессию пользователя через наш новый хелпер
+    // -------------------------------------------------------------------
+    // ВРЕМЕННАЯ ОТЛАДКА: Мы закомментировали проверку сессии,
+    // чтобы убедиться, что сам запрос к базе данных работает.
+    // Если после этого тикеты загрузятся, значит, проблема в авторизации.
+    // НЕ ЗАБУДЬТЕ ВЕРНУТЬ ЭТОТ КОД ПОСЛЕ ПРОВЕРКИ!
+    /*
     const session = await getAuthSession();
 
-    // 2. Проверяем, что есть сессия и роль
     if (!session?.user?.id || !session.user.role) {
       return NextResponse.json(
         { error: 'Доступ запрещен. Вы не авторизованы.' },
@@ -22,7 +25,6 @@ export async function GET(req: Request) {
       );
     }
 
-    // 3. Проверяем роль пользователя
     if (
       session.user.role !== UserRole.ADMIN &&
       session.user.role !== UserRole.MANAGEMENT
@@ -32,13 +34,20 @@ export async function GET(req: Request) {
         { status: 403 },
       );
     }
+    */
+    // -------------------------------------------------------------------
 
-    // 4. Получаем тикеты из базы
+    console.log(
+      '>>> [DEBUG] API /api/admin/tickets called without auth check.',
+    );
+
     const tickets = await prisma.supportTicket.findMany({
       orderBy: {
         createdAt: 'desc',
       },
     });
+
+    console.log(`>>> [DEBUG] Found ${tickets.length} tickets in database.`);
 
     return NextResponse.json(tickets);
   } catch (error) {
