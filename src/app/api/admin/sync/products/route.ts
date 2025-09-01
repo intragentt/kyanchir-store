@@ -1,13 +1,10 @@
 // /src/app/api/admin/sync/products/route.ts
 
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/auth';
-import { UserRole } from '@prisma/client';
+import { NextResponse, NextRequest } from 'next/server'; // ИЗМЕНЕНИЕ: Добавляем NextRequest
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts } from '@/lib/moysklad-api';
 
-// Интерфейсы и хелперы
+// Интерфейсы и хелперы (без изменений)
 interface MoySkladPrice {
   value: number;
   priceType: { name: string };
@@ -22,7 +19,6 @@ interface MoySkladProduct {
 function getUUIDFromHref(href: string): string {
   return href.split('/').pop() || '';
 }
-
 interface ParsedProductInfo {
   baseName: string;
   size: string | null;
@@ -36,7 +32,6 @@ function parseProductName(name: string): ParsedProductInfo {
   }
   return { baseName: name.trim(), size: null };
 }
-
 interface GroupedProductVariant {
   moyskladId: string;
   size: string | null;
@@ -45,22 +40,31 @@ interface GroupedProductVariant {
   rawSalePrices?: MoySkladPrice[];
 }
 
-export async function POST() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== UserRole.ADMIN) {
+// --- ИЗМЕНЕНИЕ: Вся логика теперь в GET-обработчике ---
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const cronSecret = searchParams.get('cron_secret');
+
+  // 1. Проверяем секретный ключ
+  // Мы сравниваем ключ из запроса с тем, что хранится в переменных окружения на Vercel
+  if (process.env.CRON_SECRET !== cronSecret) {
+    // Если ключи не совпадают - отказываем в доступе
     return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
-      status: 403,
-    });
+      status: 401,
+    }); // 401 Unauthorized
   }
 
+  // Если проверка пройдена, запускаем синхронизацию
   try {
     const moySkladResponse = await getMoySkladProducts();
     const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];
 
     if (moySkladProducts.length === 0) {
+      // Важно возвращать JSON и успешный статус, даже если делать нечего
       return NextResponse.json({ message: 'Товары в МойСклад не найдены.' });
     }
 
+    // --- ВСЯ НАША "УМНАЯ" ЛОГИКА ОСТАЕТСЯ ЗДЕСЬ ---
     const groupedProducts = new Map<string, GroupedProductVariant[]>();
     for (const product of moySkladProducts) {
       const { baseName, size } = parseProductName(product.name);
@@ -85,7 +89,6 @@ export async function POST() {
     );
 
     const transactionPromises = [];
-
     for (const [baseName, variants] of groupedProducts.entries()) {
       const firstVariant = variants[0];
       const categoryMoySkladId = firstVariant.productFolder
@@ -111,7 +114,6 @@ export async function POST() {
       }
 
       for (const variantData of variants) {
-        // --- ИЗМЕНЕНИЕ ЗДЕСЬ! Ищем правильные названия цен ---
         const salePriceObj = (variantData.rawSalePrices || []).find(
           (p) => p.priceType.name === 'Скидка',
         );
@@ -130,15 +132,12 @@ export async function POST() {
           : 0;
 
         if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
-          // Скидка есть! Новая цена - "Скидка", старая - "Цена продажи"
           currentPrice = salePriceValue;
           oldPrice = regularPriceValue;
         } else {
-          // Скидки нет, показываем обычную "Цену продажи"
           currentPrice =
             regularPriceValue > 0 ? regularPriceValue : salePriceValue;
         }
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
         let sizeRecord = null;
         if (variantData.size) {
@@ -168,14 +167,18 @@ export async function POST() {
 
     await prisma.$transaction(transactionPromises);
 
+    // Успешный ответ для логов Vercel Cron
     return NextResponse.json({
-      message: `Синхронизация успешно завершена. Сгруппировано в ${groupedProducts.size} уникальных товаров.`,
+      message: `Синхронизация по расписанию успешно завершена.`,
       synchronizedProducts: groupedProducts.size,
     });
   } catch (error) {
-    console.error('[API SYNC PRODUCTS ERROR]:', error);
+    console.error('[CRON SYNC ERROR]:', error);
+    // Ответ с ошибкой для логов Vercel Cron
     return new NextResponse(
-      JSON.stringify({ error: 'Внутренняя ошибка сервера.' }),
+      JSON.stringify({
+        error: 'Внутренняя ошибка сервера во время выполнения Cron Job.',
+      }),
       { status: 500 },
     );
   }
