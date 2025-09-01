@@ -1,4 +1,5 @@
 // Местоположение: src/app/page.tsx
+
 import prisma from '@/lib/prisma';
 import React from 'react';
 import HomePageClient from '@/components/HomePageClient';
@@ -9,7 +10,11 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   const [productsData, mainFilterPreset] = await Promise.all([
     prisma.product.findMany({
-      where: { status: 'PUBLISHED' },
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      // Временно убираем фильтр по статусу, чтобы увидеть все синхронизированные товары,
+      // даже если они сейчас в статусе "DRAFT" (Черновик).
+      // where: { status: 'PUBLISHED' },
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       orderBy: { createdAt: 'desc' },
       include: {
         variants: {
@@ -52,10 +57,6 @@ export default async function HomePage() {
     [],
   );
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // ИСПРАВЛЕНО: Мы явно указываем TypeScript "маркировку" нашего "подноса".
-  // Теперь он знает, что `categoriesFromPreset` — это массив объектов,
-  // где у каждого есть строковый `id` и строковый `name`.
   let categoriesFromPreset: { id: string; name: string }[] = [];
 
   if (mainFilterPreset && mainFilterPreset.items) {
@@ -71,7 +72,6 @@ export default async function HomePage() {
     { id: 'all', name: 'все товары' },
     ...categoriesFromPreset,
   ];
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <>
