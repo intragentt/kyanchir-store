@@ -1,6 +1,6 @@
 // Местоположение: src/lib/auth.ts
 
-import { NextAuthOptions, getServerSession } from 'next-auth';
+import { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -8,6 +8,7 @@ import bcrypt from 'bcrypt';
 import { UserRole } from '@prisma/client';
 
 // Это наш "Единый Источник Правды" для конфигурации Auth.js.
+// Отсюда его смогут безопасно импортировать все части приложения.
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -109,7 +110,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role; // <-- TypeScript теперь знает про это поле из `next-auth.d.ts`
+        token.role = user.role;
       }
       return token;
     },
@@ -123,4 +124,4 @@ export const authOptions: NextAuthOptions = {
   },
 };
 
-export const getAuthSession = () => getServerSession(authOptions);
+// Функция `getAuthSession` удалена, так как мы используем `getServerSession(authOptions)` напрямую.
