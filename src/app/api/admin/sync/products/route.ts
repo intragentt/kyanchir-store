@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts } from '@/lib/moysklad-api';
 
-// Интерфейсы для типизации ответа от МойСклад
+// --- ИСПРАВЛЕНИЕ ОПЕЧАТКИ ЗДЕСЬ ---
 interface MoySkladPrice {
   value: number;
   priceType: {
@@ -26,8 +26,8 @@ interface MoySkladProduct {
   };
   salePrices?: MoySkladPrice[];
 }
+// --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
-// Вспомогательная функция для извлечения ID из URL-ссылки
 function getUUIDFromHref(href: string): string {
   return href.split('/').pop() || '';
 }
@@ -51,7 +51,6 @@ export async function POST() {
       });
     }
 
-    // Создаем карту существующих категорий для быстрой связки
     const allOurCategories = await prisma.category.findMany({
       select: { id: true, moyskladId: true },
     });
@@ -60,7 +59,6 @@ export async function POST() {
       (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
     );
 
-    // Готовим массив "обещаний" для всех операций upsert
     const upsertPromises = moySkladProducts.map((product) => {
       const categoryMoySkladId = product.productFolder
         ? getUUIDFromHref(product.productFolder.meta.href)
@@ -70,13 +68,10 @@ export async function POST() {
         ? categoryMap.get(categoryMoySkladId)
         : undefined;
 
-      // Ищем цену с типом "Цена продажи" и переводим её в копейки
       const salePriceObject = (product.salePrices || []).find(
         (p) => p.priceType.name === 'Цена продажи',
       );
-      const priceInCents = salePriceObject
-        ? Math.round(salePriceObject.value * 100)
-        : 0;
+      const price = salePriceObject ? Math.round(salePriceObject.value) : 0;
 
       return prisma.product.upsert({
         where: { moyskladId: product.id },
@@ -86,7 +81,15 @@ export async function POST() {
           categories: ourCategoryId
             ? { connect: { id: ourCategoryId } }
             : undefined,
-          // Можно добавить и обновление цены варианта, если нужно
+          variants: {
+            updateMany: {
+              where: {
+                // Просто обновляем все варианты этого продукта, если их несколько.
+                // Это упрощение, в идеале нужно матчить варианты по SKU или другому ID.
+              },
+              data: { price: price },
+            },
+          },
         },
         create: {
           name: product.name,
@@ -97,14 +100,13 @@ export async function POST() {
             : undefined,
           variants: {
             create: {
-              price: priceInCents, // цена в копейках
+              price: price,
             },
           },
         },
       });
     });
 
-    // Выполняем все операции в одной транзакции для надежности
     await prisma.$transaction(upsertPromises);
 
     return NextResponse.json({
