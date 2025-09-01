@@ -1,9 +1,11 @@
 // /src/lib/moysklad-api.ts
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
 const MOYSKLAD_API_TOKEN = process.env.MOYSKLAD_API_TOKEN;
-const MOYSKLAD_API_URL = 'https://online.moysklad.ru/api/remap/1.2';
+
+// --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
+// Старый URL: 'https://online.moysklad.ru/api/remap/1.2'
+const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
+// --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
 if (!MOYSKLAD_API_TOKEN) {
   throw new Error('Переменная окружения MOYSKLAD_API_TOKEN не определена!');
@@ -37,6 +39,11 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
       );
     }
 
+    // Если ответ пустой (например, код 204), вернем null, а не пытаемся парсить JSON
+    if (response.status === 204) {
+      return null;
+    }
+
     return await response.json();
   } catch (error) {
     console.error('Ошибка при выполнении запроса к МойСклад:', error);
@@ -59,5 +66,3 @@ export const getMoySkladCategories = async () => {
   const data = await moySkladFetch('entity/productfolder');
   return data;
 };
-
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
