@@ -4,9 +4,8 @@
 import { useState, useEffect } from 'react';
 import { SupportTicket } from '@prisma/client';
 
-// Компонент-хелпер для отображения иконок источника
 const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
-  let icon = '📧'; // Email по умолчанию
+  let icon = '📧';
   let tooltip = 'Пришло с почты';
   if (source === 'WEB_FORM') {
     icon = '🌐';
@@ -22,7 +21,6 @@ const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
   );
 };
 
-// Тип для хранения состояния нашего компонента
 type TicketsState = {
   tickets: SupportTicket[];
   isLoading: boolean;
@@ -32,7 +30,7 @@ type TicketsState = {
 export default function AdminMailPage() {
   const [state, setState] = useState<TicketsState>({
     tickets: [],
-    isLoading: true, // Начинаем с состояния загрузки
+    isLoading: true,
     error: null,
   });
 
@@ -40,17 +38,16 @@ export default function AdminMailPage() {
     null,
   );
 
-  // useEffect для загрузки данных при монтировании компонента
   useEffect(() => {
     const fetchTickets = async () => {
       try {
-        // Устанавливаем состояние загрузки
         setState((prevState) => ({
           ...prevState,
           isLoading: true,
           error: null,
         }));
 
+        // --- ИЗМЕНЕНИЕ ЗДЕСЬ: Используем относительный путь для fetch ---
         const response = await fetch('/api/admin/tickets');
 
         if (!response.ok) {
@@ -61,22 +58,17 @@ export default function AdminMailPage() {
         }
 
         const data: SupportTicket[] = await response.json();
-
-        // Устанавливаем полученные данные
         setState({ tickets: data, isLoading: false, error: null });
 
-        // Автоматически выбираем первый тикет в списке, если он есть
         if (data.length > 0) {
           setSelectedTicket(data[0]);
         }
       } catch (err: any) {
-        // В случае ошибки обновляем состояние
         setState({ tickets: [], isLoading: false, error: err.message });
       }
     };
-
     fetchTickets();
-  }, []); // Пустой массив зависимостей означает, что эффект выполнится только один раз при загрузке страницы
+  }, []);
 
   const availableEmails = [
     'support@kyanchir.ru',
@@ -86,20 +78,17 @@ export default function AdminMailPage() {
     'hello@kyanchir.ru',
   ];
 
-  // Функция для красивого форматирования даты
   const formatDate = (dateString: Date) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('ru-RU', { day: '2-digit', month: 'short' });
   };
 
-  // TODO: В будущем эти счетчики тоже будут динамическими
   const openTicketsCount = state.tickets.filter(
     (t) => t.status === 'OPEN',
   ).length;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg bg-white shadow-md">
-      {/* --- КОЛОНКА 1: ПАПКИ --- */}
       <aside className="w-1/5 border-r bg-gray-50 p-4">
         <h2 className="mb-4 text-xl font-bold">Папки</h2>
         <nav>
@@ -122,8 +111,6 @@ export default function AdminMailPage() {
           </ul>
         </nav>
       </aside>
-
-      {/* --- КОЛОНКА 2: СПИСОК ТИКЕТОВ --- */}
       <section className="w-1/3 overflow-y-auto border-r">
         <div className="border-b p-4">
           <input
@@ -167,8 +154,6 @@ export default function AdminMailPage() {
           ))}
         </ul>
       </section>
-
-      {/* --- КОЛОНКА 3: ПРОСМОТР И ОТВЕТ --- */}
       <main className="flex w-full flex-col overflow-y-auto p-4">
         {selectedTicket ? (
           <>
@@ -191,7 +176,6 @@ export default function AdminMailPage() {
               </p>
             </div>
             <div className="prose mb-4 flex-grow">
-              {/* TODO: На следующем шаге будем загружать сюда историю переписки */}
               <p>
                 Здесь будет отображаться вся история сообщений по этому
                 тикету...
