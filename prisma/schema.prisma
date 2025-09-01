@@ -22,6 +22,9 @@ model Product {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   tags             Tag[]             @relation("ProductTags")
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (МойСклад) ---
+  moyskladId       String?           @unique // ID товара из МойСклад
+  // --- КОНЕЦ ИЗМЕНЕНИЙ (МойСклад) ---
 }
 
 model Variant {
@@ -39,6 +42,10 @@ model Variant {
   isFeatured         Boolean     @default(false)
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (МойСклад) ---
+  moyskladId         String?     @unique // ID варианта (модификации) из МойСклад
+  // --- КОНЕЦ ИЗМЕНЕНИЙ (МойСклад) ---
+
   @@unique([productId, color])
 }
 
@@ -85,7 +92,12 @@ model Category {
   order       Int          @default(0)
   color       String?
   presetItems PresetItem[]
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (МойСклад) ---
+  moyskladId  String?      @unique // ID категории из МойСклад
+  // --- КОНЕЦ ИЗМЕНЕНИЙ (МойСклад) ---
 }
+
+// ... все остальные модели остаются без изменений ...
 
 model Tag {
   id          String       @id @default(cuid())
@@ -143,6 +155,7 @@ enum UserRole {
   CLIENT
   ADMIN
   MANAGEMENT // Добавили новую роль
+  SUPPORT // Добавляем роль для консистентности
 }
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
