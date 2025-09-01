@@ -40,20 +40,21 @@ interface GroupedProductVariant {
   rawSalePrices?: MoySkladPrice[];
 }
 
-// Вся логика теперь в GET-обработчике для работы с Vercel Cron
 export async function GET(req: NextRequest) {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Проверка секрета из URL-параметра ---
   const { searchParams } = new URL(req.url);
-  const cronSecret = searchParams.get('cron_secret');
+  const receivedSecret = searchParams.get('cron_secret');
 
-  // Сравниваем полученный ключ с тем, что хранится в переменных окружения
-  if (process.env.CRON_SECRET !== cronSecret) {
-    // Если ключи не совпадают - отказываем в доступе
-    return new NextResponse(JSON.stringify({ error: 'Доступ запрещен: неверный секретный ключ' }), { status: 401 });
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Секрет "зашит" прямо в код для 100% надежности ---
+  const expectedSecret = 'Jfxh?pMU;ypP6Fd|L68MH3H|e_M;sl';
+
+  if (receivedSecret !== expectedSecret) {
+    return new NextResponse(
+      JSON.stringify({ error: 'Доступ запрещен: неверный секрет' }),
+      { status: 401 },
+    );
   }
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // Если проверка пройдена, запускаем синхронизацию
   try {
     const moySkladResponse = await getMoySkladProducts();
     const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];

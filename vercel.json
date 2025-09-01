@@ -3,6 +3,8 @@
   "crons": [
     {
       "path": "/api/admin/sync/products?cron_secret=Jfxh?pMU;ypP6Fd|L68MH3H|e_M;sl",
+
+      "description": "Синхронизация продуктов с МойСклад",
       "schedule": "0 0 * * *"
     }
   ]
