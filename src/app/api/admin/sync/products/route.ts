@@ -42,17 +42,14 @@ interface GroupedProductVariant {
 
 // Вся логика теперь в GET-обработчике для работы с Vercel Cron
 export async function GET(req: NextRequest) {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Проверка секрета из заголовков ---
-  const authHeader = req.headers.get('authorization');
-  const expectedAuthHeader = `Bearer ${process.env.CRON_SECRET}`;
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Проверка секрета из URL-параметра ---
+  const { searchParams } = new URL(req.url);
+  const cronSecret = searchParams.get('cron_secret');
 
-  // Сравниваем полученный заголовок с ожидаемым
-  if (authHeader !== expectedAuthHeader) {
-    // Если заголовки не совпадают или отсутствуют - отказываем в доступе
-    return new NextResponse(
-      JSON.stringify({ error: 'Доступ запрещен: неверный токен авторизации' }),
-      { status: 401 },
-    );
+  // Сравниваем полученный ключ с тем, что хранится в переменных окружения
+  if (process.env.CRON_SECRET !== cronSecret) {
+    // Если ключи не совпадают - отказываем в доступе
+    return new NextResponse(JSON.stringify({ error: 'Доступ запрещен: неверный секретный ключ' }), { status: 401 });
   }
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
