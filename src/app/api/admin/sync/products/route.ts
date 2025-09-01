@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts } from '@/lib/moysklad-api';
 
-// Интерфейсы оставляем, они полезны
+// Интерфейсы для типизации ответа от МойСклад
 interface MoySkladPrice {
   value: number;
   priceType: {
@@ -27,13 +27,12 @@ interface MoySkladProduct {
   salePrices?: MoySkladPrice[];
 }
 
+// Вспомогательная функция для извлечения ID из URL-ссылки
 function getUUIDFromHref(href: string): string {
   return href.split('/').pop() || '';
 }
 
 export async function POST() {
-  console.log('[SYNC PRODUCTS] Start');
-
   const session = await getServerSession(authOptions);
   if (!session?.user || session.user.role !== UserRole.ADMIN) {
     return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
@@ -52,10 +51,7 @@ export async function POST() {
       });
     }
 
-    console.log(
-      `[SYNC PRODUCTS] Found ${moySkladProducts.length} products in MoySklad. Starting sync...`,
-    );
-
+    // Создаем карту существующих категорий для быстрой связки
     const allOurCategories = await prisma.category.findMany({
       select: { id: true, moyskladId: true },
     });
@@ -64,16 +60,17 @@ export async function POST() {
       (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
     );
 
-    // --- УБИРАЕМ ОГРАНИЧЕНИЕ ---
+    // Готовим массив "обещаний" для всех операций upsert
     const upsertPromises = moySkladProducts.map((product) => {
       const categoryMoySkladId = product.productFolder
         ? getUUIDFromHref(product.productFolder.meta.href)
         : null;
+
       const ourCategoryId = categoryMoySkladId
         ? categoryMap.get(categoryMoySkladId)
         : undefined;
 
-      // ВАЖНО: Цену нужно привести к копейкам
+      // Ищем цену с типом "Цена продажи" и переводим её в копейки
       const salePriceObject = (product.salePrices || []).find(
         (p) => p.priceType.name === 'Цена продажи',
       );
@@ -89,6 +86,7 @@ export async function POST() {
           categories: ourCategoryId
             ? { connect: { id: ourCategoryId } }
             : undefined,
+          // Можно добавить и обновление цены варианта, если нужно
         },
         create: {
           name: product.name,
@@ -99,16 +97,16 @@ export async function POST() {
             : undefined,
           variants: {
             create: {
-              price: priceInCents,
+              price: priceInCents, // цена в копейках
             },
           },
         },
       });
     });
 
+    // Выполняем все операции в одной транзакции для надежности
     await prisma.$transaction(upsertPromises);
 
-    console.log('[SYNC PRODUCTS] Success');
     return NextResponse.json({
       message: 'Синхронизация товаров успешно завершена.',
       synchronizedCount: moySkladProducts.length,
