@@ -2,20 +2,24 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { authOptions } from '@/lib/auth'; // <-- МЕНЯЕМ ИМПОРТ
-import { getServerSession } from 'next-auth/next'; // <-- НОВЫЙ ИМПОРТ
+import { authOptions } from '@/lib/auth'; // Импортируем authOptions напрямую
+import { getServerSession } from 'next-auth/next'; // Импортируем getServerSession
 import { UserRole } from '@prisma/client';
 
+/**
+ * API-эндпоинт для получения списка тикетов в админ-панели.
+ * Доступно только для ролей ADMIN и MANAGEMENT.
+ */
 export async function GET(req: Request) {
-  // <-- `req` теперь используется
+  // `req` теперь используется
   try {
-    // --- ИЗМЕНЕНИЕ: Передаем `req` в `getServerSession` ---
-    // Это самый надежный способ получить сессию в Route Handlers
+    // Используем самый надежный способ получения сессии в Route Handlers,
+    // явно передавая ему объект запроса.
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id || !session.user.role) {
       return NextResponse.json(
-        { error: 'Доступ запрещен. Не авторизованы.' },
+        { error: 'Доступ запрещен. Вы не авторизованы.' },
         { status: 401 },
       );
     }
@@ -31,7 +35,9 @@ export async function GET(req: Request) {
     }
 
     const tickets = await prisma.supportTicket.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
     return NextResponse.json(tickets);
