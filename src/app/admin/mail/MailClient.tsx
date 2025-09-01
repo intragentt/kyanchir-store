@@ -1,27 +1,39 @@
 // Местоположение: /src/app/admin/mail/MailClient.tsx
 'use client';
 
-import { useState } from 'react';
-import {
-  SupportTicket,
-  SupportMessage,
-  SupportAgent,
-  AgentRole,
-} from '@prisma/client';
+import { useState, useEffect } from 'react';
+import { SupportTicket, SupportMessage, AgentRole } from '@prisma/client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Создаем более полный тип для сообщения, включающий информацию об агенте
 type MessageWithAgent = SupportMessage & {
   agent: { name: string; role: AgentRole } | null;
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
-  // ... (код без изменений)
+  let icon = '📧';
+  let tooltip = 'Пришло с почты';
+  if (source === 'WEB_FORM') {
+    icon = '🌐';
+    tooltip = 'Заполнена форма на сайте';
+  } else if (source === 'TELEGRAM_BOT') {
+    icon = '🤖';
+    tooltip = 'Обращение из Telegram бота';
+  }
+  return (
+    <span title={tooltip} className="mr-2 text-lg">
+      {icon}
+    </span>
+  );
 };
 
 const formatDate = (dateString: Date) => {
-  // ... (код без изменений)
+  const date = new Date(dateString);
+  const options: Intl.DateTimeFormatOptions = {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  };
+  return date.toLocaleDateString('ru-RU', options);
 };
 
 type MailClientProps = {
@@ -39,42 +51,45 @@ export default function MailClient({
     initialTickets[0] || null,
   );
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Новые состояния для переписки
   const [messages, setMessages] = useState<MessageWithAgent[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
-  // Новые состояния для формы ответа
   const [replyText, setReplyText] = useState('');
   const [selectedEmail, setSelectedEmail] = useState('support@kyanchir.ru');
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  const [isSending, setIsSending] = useState(false);
 
-  // Функция для загрузки сообщений при выборе тикета
   const handleTicketSelect = async (ticket: SupportTicket) => {
     setSelectedTicket(ticket);
     setIsLoadingMessages(true);
-    setMessages([]); // Очищаем старые сообщения
-
+    setMessages([]);
     try {
       const response = await fetch(`/api/admin/tickets/${ticket.id}`);
       if (!response.ok) {
-        throw new Error('Не удалось загрузить переписку');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Не удалось загрузить переписку');
       }
-
       const data: MessageWithAgent[] = await response.json();
       setMessages(data);
-    } catch (e) {
-      // TODO: Показать ошибку загрузки сообщений
-      console.error(e);
+    } catch (e: any) {
+      console.error(e.message);
+      // Можно установить состояние ошибки для отображения в UI
     } finally {
       setIsLoadingMessages(false);
     }
   };
 
-  // Функция для отправки ответа (пока заглушка)
+  useEffect(() => {
+    if (initialTickets.length > 0 && !selectedTicket) {
+      handleTicketSelect(initialTickets[0]);
+    }
+  }, [initialTickets, selectedTicket]);
+
   const handleSendReply = async () => {
     if (!replyText.trim() || !selectedTicket) return;
 
+    setIsSending(true);
+
+    // Пока что выводим в консоль
     console.log({
       message: 'Отправка ответа (пока заглушка)',
       ticketId: selectedTicket.id,
@@ -82,68 +97,139 @@ export default function MailClient({
       text: replyText,
     });
 
-    // TODO: Реализовать POST-запрос на /api/admin/tickets/[id]/reply
-    alert(
-      `Ответ отправлен (заглушка):\n\nОт: ${selectedEmail}\nКому: ${selectedTicket.clientEmail}\n\n${replyText}`,
-    );
-    setReplyText(''); // Очищаем поле ввода
+    setTimeout(() => {
+      alert(
+        `Ответ отправлен (заглушка):\n\nОт: ${selectedEmail}\nКому: ${selectedTicket.clientEmail}\n\n${replyText}`,
+      );
+      setReplyText('');
+      setIsSending(false);
+      // TODO: После реальной отправки нужно будет обновить список сообщений
+    }, 1000); // Имитация задержки
   };
 
-  // --- ... (остальной код остается почти таким же, меняются только onClick и Колонка 3)
+  const availableEmails = [
+    'support@kyanchir.ru',
+    'yana@kyanchir.ru',
+    'artem@kyanchir.ru',
+    'promo@kyanchir.ru',
+    'hello@kyanchir.ru',
+  ];
 
-  const availableEmails = ['support@kyanchir.ru' /* ... */];
+  const openTicketsCount = tickets.filter((t) => t.status === 'OPEN').length;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] ...">
-      {/* ... Колонка 1 и 2 без существенных изменений, только onClick ... */}
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg bg-white shadow-md">
+      <aside className="w-1/5 border-r bg-gray-50 p-4">
+        <h2 className="mb-4 text-xl font-bold">Папки</h2>
+        <nav>
+          <ul>
+            <li className="mb-2">
+              <a href="#" className="font-semibold text-blue-600">
+                Входящие ({openTicketsCount})
+              </a>
+            </li>
+            <li className="mb-2">
+              <a href="#" className="text-gray-700 hover:text-blue-600">
+                В работе (0)
+              </a>
+            </li>
+            <li className="mb-2">
+              <a href="#" className="text-gray-700 hover:text-blue-600">
+                Закрытые (0)
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
       <section className="w-1/3 overflow-y-auto border-r">
-        {/* ... */}
+        <div className="border-b p-4">
+          <input
+            type="search"
+            placeholder="Поиск в почте..."
+            className="w-full rounded border p-2"
+          />
+        </div>
+        {error && (
+          <div className="bg-red-50 p-4 text-center text-red-600">
+            <b>Ошибка:</b>
+            <p>{error}</p>
+          </div>
+        )}
+        {tickets.length === 0 && !error && (
+          <p className="p-4 text-center text-gray-500">Нет новых обращений.</p>
+        )}
         <ul>
           {tickets.map((ticket) => (
             <li
               key={ticket.id}
               onClick={() => handleTicketSelect(ticket)}
-              className={`...`}
+              className={`cursor-pointer border-b p-4 hover:bg-gray-50 ${selectedTicket?.id === ticket.id ? 'bg-blue-100' : ''}`}
             >
-              {/* ... */}
+              <div className="mb-1 flex items-center justify-between">
+                <span className="truncate font-bold text-gray-800">
+                  {ticket.clientEmail}
+                </span>
+                <span className="flex-shrink-0 text-xs text-gray-500">
+                  {formatDate(ticket.createdAt)}
+                </span>
+              </div>
+              <p className="flex items-center truncate text-sm text-gray-700">
+                <SourceIcon source={ticket.source} />
+                {ticket.subject}
+              </p>
             </li>
           ))}
         </ul>
       </section>
-
-      {/* --- КОЛОНКА 3: ПОЛНОСТЬЮ ОБНОВЛЕННАЯ --- */}
       <main className="flex w-full flex-col overflow-y-auto p-4">
         {selectedTicket ? (
           <>
             <div className="mb-4 border-b pb-4">
-              <h1 className="mb-1 flex items-center text-2xl font-bold">...</h1>
-              <p>От: ...</p>
-              <p>На email: ...</p>
+              <h1 className="mb-1 flex items-center text-2xl font-bold">
+                <SourceIcon source={selectedTicket.source} />
+                {selectedTicket.subject}
+              </h1>
+              <p className="text-sm text-gray-600">
+                От:{' '}
+                <span className="font-semibold">
+                  {selectedTicket.clientEmail}
+                </span>
+              </p>
+              <p className="text-sm text-gray-600">
+                На email:{' '}
+                <span className="font-semibold">
+                  {selectedTicket.assignedEmail || '-'}
+                </span>
+              </p>
             </div>
-
-            {/* Зона переписки */}
-            <div className="prose mb-4 flex-grow overflow-y-auto">
-              {isLoadingMessages && <p>Загрузка переписки...</p>}
+            <div className="prose mb-4 flex-grow space-y-4 overflow-y-auto pr-2">
+              {isLoadingMessages && (
+                <p className="text-center text-gray-500">
+                  Загрузка переписки...
+                </p>
+              )}
+              {messages.length === 0 && !isLoadingMessages && (
+                <p className="text-center text-gray-400">Сообщений пока нет.</p>
+              )}
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`chat-bubble mb-4 max-w-[80%] rounded-lg p-3 ${
-                    msg.senderType === 'CLIENT'
-                      ? 'self-start bg-gray-200'
-                      : 'ml-auto self-end bg-blue-500 text-white'
-                  }`}
+                  className={`flex flex-col ${msg.senderType === 'CLIENT' ? 'items-start' : 'items-end'}`}
                 >
-                  <p className="text-sm">{msg.content}</p>
-                  <p className="mt-1 text-right text-xs opacity-75">
+                  <div
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${msg.senderType === 'CLIENT' ? 'bg-gray-200 text-gray-800' : 'bg-blue-600 text-white'}`}
+                  >
+                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">
                     {msg.senderType === 'AGENT'
-                      ? `Отправлено: ${msg.agent?.name || 'Агент'}`
-                      : `Получено`}
+                      ? msg.agent?.name || 'Агент'
+                      : selectedTicket.clientEmail}
+                    , {formatDate(msg.createdAt)}
                   </p>
                 </div>
               ))}
             </div>
-
-            {/* Форма ответа */}
             <div className="mt-auto border-t pt-4">
               <textarea
                 placeholder="Напишите ваш ответ..."
@@ -151,7 +237,7 @@ export default function MailClient({
                 className="mb-2 w-full rounded border p-2"
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-              />
+              ></textarea>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <label htmlFor="from-email" className="text-sm text-gray-600">
@@ -173,16 +259,16 @@ export default function MailClient({
                 <button
                   onClick={handleSendReply}
                   className="rounded bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700 disabled:bg-gray-400"
-                  disabled={!replyText.trim()}
+                  disabled={!replyText.trim() || isSending}
                 >
-                  Отправить
+                  {isSending ? 'Отправка...' : 'Отправить'}
                 </button>
               </div>
             </div>
           </>
         ) : (
           <div className="flex h-full items-center justify-center text-gray-500">
-            <p>Выберите обращение из списка слева</p>
+            <p>{error ? '' : 'Выберите обращение из списка слева'}</p>
           </div>
         )}
       </main>
