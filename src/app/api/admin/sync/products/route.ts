@@ -1,6 +1,9 @@
 // /src/app/api/admin/sync/products/route.ts
 
 import { NextResponse, NextRequest } from 'next/server';
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/lib/auth';
+import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts } from '@/lib/moysklad-api';
 
@@ -39,142 +42,170 @@ interface GroupedProductVariant {
   productFolder?: { meta: { href: string } };
   rawSalePrices?: MoySkladPrice[];
 }
+// --- КОНЕЦ ХЕЛПЕРОВ ---
 
+// === 1. ОСНОВНАЯ ЛОГИКА СИНХРОНИЗАЦИИ (вынесена в отдельную функцию) ===
+async function runSync() {
+  const moySkladResponse = await getMoySkladProducts();
+  const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];
+
+  if (moySkladProducts.length === 0) {
+    return {
+      message: 'Товары в МойСклад не найдены.',
+      synchronizedProducts: 0,
+    };
+  }
+
+  const groupedProducts = new Map<string, GroupedProductVariant[]>();
+  for (const product of moySkladProducts) {
+    const { baseName, size } = parseProductName(product.name);
+    if (!groupedProducts.has(baseName)) {
+      groupedProducts.set(baseName, []);
+    }
+    groupedProducts.get(baseName)!.push({
+      moyskladId: product.id,
+      size,
+      description: product.description,
+      productFolder: product.productFolder,
+      rawSalePrices: product.salePrices,
+    });
+  }
+
+  const categoryMap = new Map<string, string>();
+  const allOurCategories = await prisma.category.findMany({
+    select: { id: true, moyskladId: true },
+  });
+  allOurCategories.forEach(
+    (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
+  );
+
+  const transactionPromises = [];
+  for (const [baseName, variants] of groupedProducts.entries()) {
+    const firstVariant = variants[0];
+    const categoryMoySkladId = firstVariant.productFolder
+      ? getUUIDFromHref(firstVariant.productFolder.meta.href)
+      : null;
+    const ourCategoryId = categoryMoySkladId
+      ? categoryMap.get(categoryMoySkladId)
+      : undefined;
+
+    let product = await prisma.product.findFirst({
+      where: { name: baseName },
+    });
+    if (!product) {
+      product = await prisma.product.create({
+        data: {
+          name: baseName,
+          description: firstVariant.description || '',
+          categories: ourCategoryId
+            ? { connect: { id: ourCategoryId } }
+            : undefined,
+        },
+      });
+    }
+
+    for (const variantData of variants) {
+      const salePriceObj = (variantData.rawSalePrices || []).find(
+        (p) => p.priceType.name === 'Скидка',
+      );
+      const regularPriceObj = (variantData.rawSalePrices || []).find(
+        (p) => p.priceType.name === 'Цена продажи',
+      );
+      let currentPrice = 0;
+      let oldPrice = null;
+      const regularPriceValue = regularPriceObj
+        ? Math.round(regularPriceObj.value)
+        : 0;
+      const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
+      if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
+        currentPrice = salePriceValue;
+        oldPrice = regularPriceValue;
+      } else {
+        currentPrice =
+          regularPriceValue > 0 ? regularPriceValue : salePriceValue;
+      }
+      let sizeRecord = null;
+      if (variantData.size) {
+        sizeRecord = await prisma.size.upsert({
+          where: { value: variantData.size },
+          update: {},
+          create: { value: variantData.size },
+        });
+      }
+      const variantUpsert = prisma.variant.upsert({
+        where: { moyskladId: variantData.moyskladId },
+        update: { price: currentPrice, oldPrice: oldPrice },
+        create: {
+          price: currentPrice,
+          oldPrice: oldPrice,
+          product: { connect: { id: product.id } },
+          moyskladId: variantData.moyskladId,
+          inventory: sizeRecord
+            ? { create: { sizeId: sizeRecord.id, stock: 0 } }
+            : undefined,
+        },
+      });
+      transactionPromises.push(variantUpsert);
+    }
+  }
+
+  await prisma.$transaction(transactionPromises);
+
+  return {
+    message: `Синхронизация успешно завершена.`,
+    synchronizedProducts: groupedProducts.size,
+  };
+}
+
+// === 2. ОБРАБОТЧИК ДЛЯ CRON JOB (GET-запросы) ===
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const receivedSecret = searchParams.get('cron_secret');
+  try {
+    const cronSecret = req.nextUrl.searchParams.get('cron_secret');
+    if (process.env.CRON_SECRET !== cronSecret) {
+      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
+        status: 401,
+      });
+    }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Секрет "зашит" прямо в код для 100% надежности ---
-  const expectedSecret = 'Jfxh?pMU;ypP6Fd|L68MH3H|e_M;sl';
-
-  if (receivedSecret !== expectedSecret) {
+    console.log('[CRON SYNC] Запуск синхронизации продуктов по расписанию...');
+    const result = await runSync();
+    console.log(
+      `[CRON SYNC] ${result.message} Обработано: ${result.synchronizedProducts} шт.`,
+    );
+    return NextResponse.json(result);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[CRON SYNC ERROR]:', errorMessage);
     return new NextResponse(
-      JSON.stringify({ error: 'Доступ запрещен: неверный секрет' }),
-      { status: 401 },
+      JSON.stringify({ error: 'Внутренняя ошибка сервера.' }),
+      { status: 500 },
     );
   }
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+}
 
+// === 3. ОБРАБОТЧИК ДЛЯ КНОПКИ В АДМИНКЕ (POST-запросы) ===
+export async function POST() {
   try {
-    const moySkladResponse = await getMoySkladProducts();
-    const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];
-
-    if (moySkladProducts.length === 0) {
-      return NextResponse.json({ message: 'Товары в МойСклад не найдены.' });
-    }
-
-    const groupedProducts = new Map<string, GroupedProductVariant[]>();
-    for (const product of moySkladProducts) {
-      const { baseName, size } = parseProductName(product.name);
-      if (!groupedProducts.has(baseName)) {
-        groupedProducts.set(baseName, []);
-      }
-      groupedProducts.get(baseName)!.push({
-        moyskladId: product.id,
-        size,
-        description: product.description,
-        productFolder: product.productFolder,
-        rawSalePrices: product.salePrices,
+    const session = await getServerSession(authOptions);
+    if (!session?.user || session.user.role !== UserRole.ADMIN) {
+      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
+        status: 403,
       });
     }
 
-    const categoryMap = new Map<string, string>();
-    const allOurCategories = await prisma.category.findMany({
-      select: { id: true, moyskladId: true },
-    });
-    allOurCategories.forEach(
-      (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
+    console.log(
+      `[MANUAL SYNC] Запуск ручной синхронизации продуктов от пользователя ${session.user.email}...`,
     );
-
-    const transactionPromises = [];
-    for (const [baseName, variants] of groupedProducts.entries()) {
-      const firstVariant = variants[0];
-      const categoryMoySkladId = firstVariant.productFolder
-        ? getUUIDFromHref(firstVariant.productFolder.meta.href)
-        : null;
-      const ourCategoryId = categoryMoySkladId
-        ? categoryMap.get(categoryMoySkladId)
-        : undefined;
-
-      let product = await prisma.product.findFirst({
-        where: { name: baseName },
-      });
-      if (!product) {
-        product = await prisma.product.create({
-          data: {
-            name: baseName,
-            description: firstVariant.description || '',
-            categories: ourCategoryId
-              ? { connect: { id: ourCategoryId } }
-              : undefined,
-          },
-        });
-      }
-
-      for (const variantData of variants) {
-        const salePriceObj = (variantData.rawSalePrices || []).find(
-          (p) => p.priceType.name === 'Скидка',
-        );
-        const regularPriceObj = (variantData.rawSalePrices || []).find(
-          (p) => p.priceType.name === 'Цена продажи',
-        );
-
-        let currentPrice = 0;
-        let oldPrice = null;
-
-        const regularPriceValue = regularPriceObj
-          ? Math.round(regularPriceObj.value)
-          : 0;
-        const salePriceValue = salePriceObj
-          ? Math.round(salePriceObj.value)
-          : 0;
-
-        if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
-          currentPrice = salePriceValue;
-          oldPrice = regularPriceValue;
-        } else {
-          currentPrice =
-            regularPriceValue > 0 ? regularPriceValue : salePriceValue;
-        }
-
-        let sizeRecord = null;
-        if (variantData.size) {
-          sizeRecord = await prisma.size.upsert({
-            where: { value: variantData.size },
-            update: {},
-            create: { value: variantData.size },
-          });
-        }
-
-        const variantUpsert = prisma.variant.upsert({
-          where: { moyskladId: variantData.moyskladId },
-          update: { price: currentPrice, oldPrice: oldPrice },
-          create: {
-            price: currentPrice,
-            oldPrice: oldPrice,
-            product: { connect: { id: product.id } },
-            moyskladId: variantData.moyskladId,
-            inventory: sizeRecord
-              ? { create: { sizeId: sizeRecord.id, stock: 0 } }
-              : undefined,
-          },
-        });
-        transactionPromises.push(variantUpsert);
-      }
-    }
-
-    await prisma.$transaction(transactionPromises);
-
-    return NextResponse.json({
-      message: `Синхронизация по расписанию успешно завершена.`,
-      synchronizedProducts: groupedProducts.size,
-    });
+    const result = await runSync();
+    console.log(
+      `[MANUAL SYNC] ${result.message} Обработано: ${result.synchronizedProducts} шт.`,
+    );
+    return NextResponse.json(result);
   } catch (error) {
-    console.error('[CRON SYNC ERROR]:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[MANUAL SYNC ERROR]:', errorMessage);
     return new NextResponse(
-      JSON.stringify({
-        error: 'Внутренняя ошибка сервера во время выполнения Cron Job.',
-      }),
+      JSON.stringify({ error: 'Внутренняя ошибка сервера.' }),
       { status: 500 },
     );
   }
