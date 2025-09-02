@@ -77,12 +77,16 @@ export default function ProductTable({
     setIsSyncing(true);
 
     const syncPromise = Promise.resolve().then(async () => {
-      // Сначала чистим категории и продукты, чтобы избежать дубликатов
-      // Для этого нам понадобится новый API-эндпоинт /api/admin/clear-data
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      // ВРЕМЕННО КОММЕНТИРУЕМ ОЧИСТКУ, Т.К. API ЕЩЕ НЕ ГОТОВ
+      /*
+      console.log("Очистка продуктов и категорий перед синхронизацией...");
       const clearRes = await fetch('/api/admin/clear-data', { method: 'POST' });
-      if (!clearRes.ok)
-        throw new Error('Ошибка при очистке данных перед синхронизацией.');
+      if(!clearRes.ok) throw new Error('Ошибка при очистке данных перед синхронизацией.');
+      */
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
+      console.log('Синхронизация категорий...');
       const catRes = await fetch('/api/admin/sync/categories', {
         method: 'POST',
       });
@@ -91,6 +95,7 @@ export default function ProductTable({
         throw new Error(err.error || 'Ошибка синхронизации категорий');
       }
 
+      console.log('Синхронизация продуктов...');
       const prodRes = await fetch('/api/admin/sync/products', {
         method: 'POST',
       });
@@ -103,7 +108,7 @@ export default function ProductTable({
     });
 
     toast.promise(syncPromise, {
-      loading: 'Синхронизация со складом (это может занять до минуты)...',
+      loading: 'Синхронизация со складом...',
       success: (message) => {
         router.refresh();
         setIsSyncing(false);
