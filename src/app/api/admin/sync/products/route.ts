@@ -1,245 +1,90 @@
 // /src/app/api/admin/sync/products/route.ts
 
 import { NextResponse, NextRequest } from 'next/server';
+// ... (все остальные импорты)
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 
-// Интерфейсы и хелперы
-interface MoySkladPrice {
-  value: number;
-  priceType: { name: string };
-}
-interface MoySkladProduct {
-  id: string;
-  name: string;
-  description?: string;
-  productFolder?: { meta: { href: string } };
-  salePrices?: MoySkladPrice[];
-}
-function getUUIDFromHref(href: string): string {
-  return href.split('/').pop() || '';
-}
-interface ParsedProductInfo {
-  baseName: string;
-  size: string | null;
-}
-function parseProductName(name: string): ParsedProductInfo {
-  const sizeMatch = name.match(/\s+\((S|M|L|XS|XL|XXL)\)$/);
-  if (sizeMatch) {
-    const baseName = name.replace(sizeMatch[0], '').trim();
-    const size = sizeMatch[1];
-    return { baseName, size };
-  }
-  return { baseName: name.trim(), size: null };
-}
-interface GroupedProductVariant {
-  moyskladId: string;
-  size: string | null;
-  description?: string;
-  productFolder?: { meta: { href: string } };
-  rawSalePrices?: MoySkladPrice[];
-  stock: number;
-}
+// --- (Все интерфейсы и хелперы без изменений) ---
+// ...
 
-// === ОСНОВНАЯ ЛОГИКА СИНХРОНИЗАЦИИ ===
 async function runSync() {
-  console.log('1/4: Получение товаров и остатков из МойСклад...');
+  console.log("1/5: Получение данных...");
   const [moySkladResponse, stockResponse] = await Promise.all([
     getMoySkladProducts(),
     getMoySkladStock(),
   ]);
 
-  const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];
+  const moySkladProducts: any[] = moySkladResponse.rows || [];
   const stockData: any[] = stockResponse.rows || [];
 
   if (moySkladProducts.length === 0) {
-    return {
-      message: 'Товары в МойСклад не найдены.',
-      synchronizedProducts: 0,
-    };
+    return { message: 'Товары не найдены.' };
   }
 
+  // === ОТЛАДОЧНЫЙ БЛОК 1: СМОТРИМ, ЧТО ПРИШЛО В ОСТАТКАХ ===
+  console.log('--- ОТЛАДКА: ПЕРВЫЕ 3 ЗАПИСИ ИЗ ОТЧЕТА ПО ОСТАТКАМ ---');
+  console.log(JSON.stringify(stockData.slice(0, 3), null, 2));
+  console.log('----------------------------------------------------');
+  
   const stockMap = new Map<string, number>();
-  stockData.forEach((item) => {
-    const assortmentId = item.assortment?.meta?.href.split('/').pop();
-    if (assortmentId && typeof item.stock === 'number') {
-      stockMap.set(assortmentId, item.stock);
+  stockData.forEach(item => {
+    const id = item.assortment?.meta?.href.split('/').pop();
+    if (id) {
+        stockMap.set(id, item.stock === undefined ? -1 : item.stock); // Используем -1 для отладки
     }
   });
-  console.log(
-    `2/4: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockMap.size}.`,
-  );
+  
+  console.log(`2/5: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockMap.size}.`);
+  
+  // === ОТЛАДОЧНЫЙ БЛОК 2: СМОТРИМ НА ПЕРВЫЙ ТОВАР И ЕГО ОСТАТОК ===
+  const firstProductId = moySkladProducts[0]?.id;
+  console.log('--- ОТЛАДКА: ПЫТАЕМСЯ НАЙТИ ОСТАТОК ДЛЯ ПЕРВОГО ТОВАРА ---');
+  console.log(`ID первого товара: ${firstProductId}`);
+  console.log(`Найденный остаток для этого ID: ${stockMap.get(firstProductId)}`);
+  console.log('---------------------------------------------------------');
 
-  const groupedProducts = new Map<string, GroupedProductVariant[]>();
-  for (const product of moySkladProducts) {
-    const { baseName, size } = parseProductName(product.name);
-    if (!groupedProducts.has(baseName)) {
-      groupedProducts.set(baseName, []);
-    }
-    groupedProducts.get(baseName)!.push({
-      moyskladId: product.id,
-      size,
-      description: product.description,
-      productFolder: product.productFolder,
-      rawSalePrices: product.salePrices,
-      stock: stockMap.get(product.id) || 0,
-    });
-  }
-  console.log(
-    `3/4: Товары сгруппированы. Уникальных продуктов: ${groupedProducts.size}. Начинаем запись в БД...`,
-  );
-
-  const categoryMap = new Map<string, string>();
-  const allOurCategories = await prisma.category.findMany({
-    select: { id: true, moyskladId: true },
-  });
-  allOurCategories.forEach(
-    (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
-  );
-
-  for (const [baseName, variants] of groupedProducts.entries()) {
-    const firstVariant = variants[0];
-    const categoryMoySkladId = firstVariant.productFolder
-      ? getUUIDFromHref(firstVariant.productFolder.meta.href)
-      : null;
-    const ourCategoryId = categoryMoySkladId
-      ? categoryMap.get(categoryMoySkladId)
-      : undefined;
-
-    let product = await prisma.product.findFirst({
-      where: { name: baseName },
-    });
-    if (!product) {
-      product = await prisma.product.create({
-        data: {
-          name: baseName,
-          description: firstVariant.description || '',
-          categories: ourCategoryId
-            ? { connect: { id: ourCategoryId } }
-            : undefined,
-        },
-      });
-    }
-
-    for (const variantData of variants) {
-      let currentPrice = 0,
-        oldPrice = null;
-      const salePriceObj = (variantData.rawSalePrices || []).find(
-        (p) => p.priceType.name === 'Скидка',
-      );
-      const regularPriceObj = (variantData.rawSalePrices || []).find(
-        (p) => p.priceType.name === 'Цена продажи',
-      );
-      const regularPriceValue = regularPriceObj
-        ? Math.round(regularPriceObj.value)
-        : 0;
-      const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
-
-      if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
-        currentPrice = salePriceValue;
-        oldPrice = regularPriceValue;
-      } else {
-        currentPrice =
-          regularPriceValue > 0 ? regularPriceValue : salePriceValue;
-      }
-
-      let sizeRecord = null;
-      if (variantData.size) {
-        sizeRecord = await prisma.size.upsert({
-          where: { value: variantData.size },
-          update: {},
-          create: { value: variantData.size },
-        });
-      }
-
-      const variant = await prisma.variant.upsert({
-        where: { moyskladId: variantData.moyskladId },
-        update: {
-          price: currentPrice,
-          oldPrice: oldPrice,
-        },
-        create: {
-          price: currentPrice,
-          oldPrice: oldPrice,
-          product: { connect: { id: product.id } },
-          moyskladId: variantData.moyskladId,
-        },
-      });
-
-      if (sizeRecord) {
-        await prisma.inventory.upsert({
-          where: {
-            variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
-          },
-          update: { stock: variantData.stock },
-          create: {
-            variantId: variant.id,
-            sizeId: sizeRecord.id,
-            stock: variantData.stock,
-          },
-        });
-      }
-    }
-  }
-
-  console.log('4/4: Синхронизация завершена успешно.');
-  return {
-    message: `Синхронизация успешно завершена.`,
-    synchronizedProducts: groupedProducts.size,
-  };
+  
+  // (Остальная логика группировки и upsert'ов пока без изменений, но она нам понадобится)
+  const groupedProducts = new Map<string, any[]>();
+  //...
+  
+  // Пропускаем запись в БД, чтобы не вызывать ошибок.
+  // Сейчас наша цель - только посмотреть логи.
+  
+  console.log("5/5: Отладочный запуск завершен.");
+  return { message: `ОТЛАДКА: Синхронизация завершена.`, synchronizedProducts: 0 };
 }
 
-// === GET (Cron Job) обработчик ===
+
+// Обработчики GET и POST
 export async function GET(req: NextRequest) {
   try {
     const cronSecret = req.nextUrl.searchParams.get('cron_secret');
     if (process.env.CRON_SECRET !== cronSecret) {
-      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
-        status: 401,
-      });
+      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), { status: 401 });
     }
-    console.log('[CRON SYNC] Запуск синхронизации продуктов по расписанию...');
     const result = await runSync();
-    console.log(
-      `[CRON SYNC] ${result.message} Обработано: ${result.synchronizedProducts} шт.`,
-    );
     return NextResponse.json(result);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[CRON SYNC ERROR]:', errorMessage);
-    return new NextResponse(
-      JSON.stringify({ error: 'Внутренняя ошибка сервера.' }),
-      { status: 500 },
-    );
+    console.error('[CRON SYNC ERROR]:', error);
+    return new NextResponse(JSON.stringify({ error: 'Внутренняя ошибка сервера.' }), { status: 500 });
   }
 }
 
-// === POST (кнопка) обработчик ===
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
-      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
-        status: 403,
-      });
+      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), { status: 403 });
     }
-    console.log(
-      `[MANUAL SYNC] Запуск ручной синхронизации от пользователя ${session.user.email}...`,
-    );
     const result = await runSync();
-    console.log(
-      `[MANUAL SYNC] ${result.message} Обработано: ${result.synchronizedProducts} шт.`,
-    );
     return NextResponse.json(result);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[MANUAL SYNC ERROR]:', errorMessage);
-    return new NextResponse(
-      JSON.stringify({ error: 'Внутренняя ошибка сервера.' }),
-      { status: 500 },
-    );
+    console.error('[MANUAL SYNC ERROR]:', error);
+    return new NextResponse(JSON.stringify({ error: 'Внутренняя ошибка сервера.' }), { status: 500 });
   }
 }
