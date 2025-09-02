@@ -46,9 +46,7 @@ interface GroupedProductVariant {
 
 // === ОСНОВНАЯ ЛОГИКА СИНХРОНИЗАЦИИ ===
 async function runSync() {
-  console.log(
-    'Запуск синхронизации: получение товаров и остатков из МойСклад...',
-  );
+  console.log('1/4: Получение товаров и остатков из МойСклад...');
   const [moySkladResponse, stockResponse] = await Promise.all([
     getMoySkladProducts(),
     getMoySkladStock(),
@@ -72,13 +70,15 @@ async function runSync() {
     }
   });
   console.log(
-    `... получено ${moySkladProducts.length} товаров и ${stockMap.size} записей об остатках.`,
+    `2/4: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockMap.size}.`,
   );
 
   const groupedProducts = new Map<string, GroupedProductVariant[]>();
   for (const product of moySkladProducts) {
     const { baseName, size } = parseProductName(product.name);
-    if (!groupedProducts.has(baseName)) groupedProducts.set(baseName, []);
+    if (!groupedProducts.has(baseName)) {
+      groupedProducts.set(baseName, []);
+    }
     groupedProducts.get(baseName)!.push({
       moyskladId: product.id,
       size,
@@ -88,6 +88,9 @@ async function runSync() {
       stock: stockMap.get(product.id) || 0,
     });
   }
+  console.log(
+    `3/4: Товары сгруппированы. Уникальных продуктов: ${groupedProducts.size}. Начинаем запись в БД...`,
+  );
 
   const categoryMap = new Map<string, string>();
   const allOurCategories = await prisma.category.findMany({
@@ -106,7 +109,9 @@ async function runSync() {
       ? categoryMap.get(categoryMoySkladId)
       : undefined;
 
-    let product = await prisma.product.findFirst({ where: { name: baseName } });
+    let product = await prisma.product.findFirst({
+      where: { name: baseName },
+    });
     if (!product) {
       product = await prisma.product.create({
         data: {
@@ -152,7 +157,10 @@ async function runSync() {
 
       const variant = await prisma.variant.upsert({
         where: { moyskladId: variantData.moyskladId },
-        update: { price: currentPrice, oldPrice: oldPrice },
+        update: {
+          price: currentPrice,
+          oldPrice: oldPrice,
+        },
         create: {
           price: currentPrice,
           oldPrice: oldPrice,
@@ -177,6 +185,7 @@ async function runSync() {
     }
   }
 
+  console.log('4/4: Синхронизация завершена успешно.');
   return {
     message: `Синхронизация успешно завершена.`,
     synchronizedProducts: groupedProducts.size,
