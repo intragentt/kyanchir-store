@@ -57,7 +57,6 @@ const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-// Обновляем интерфейс props
 interface ProductTableProps {
   products: ProductForTable[];
   allCategories: Category[];
@@ -78,8 +77,12 @@ export default function ProductTable({
     setIsSyncing(true);
 
     const syncPromise = Promise.resolve().then(async () => {
-      // Мы предполагаем, что очистка не нужна, т.к. upsert сам всё обновит.
-      // Если понадобится, можно будет создать эндпоинт /api/admin/clear-data
+      // Сначала чистим категории и продукты, чтобы избежать дубликатов
+      // Для этого нам понадобится новый API-эндпоинт /api/admin/clear-data
+      const clearRes = await fetch('/api/admin/clear-data', { method: 'POST' });
+      if (!clearRes.ok)
+        throw new Error('Ошибка при очистке данных перед синхронизацией.');
+
       const catRes = await fetch('/api/admin/sync/categories', {
         method: 'POST',
       });
@@ -100,7 +103,7 @@ export default function ProductTable({
     });
 
     toast.promise(syncPromise, {
-      loading: 'Синхронизация со складом...',
+      loading: 'Синхронизация со складом (это может занять до минуты)...',
       success: (message) => {
         router.refresh();
         setIsSyncing(false);
@@ -169,10 +172,10 @@ export default function ProductTable({
                   <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                     Статус
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
                     Остатки
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
                     Цена
                   </th>
                   <th scope="col" className="relative px-6 py-3">

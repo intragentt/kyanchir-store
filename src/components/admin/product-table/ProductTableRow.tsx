@@ -1,16 +1,17 @@
 // Местоположение: src/components/admin/product-table/ProductTableRow.tsx
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Prisma, Category, Tag } from '@prisma/client';
 
 import { formatPrice } from '@/utils/formatPrice';
 import type { ProductForTable } from '@/app/admin/dashboard/page';
-import { VariantRow } from './VariantRow';
+import { EditableCountdownTimer } from './EditableCountdownTimer';
+import ShortLogo from '@/components/icons/ShortLogo';
 
-// --- ИКОНКИ ---
+// --- ИКОНКИ И ТИПЫ ---
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -30,7 +31,6 @@ const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-// --- ТИПЫ ---
 type ProductStatus = ProductForTable['status'];
 const statusConfig: Record<
   ProductStatus,
@@ -43,7 +43,15 @@ const statusConfig: Record<
 type VariantData = ProductForTable['variants'][0];
 type ProductData = Omit<ProductForTable, 'variants'>;
 
-// --- PROPS ---
+const formatNumberForInput = (num: number | null | undefined): string => {
+  if (num === null || num === undefined) return '';
+  return num.toString();
+};
+
+// =====================================================================
+// === ГЛАВНЫЙ КОМПОНЕНТ: КОНТЕЙНЕР ДЛЯ ПРОДУКТА (PRODUCTTABLEROW) ===
+// =====================================================================
+
 interface ProductTableRowProps {
   product: ProductForTable;
   allCategories: Category[];
@@ -64,7 +72,6 @@ export const ProductTableRow = ({
     new Set(),
   );
 
-  // === ИСПРАВЛЕННЫЕ ОБРАБОТЧИКИ ===
   const handleVariantUpdate = (
     variantId: string,
     updatedData: Partial<VariantData>,
@@ -78,7 +85,6 @@ export const ProductTableRow = ({
     setEditedVariantIds((prev) => new Set(prev).add(variantId));
   };
 
-  // Этот обработчик теперь принимает productId, как и ожидает дочерний компонент
   const handleProductUpdate = (
     productId: string,
     updatedData: Partial<ProductData>,
@@ -103,15 +109,25 @@ export const ProductTableRow = ({
     }
   };
 
-  // Вычисляемые значения (без изменений)
   const totalStock = productState.variants.reduce(
     (acc, v) => acc + v.inventory.reduce((sum, i) => sum + i.stock, 0),
     0,
   );
   const priceRange = () => {
-    /* ... */
+    const prices = productState.variants
+      .map((v) => v.price)
+      .filter((p) => p !== null) as number[];
+    if (prices.length === 0) return formatPrice(0);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    if (minPrice === maxPrice) return formatPrice(minPrice);
+    return {
+      value: `${formatPrice(minPrice)?.value} - ${formatPrice(maxPrice)?.value}`,
+      currency: 'RUB',
+    };
   };
-  const formattedPrice = formatPrice(productState.variants[0]?.price || 0);
+  const formattedPrice = priceRange();
+
   const areAllVariantsSelected =
     selectedVariantIds.size === productState.variants.length &&
     productState.variants.length > 0;
@@ -201,21 +217,128 @@ export const ProductTableRow = ({
         </td>
       </tr>
 
-      {isExpanded &&
-        productState.variants.map((variant) => (
-          <VariantRow
-            key={variant.id}
-            product={productState}
-            variant={variant}
-            isSelected={selectedVariantIds.has(variant.id)}
-            isEdited={editedVariantIds.has(variant.id)}
-            onSelectOne={handleSelectVariant}
-            onVariantUpdate={handleVariantUpdate}
-            onProductUpdate={handleProductUpdate}
-            allCategories={allCategories}
-            allTags={allTags}
-          />
-        ))}
+      {isExpanded && (
+        <tr>
+          <td colSpan={8} className="bg-gray-50/50 p-0">
+            <div className="border-l-4 border-indigo-200 px-4 py-2">
+              <table className="min-w-full">
+                <tbody className="divide-y divide-gray-200">
+                  {productState.variants.map((variant) => (
+                    <VariantRow
+                      key={variant.id}
+                      product={productState}
+                      variant={variant}
+                      allCategories={allCategories}
+                      allTags={allTags}
+                      isSelected={selectedVariantIds.has(variant.id)}
+                      isEdited={editedVariantIds.has(variant.id)}
+                      onSelectOne={handleSelectVariant}
+                      onVariantUpdate={handleVariantUpdate}
+                      onProductUpdate={handleProductUpdate}
+                    />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      )}
     </Fragment>
+  );
+};
+
+// ==========================================================
+// === ДОЧЕРНИЙ КОМПОНЕНТ: РЕДАКТИРУЕМАЯ СТРОКА ВАРИАНТА ===
+// ==========================================================
+interface VariantRowProps {
+  product: ProductData;
+  variant: VariantData;
+  isSelected: boolean;
+  isEdited: boolean;
+  onSelectOne: (variantId: string, isSelected: boolean) => void;
+  onVariantUpdate: (
+    variantId: string,
+    updatedData: Partial<VariantData>,
+  ) => void;
+  onProductUpdate: (
+    productId: string,
+    updatedData: Partial<ProductData>,
+  ) => void;
+  allCategories: Category[];
+  allTags: Tag[];
+}
+
+const VariantRow = ({
+  variant,
+  isSelected,
+  onSelectOne,
+  onVariantUpdate,
+}: VariantRowProps) => {
+  const [editingDiscount, setEditingDiscount] = useState<string | null>(null);
+
+  const discountPercent =
+    variant.oldPrice && variant.price < variant.oldPrice
+      ? Math.round(
+          ((variant.oldPrice - variant.price) / variant.oldPrice) * 100,
+        )
+      : 0;
+
+  const handleNumericInputChange = (
+    field: keyof VariantData,
+    inputValue: string,
+  ) => {
+    const numericString = inputValue.replace(/[^0-9]/g, '');
+    const value = numericString === '' ? null : parseInt(numericString, 10);
+    onVariantUpdate(variant.id, { [field]: value });
+  };
+
+  const handleDiscountChange = (newPercentStr: string) => {
+    const newPercent = newPercentStr ? parseInt(newPercentStr, 10) : 0;
+    if (isNaN(newPercent) || newPercent < 0 || newPercent > 100) return;
+
+    const originalPrice = variant.oldPrice || variant.price;
+    if (!originalPrice) return;
+    let updatedData: Partial<VariantData>;
+    if (newPercent > 0) {
+      updatedData = {
+        price: Math.round(originalPrice * (1 - newPercent / 100)),
+        oldPrice: originalPrice,
+      };
+    } else {
+      updatedData = { price: originalPrice, oldPrice: null };
+    }
+    onVariantUpdate(variant.id, updatedData);
+  };
+
+  return (
+    <tr className="hover:bg-gray-100/50">
+      <td className="w-24 px-4 py-3">
+        <input
+          type="checkbox"
+          className="h-4 w-4 rounded"
+          checked={isSelected}
+          onChange={(e) => onSelectOne(variant.id, e.target.checked)}
+        />
+      </td>
+      <td className="px-6 py-3"> {/* Пусто */} </td>
+      <td className="px-6 py-3">(категории)</td>
+      <td className="px-6 py-3">(статус)</td>
+      <td className="px-6 py-3 text-center">
+        {variant.inventory.map((inv) => (
+          <div key={inv.id}>
+            {inv.size.value}:{' '}
+            <input
+              type="number"
+              defaultValue={inv.stock}
+              className="w-10 p-0.5 text-center"
+            />
+          </div>
+        ))}
+      </td>
+      <td className="px-6 py-3 text-center">
+        {formatPrice(variant.price)?.value} RUB
+      </td>
+      <td className="px-6 py-3"></td>
+    </tr>
   );
 };
