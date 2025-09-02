@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
 
-// 1. Импортируем наш новый, правильный тип
 import type { ProductForTable } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
 import { ProductTableRow } from './product-table/ProductTableRow';
@@ -58,7 +57,7 @@ const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-// 2. Обновляем интерфейс props
+// Обновляем интерфейс props
 interface ProductTableProps {
   products: ProductForTable[];
   allCategories: Category[];
@@ -67,55 +66,44 @@ interface ProductTableProps {
 }
 
 export default function ProductTable({
-  products: initialProducts,
+  products,
   allCategories,
   allTags,
   filterPresets,
 }: ProductTableProps) {
   const router = useRouter();
-  const [products, setProducts] = useState(initialProducts);
   const [isSyncing, setIsSyncing] = useState(false);
-
-  // Эта функция будет вызываться после успешной синхронизации
-  const handleSyncSuccess = () => {
-    toast.success('Синхронизация успешно завершена!');
-    router.refresh(); // Перезагружаем серверные данные
-    setIsSyncing(false);
-  };
 
   const handleSync = async () => {
     setIsSyncing(true);
 
-    const syncPromise = new Promise(async (resolve, reject) => {
-      try {
-        // Опционально: очистка перед синхронизацией.
-        // Это полезно для избежания дубликатов на этапе разработки.
-        // В продакшене это, возможно, не понадобится.
-        console.log('Очистка продуктов и категорий перед синхронизацией...');
-        await fetch('/api/admin/clear-data', { method: 'POST' }); // Предполагаем, что создадим такой эндпоинт
-
-        console.log('Синхронизация категорий...');
-        const catRes = await fetch('/api/admin/sync/categories', {
-          method: 'POST',
-        });
-        if (!catRes.ok) throw new Error('Ошибка при синхронизации категорий');
-
-        console.log('Синхронизация продуктов...');
-        const prodRes = await fetch('/api/admin/sync/products', {
-          method: 'POST',
-        });
-        if (!prodRes.ok) throw new Error('Ошибка при синхронизации продуктов');
-
-        resolve('Данные успешно обновлены.');
-      } catch (error) {
-        reject(error);
+    const syncPromise = Promise.resolve().then(async () => {
+      // Мы предполагаем, что очистка не нужна, т.к. upsert сам всё обновит.
+      // Если понадобится, можно будет создать эндпоинт /api/admin/clear-data
+      const catRes = await fetch('/api/admin/sync/categories', {
+        method: 'POST',
+      });
+      if (!catRes.ok) {
+        const err = await catRes.json();
+        throw new Error(err.error || 'Ошибка синхронизации категорий');
       }
+
+      const prodRes = await fetch('/api/admin/sync/products', {
+        method: 'POST',
+      });
+      if (!prodRes.ok) {
+        const err = await prodRes.json();
+        throw new Error(err.error || 'Ошибка синхронизации продуктов');
+      }
+
+      return 'Данные успешно обновлены!';
     });
 
     toast.promise(syncPromise, {
       loading: 'Синхронизация со складом...',
       success: (message) => {
-        handleSyncSuccess();
+        router.refresh();
+        setIsSyncing(false);
         return String(message);
       },
       error: (err) => {
@@ -170,7 +158,7 @@ export default function ProductTable({
                 <tr>
                   <th
                     scope="col"
-                    className="relative w-12 px-1 py-3 text-center"
+                    className="relative w-24 px-1 py-3 text-center"
                   ></th>
                   <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                     Товар
@@ -192,7 +180,7 @@ export default function ProductTable({
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 bg-white">
                 {products.map((product) => (
                   <ProductTableRow
                     key={product.id}

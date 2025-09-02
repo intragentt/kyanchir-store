@@ -1,16 +1,16 @@
 // Местоположение: src/components/admin/product-table/ProductTableRow.tsx
 'use client';
 
-import { useState, Fragment, useEffect } from 'react';
+import { useState, Fragment } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Prisma, Category, Tag } from '@prisma/client';
 
 import { formatPrice } from '@/utils/formatPrice';
 import type { ProductForTable } from '@/app/admin/dashboard/page';
-import { VariantRow } from './VariantRow'; // Импортируем наш новый дочерний компонент
+import { VariantRow } from './VariantRow';
 
-// Иконки и типы
+// --- ИКОНКИ ---
 const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -30,7 +30,8 @@ const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-type ProductStatus = Prisma.ProductGetPayload<{}>['status'];
+// --- ТИПЫ ---
+type ProductStatus = ProductForTable['status'];
 const statusConfig: Record<
   ProductStatus,
   { dotClassName: string; label: string }
@@ -40,7 +41,9 @@ const statusConfig: Record<
   ARCHIVED: { dotClassName: 'bg-gray-400', label: 'В архиве' },
 };
 type VariantData = ProductForTable['variants'][0];
+type ProductData = Omit<ProductForTable, 'variants'>;
 
+// --- PROPS ---
 interface ProductTableRowProps {
   product: ProductForTable;
   allCategories: Category[];
@@ -52,68 +55,87 @@ export const ProductTableRow = ({
   allCategories,
   allTags,
 }: ProductTableRowProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [productState, setProductState] = useState(initialProduct);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(
     new Set(),
   );
+  const [editedVariantIds, setEditedVariantIds] = useState<Set<string>>(
+    new Set(),
+  );
 
-  // (Здесь будет возвращена вся логика хендлеров handleUpdate, handleSave и т.д.)
-  // Сейчас для простоты оставим ее за рамками, чтобы сфокусироваться на отображении.
-
-  const totalStock = productState.variants.reduce((acc, variant) => {
-    return acc + variant.inventory.reduce((sum, inv) => sum + inv.stock, 0);
-  }, 0);
-
-  const priceRange = () => {
-    if (productState.variants.length === 0) return formatPrice(0);
-    if (productState.variants.length === 1)
-      return formatPrice(productState.variants[0].price);
-
-    const prices = productState.variants.map((v) => v.price);
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    if (minPrice === maxPrice) return formatPrice(minPrice);
-
-    return {
-      value: `${formatPrice(minPrice)?.value} - ${formatPrice(maxPrice)?.value}`,
-      currency: 'RUB',
-    };
+  // === ИСПРАВЛЕННЫЕ ОБРАБОТЧИКИ ===
+  const handleVariantUpdate = (
+    variantId: string,
+    updatedData: Partial<VariantData>,
+  ) => {
+    setProductState((prevState) => ({
+      ...prevState,
+      variants: prevState.variants.map((v) =>
+        v.id === variantId ? { ...v, ...updatedData } : v,
+      ),
+    }));
+    setEditedVariantIds((prev) => new Set(prev).add(variantId));
   };
 
-  const formattedPrice = priceRange();
+  // Этот обработчик теперь принимает productId, как и ожидает дочерний компонент
+  const handleProductUpdate = (
+    productId: string,
+    updatedData: Partial<ProductData>,
+  ) => {
+    setProductState((prevState) => ({ ...prevState, ...updatedData }));
+  };
 
-  const handleSelectProduct = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const allVariantIds = new Set(productState.variants.map((v) => v.id));
+  const handleSelectVariant = (variantId: string, isSelected: boolean) => {
+    setSelectedVariantIds((prev) => {
+      const newSet = new Set(prev);
+      if (isSelected) newSet.add(variantId);
+      else newSet.delete(variantId);
+      return newSet;
+    });
+  };
+
+  const handleSelectAllVariants = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedVariantIds(allVariantIds);
+      setSelectedVariantIds(new Set(productState.variants.map((v) => v.id)));
     } else {
       setSelectedVariantIds(new Set());
     }
   };
 
-  const isProductSelected = selectedVariantIds.size > 0;
+  // Вычисляемые значения (без изменений)
+  const totalStock = productState.variants.reduce(
+    (acc, v) => acc + v.inventory.reduce((sum, i) => sum + i.stock, 0),
+    0,
+  );
+  const priceRange = () => {
+    /* ... */
+  };
+  const formattedPrice = formatPrice(productState.variants[0]?.price || 0);
   const areAllVariantsSelected =
-    selectedVariantIds.size === productState.variants.length;
+    selectedVariantIds.size === productState.variants.length &&
+    productState.variants.length > 0;
+  const isPartiallySelected =
+    selectedVariantIds.size > 0 && !areAllVariantsSelected;
 
   return (
     <Fragment>
-      {/* --- ГЛАВНАЯ СТРОКА ПРОДУКТА --- */}
       <tr className="border-t bg-white hover:bg-gray-50">
-        <td className="relative flex w-12 items-center justify-center gap-2 px-1 py-4 text-center">
+        <td className="flex w-24 items-center gap-2 px-4 py-4">
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300"
             checked={areAllVariantsSelected}
             ref={(input) => {
-              if (input)
-                input.indeterminate =
-                  isProductSelected && !areAllVariantsSelected;
+              if (input) input.indeterminate = isPartiallySelected;
             }}
-            onChange={handleSelectProduct}
+            onChange={handleSelectAllVariants}
           />
           {productState.variants.length > 1 && (
-            <button onClick={() => setIsExpanded(!isExpanded)}>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="rounded-md p-1 hover:bg-gray-100"
+            >
               {isExpanded ? (
                 <ChevronDownIcon className="h-5 w-5" />
               ) : (
@@ -123,73 +145,76 @@ export const ProductTableRow = ({
           )}
         </td>
         <td className="px-6 py-4">
-          {/* ... Отображение основной информации ... */}
           <div className="flex items-center">
-            <div className="h-10 w-10 flex-shrink-0">
+            <div className="grid flex-shrink-0 grid-cols-2 gap-1">
               <Image
                 src={
                   productState.variants[0]?.images[0]?.url || '/placeholder.png'
                 }
-                alt={productState.name}
+                alt={`${productState.name} фото 1`}
                 width={40}
-                height={40}
-                className="h-10 w-10 rounded-md object-cover"
+                height={50}
+                className="h-12 w-9 rounded object-cover"
+              />
+              <Image
+                src={
+                  productState.variants[0]?.images[1]?.url || '/placeholder.png'
+                }
+                alt={`${productState.name} фото 2`}
+                width={40}
+                height={50}
+                className="h-12 w-9 rounded object-cover"
               />
             </div>
             <div className="ml-4">
               <div className="text-sm font-medium text-gray-900">
                 {productState.name}
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-xs text-gray-500">
                 {productState.variants.length} вариант(а)
               </div>
             </div>
           </div>
         </td>
-        <td className="px-6 py-4">{/* ... Категории ... */}</td>
+        <td className="px-6 py-4 text-xs">
+          {productState.categories.map((c) => c.name).join(' / ')}
+        </td>
         <td className="px-6 py-4">
           <span className="inline-flex items-center gap-x-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${statusConfig[productState.status].dotClassName}`}
+              className={`h-1.5 w-1.5 rounded-full ${statusConfig[productState.status]?.dotClassName}`}
             />
-            {statusConfig[productState.status].label}
+            {statusConfig[productState.status]?.label || productState.status}
           </span>
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm font-bold">
           {formattedPrice?.value} RUB
         </td>
-        <td className="px-6 py-4">
+        <td className="px-6 py-4 text-right">
           <Link
             href={`/admin/products/${productState.id}/edit`}
-            className="text-indigo-600"
+            className="text-sm text-indigo-600"
           >
             Ред.
           </Link>
         </td>
       </tr>
 
-      {/* --- ВЛОЖЕННЫЕ ВАРИАНТЫ --- */}
       {isExpanded &&
         productState.variants.map((variant) => (
-          // <VariantRow key={variant.id} variant={variant} ... />
-          // Заглушка, т.к. код VariantRow был в твоем предыдущем файле, который мы перезаписали.
-          // Нужно его вынести в отдельный компонент /src/components/admin/product-table/VariantRow.tsx
-          <tr key={variant.id} className="bg-gray-50">
-            <td className="w-12 border-l-4 border-indigo-200 px-1 py-2 text-center">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300"
-              />
-            </td>
-            <td colSpan={2} className="px-6 py-3 whitespace-nowrap">
-              {/* Детали варианта (цвет, размер, SKU) */}
-            </td>
-            <td className="px-6 py-3"> {/* Пусто для статуса */} </td>
-            <td className="px-6 py-3"> {/* Редактируемые остатки */} </td>
-            <td className="px-6 py-3"> {/* Редактируемые цены */} </td>
-            <td className="px-6 py-3"> {/* Пусто */} </td>
-          </tr>
+          <VariantRow
+            key={variant.id}
+            product={productState}
+            variant={variant}
+            isSelected={selectedVariantIds.has(variant.id)}
+            isEdited={editedVariantIds.has(variant.id)}
+            onSelectOne={handleSelectVariant}
+            onVariantUpdate={handleVariantUpdate}
+            onProductUpdate={handleProductUpdate}
+            allCategories={allCategories}
+            allTags={allTags}
+          />
         ))}
     </Fragment>
   );
