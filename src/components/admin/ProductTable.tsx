@@ -3,14 +3,14 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import toast, { Toaster } from 'react-hot-toast';
+
 import type { VariantWithProductInfo } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
 import { ProductTableRow } from './product-table/ProductTableRow';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
-// Определяем точный тип для filterPresets, который мы получаем на странице.
-// Это "чертеж" данных, который гарантирует, что мы работаем с правильной структурой.
+// Определяем точный тип для filterPresets
 type FilterPresetWithItems = Prisma.FilterPresetGetPayload<{
   include: {
     items: {
@@ -22,12 +22,20 @@ type FilterPresetWithItems = Prisma.FilterPresetGetPayload<{
   };
 }>;
 
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
 type ProductStatus = Prisma.ProductGetPayload<{}>['status'];
 
 const statusCycle: ProductStatus[] = ['DRAFT', 'PUBLISHED'];
 
+// Иконки
+const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
+    <path
+      fillRule="evenodd"
+      d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 110 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
 const UploadIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -57,22 +65,17 @@ interface ProductTableProps {
   variants: VariantWithProductInfo[];
   allCategories: Category[];
   allTags: Tag[];
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // Добавляем новое свойство в "контракт" компонента.
-  // Теперь он официально ожидает получить массив пресетов фильтров.
   filterPresets: FilterPresetWithItems[];
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
 export default function ProductTable({
   variants: initialVariants,
   allCategories,
   allTags,
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // "Распаковываем" filterPresets из пропсов, чтобы использовать их в компоненте.
   filterPresets,
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }: ProductTableProps) {
+  const router = useRouter();
+
   const [variants, setVariants] = useState(initialVariants);
   const [editedVariantIds, setEditedVariantIds] = useState<Set<string>>(
     new Set(),
@@ -81,6 +84,7 @@ export default function ProductTable({
     new Set(),
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleNumericInputChange = (
     variantId: string,
@@ -292,9 +296,7 @@ export default function ProductTable({
     try {
       const response = await fetch('/api/variants/batch-update', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variants: variantsToUpdate }),
       });
 
@@ -304,20 +306,60 @@ export default function ProductTable({
       }
 
       setEditedVariantIds(new Set());
-      alert('Изменения успешно сохранены!');
+      toast.success('Изменения успешно сохранены!');
     } catch (error) {
       console.error('Failed to save variants:', error);
-      // @ts-ignore
-      alert(`Не удалось сохранить изменения: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      toast.error(`Не удалось сохранить изменения: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleSync = async () => {
+    setIsSyncing(true);
+
+    const syncPromise = new Promise(async (resolve, reject) => {
+      try {
+        await fetch('/api/admin/sync/categories', { method: 'POST' });
+        await fetch('/api/admin/sync/products', { method: 'POST' });
+        resolve('Синхронизация успешно завершена!');
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    toast.promise(syncPromise, {
+      loading: 'Синхронизация со складом...',
+      success: (message) => {
+        router.refresh();
+        setIsSyncing(false);
+        return String(message);
+      },
+      error: (err) => {
+        setIsSyncing(false);
+        return `Ошибка: ${err.toString()}`;
+      },
+    });
+  };
+
   return (
     <div className="w-full">
+      <Toaster position="top-center" />
       <div className="mb-4 flex items-center justify-between">
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className="flex items-center gap-x-2 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <SyncIcon
+              className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
+            />
+            {isSyncing ? 'Синхронизация...' : 'Синхронизировать склад'}
+          </button>
+
           <button className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50">
             <UploadIcon className="h-4 w-4" /> Загрузить CSV
           </button>

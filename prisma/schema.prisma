@@ -22,9 +22,7 @@ model Product {
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   tags             Tag[]             @relation("ProductTags")
-  // --- НАЧАЛО ИЗМЕНЕНИЙ (МойСклад) ---
-  moyskladId       String?           @unique // ID товара из МойСклад
-  // --- КОНЕЦ ИЗМЕНЕНИЙ (МойСклад) ---
+  moyskladId       String?           @unique
 }
 
 model Variant {
@@ -42,9 +40,7 @@ model Variant {
   isFeatured         Boolean     @default(false)
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
-  // --- НАЧАЛО ИЗМЕНЕНИЙ (МойСклад) ---
-  moyskladId         String?     @unique // ID варианта (модификации) из МойСклад
-  // --- КОНЕЦ ИЗМЕНЕНИЙ (МойСклад) ---
+  moyskladId         String?     @unique
 
   @@unique([productId, color])
 }
@@ -84,7 +80,9 @@ model Attribute {
 
 model Category {
   id          String       @id @default(cuid())
-  name        String       @unique
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  name        String       // УБРАЛИ @unique, чтобы разрешить дубликаты имен из МойСклад
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   products    Product[]    @relation("ProductToCategory")
   parentId    String?
   parent      Category?    @relation("SubCategories", fields: [parentId], references: [id], onDelete: SetNull)
@@ -92,12 +90,8 @@ model Category {
   order       Int          @default(0)
   color       String?
   presetItems PresetItem[]
-  // --- НАЧАЛО ИЗМЕНЕНИЙ (МойСклад) ---
-  moyskladId  String?      @unique // ID категории из МойСклад
-  // --- КОНЕЦ ИЗМЕНЕНИЙ (МойСклад) ---
+  moyskladId  String?      @unique
 }
-
-// ... все остальные модели остаются без изменений ...
 
 model Tag {
   id          String       @id @default(cuid())
@@ -150,14 +144,12 @@ enum PresetItemType {
 }
 
 // === МОДЕЛИ АУТЕНТИФИКАЦИИ И ПОЛЬЗОВАТЕЛЕЙ ===
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 enum UserRole {
   CLIENT
   ADMIN
-  MANAGEMENT // Добавили новую роль
-  SUPPORT // Добавляем роль для консистентности
+  MANAGEMENT
+  SUPPORT
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 model User {
   id            String    @id @default(cuid())
