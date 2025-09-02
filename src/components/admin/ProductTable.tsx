@@ -5,14 +5,22 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
-// --- 1. ИМПОРТИРУЕМ НОВЫЙ ТИП ---
+
+// 1. Импортируем наш новый, правильный тип
 import type { ProductForTable } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
 import { ProductTableRow } from './product-table/ProductTableRow';
 
 // Тип для filterPresets (без изменений)
 type FilterPresetWithItems = Prisma.FilterPresetGetPayload<{
-  include: { items: { include: { category: true; tag: true } } };
+  include: {
+    items: {
+      include: {
+        category: true;
+        tag: true;
+      };
+    };
+  };
 }>;
 
 // Иконки (без изменений)
@@ -50,7 +58,7 @@ const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-// --- 2. ОБНОВЛЯЕМ ИНТЕРФЕЙС PROPS ---
+// 2. Обновляем интерфейс props
 interface ProductTableProps {
   products: ProductForTable[];
   allCategories: Category[];
@@ -68,37 +76,37 @@ export default function ProductTable({
   const [products, setProducts] = useState(initialProducts);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // --- 3. УПРОЩЕНИЕ: Удаляем большую часть старой логики управления состоянием.
-  // Она будет инкапсулирована внутри компонента ProductTableRow.
-  // Здесь остаются только самые общие функции, как синхронизация.
+  // Эта функция будет вызываться после успешной синхронизации
+  const handleSyncSuccess = () => {
+    toast.success('Синхронизация успешно завершена!');
+    router.refresh(); // Перезагружаем серверные данные
+    setIsSyncing(false);
+  };
 
   const handleSync = async () => {
     setIsSyncing(true);
 
-    // Очищаем таблицы перед новой синхронизацией для чистоты данных
-    // Эту часть можно будет убрать, когда синхронизация будет стабильной
-    const clearPromise = new Promise(async (resolve, reject) => {
-      try {
-        await fetch('/api/admin/clear-products', { method: 'POST' });
-        resolve('Таблицы очищены.');
-      } catch (error) {
-        reject(error);
-      }
-    });
-
-    toast.promise(clearPromise, {
-      loading: 'Очистка старых данных...',
-      success: (message) => String(message),
-      error: 'Ошибка при очистке!',
-    });
-
-    await clearPromise; // Дожидаемся завершения очистки
-
     const syncPromise = new Promise(async (resolve, reject) => {
       try {
-        await fetch('/api/admin/sync/categories', { method: 'POST' });
-        await fetch('/api/admin/sync/products', { method: 'POST' });
-        resolve('Синхронизация успешно завершена!');
+        // Опционально: очистка перед синхронизацией.
+        // Это полезно для избежания дубликатов на этапе разработки.
+        // В продакшене это, возможно, не понадобится.
+        console.log('Очистка продуктов и категорий перед синхронизацией...');
+        await fetch('/api/admin/clear-data', { method: 'POST' }); // Предполагаем, что создадим такой эндпоинт
+
+        console.log('Синхронизация категорий...');
+        const catRes = await fetch('/api/admin/sync/categories', {
+          method: 'POST',
+        });
+        if (!catRes.ok) throw new Error('Ошибка при синхронизации категорий');
+
+        console.log('Синхронизация продуктов...');
+        const prodRes = await fetch('/api/admin/sync/products', {
+          method: 'POST',
+        });
+        if (!prodRes.ok) throw new Error('Ошибка при синхронизации продуктов');
+
+        resolve('Данные успешно обновлены.');
       } catch (error) {
         reject(error);
       }
@@ -107,8 +115,7 @@ export default function ProductTable({
     toast.promise(syncPromise, {
       loading: 'Синхронизация со складом...',
       success: (message) => {
-        router.refresh();
-        setIsSyncing(false);
+        handleSyncSuccess();
         return String(message);
       },
       error: (err) => {
@@ -146,7 +153,6 @@ export default function ProductTable({
           >
             <TagIcon className="h-4 w-4" /> Управление категориями
           </Link>
-          {/* Кнопка "Сохранить" пока не нужна, т.к. редактирование будет в строке */}
         </div>
         <Link
           href="/admin/products/new"
@@ -161,14 +167,11 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                {/* Шапка таблицы остаётся такой же */}
                 <tr>
                   <th
                     scope="col"
                     className="relative w-12 px-1 py-3 text-center"
-                  >
-                    {/* Пустое место для кнопки раскрытия */}
-                  </th>
+                  ></th>
                   <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                     Товар
                   </th>
@@ -189,8 +192,7 @@ export default function ProductTable({
                   </th>
                 </tr>
               </thead>
-              <tbody>
-                {/* --- 4. ОСНОВНОЕ ИЗМЕНЕНИЕ: Итерируемся по ПРОДУКТАМ --- */}
+              <tbody className="divide-y divide-gray-200">
                 {products.map((product) => (
                   <ProductTableRow
                     key={product.id}

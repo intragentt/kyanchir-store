@@ -7,8 +7,6 @@ import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
 // 1. Создаем новый, правильный тип для наших данных.
 // Теперь это ПРОДУКТ со всеми вложенными связями, а не вариант.
 export type ProductForTable = Prisma.ProductGetPayload<{
@@ -29,7 +27,7 @@ export type ProductForTable = Prisma.ProductGetPayload<{
   };
 }>;
 
-const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL']; // Расширим на всякий случай
+const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL']; // Расширяем на всякий случай
 // 2. Сортировка теперь принимает массив вариантов, а не инвентаря
 const sortVariantsBySize = (variants: any[]) => {
   return variants.sort((a, b) => {
@@ -69,7 +67,7 @@ export default async function DashboardPage() {
       }),
       prisma.category.findMany({
         orderBy: { name: 'asc' },
-        where: { parentId: { not: null } }, // Получаем только дочерние категории для назначения
+        // Получаем все категории, чтобы строить иерархию на клиенте
       }),
       prisma.tag.findMany({ orderBy: { name: 'asc' } }),
       prisma.filterPreset.findMany({
@@ -87,8 +85,6 @@ export default async function DashboardPage() {
   allProducts.forEach((product) => {
     sortVariantsBySize(product.variants);
   });
-
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
