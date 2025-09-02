@@ -2,7 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
-      "path": "/api/admin/sync/products?cron_secret=Jfxh?pMU;ypP6Fd|L68MH3H|e_M;sl",
+      "path": "/api/admin/sync/products?cron_secret=AbCd12EfGh32EfGh34IjKl56M4IjKl56MnO",
       "schedule": "0 0 * * *"
     }
   ]
