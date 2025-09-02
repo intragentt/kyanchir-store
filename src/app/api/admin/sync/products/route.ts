@@ -5,9 +5,9 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
-import { getMoySkladProducts } from '@/lib/moysklad-api';
+import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 
-// Интерфейсы и хелперы (без изменений)
+// Интерфейсы и хелперы
 interface MoySkladPrice {
   value: number;
   priceType: { name: string };
@@ -41,13 +41,21 @@ interface GroupedProductVariant {
   description?: string;
   productFolder?: { meta: { href: string } };
   rawSalePrices?: MoySkladPrice[];
+  stock: number;
 }
-// --- КОНЕЦ ХЕЛПЕРОВ ---
 
-// === 1. ОСНОВНАЯ ЛОГИКА СИНХРОНИЗАЦИИ (вынесена в отдельную функцию) ===
+// === ОСНОВНАЯ ЛОГИКА СИНХРОНИЗАЦИИ ===
 async function runSync() {
-  const moySkladResponse = await getMoySkladProducts();
+  console.log(
+    'Запуск синхронизации: получение товаров и остатков из МойСклад...',
+  );
+  const [moySkladResponse, stockResponse] = await Promise.all([
+    getMoySkladProducts(),
+    getMoySkladStock(),
+  ]);
+
   const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];
+  const stockData: any[] = stockResponse.rows || [];
 
   if (moySkladProducts.length === 0) {
     return {
@@ -56,18 +64,28 @@ async function runSync() {
     };
   }
 
+  const stockMap = new Map<string, number>();
+  stockData.forEach((item) => {
+    const assortmentId = item.assortment?.meta?.href.split('/').pop();
+    if (assortmentId && typeof item.stock === 'number') {
+      stockMap.set(assortmentId, item.stock);
+    }
+  });
+  console.log(
+    `... получено ${moySkladProducts.length} товаров и ${stockMap.size} записей об остатках.`,
+  );
+
   const groupedProducts = new Map<string, GroupedProductVariant[]>();
   for (const product of moySkladProducts) {
     const { baseName, size } = parseProductName(product.name);
-    if (!groupedProducts.has(baseName)) {
-      groupedProducts.set(baseName, []);
-    }
+    if (!groupedProducts.has(baseName)) groupedProducts.set(baseName, []);
     groupedProducts.get(baseName)!.push({
       moyskladId: product.id,
       size,
       description: product.description,
       productFolder: product.productFolder,
       rawSalePrices: product.salePrices,
+      stock: stockMap.get(product.id) || 0,
     });
   }
 
@@ -79,7 +97,6 @@ async function runSync() {
     (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
   );
 
-  const transactionPromises = [];
   for (const [baseName, variants] of groupedProducts.entries()) {
     const firstVariant = variants[0];
     const categoryMoySkladId = firstVariant.productFolder
@@ -89,9 +106,7 @@ async function runSync() {
       ? categoryMap.get(categoryMoySkladId)
       : undefined;
 
-    let product = await prisma.product.findFirst({
-      where: { name: baseName },
-    });
+    let product = await prisma.product.findFirst({ where: { name: baseName } });
     if (!product) {
       product = await prisma.product.create({
         data: {
@@ -105,18 +120,19 @@ async function runSync() {
     }
 
     for (const variantData of variants) {
+      let currentPrice = 0,
+        oldPrice = null;
       const salePriceObj = (variantData.rawSalePrices || []).find(
         (p) => p.priceType.name === 'Скидка',
       );
       const regularPriceObj = (variantData.rawSalePrices || []).find(
         (p) => p.priceType.name === 'Цена продажи',
       );
-      let currentPrice = 0;
-      let oldPrice = null;
       const regularPriceValue = regularPriceObj
         ? Math.round(regularPriceObj.value)
         : 0;
       const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
+
       if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
         currentPrice = salePriceValue;
         oldPrice = regularPriceValue;
@@ -124,6 +140,7 @@ async function runSync() {
         currentPrice =
           regularPriceValue > 0 ? regularPriceValue : salePriceValue;
       }
+
       let sizeRecord = null;
       if (variantData.size) {
         sizeRecord = await prisma.size.upsert({
@@ -132,7 +149,8 @@ async function runSync() {
           create: { value: variantData.size },
         });
       }
-      const variantUpsert = prisma.variant.upsert({
+
+      const variant = await prisma.variant.upsert({
         where: { moyskladId: variantData.moyskladId },
         update: { price: currentPrice, oldPrice: oldPrice },
         create: {
@@ -140,16 +158,24 @@ async function runSync() {
           oldPrice: oldPrice,
           product: { connect: { id: product.id } },
           moyskladId: variantData.moyskladId,
-          inventory: sizeRecord
-            ? { create: { sizeId: sizeRecord.id, stock: 0 } }
-            : undefined,
         },
       });
-      transactionPromises.push(variantUpsert);
+
+      if (sizeRecord) {
+        await prisma.inventory.upsert({
+          where: {
+            variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
+          },
+          update: { stock: variantData.stock },
+          create: {
+            variantId: variant.id,
+            sizeId: sizeRecord.id,
+            stock: variantData.stock,
+          },
+        });
+      }
     }
   }
-
-  await prisma.$transaction(transactionPromises);
 
   return {
     message: `Синхронизация успешно завершена.`,
@@ -157,7 +183,7 @@ async function runSync() {
   };
 }
 
-// === 2. ОБРАБОТЧИК ДЛЯ CRON JOB (GET-запросы) ===
+// === GET (Cron Job) обработчик ===
 export async function GET(req: NextRequest) {
   try {
     const cronSecret = req.nextUrl.searchParams.get('cron_secret');
@@ -166,7 +192,6 @@ export async function GET(req: NextRequest) {
         status: 401,
       });
     }
-
     console.log('[CRON SYNC] Запуск синхронизации продуктов по расписанию...');
     const result = await runSync();
     console.log(
@@ -183,7 +208,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// === 3. ОБРАБОТЧИК ДЛЯ КНОПКИ В АДМИНКЕ (POST-запросы) ===
+// === POST (кнопка) обработчик ===
 export async function POST() {
   try {
     const session = await getServerSession(authOptions);
@@ -192,9 +217,8 @@ export async function POST() {
         status: 403,
       });
     }
-
     console.log(
-      `[MANUAL SYNC] Запуск ручной синхронизации продуктов от пользователя ${session.user.email}...`,
+      `[MANUAL SYNC] Запуск ручной синхронизации от пользователя ${session.user.email}...`,
     );
     const result = await runSync();
     console.log(
