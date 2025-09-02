@@ -7,25 +7,16 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { UserRole } from '@prisma/client';
 
-// Расширяем интерфейс, чтобы видеть данные о родительской папке
 interface MoySkladCategory {
   id: string;
   name: string;
-  // Поле productFolder содержит ссылку на родительскую категорию
-  productFolder?: {
-    meta: {
-      href: string;
-    };
-  };
+  productFolder?: { meta: { href: string } };
 }
 
-// Вспомогательная функция для извлечения ID из URL-ссылки
 function getUUIDFromHref(href: string): string {
   return href.split('/').pop() || '';
 }
 
-// Мы используем метод POST для ручного запуска синхронизации из админки.
-// Запрос должен быть от авторизованного администратора.
 export async function POST() {
   const session = await getServerSession(authOptions);
   if (!session?.user || session.user.role !== UserRole.ADMIN) {
@@ -35,16 +26,21 @@ export async function POST() {
   }
 
   try {
+    console.log('[SYNC CATEGORIES] Начинаем синхронизацию категорий...');
     const moySkladResponse = await getMoySkladCategories();
     const moySkladCategories: MoySkladCategory[] = moySkladResponse.rows || [];
 
     if (moySkladCategories.length === 0) {
+      console.log(
+        '[SYNC CATEGORIES] В МойСклад не найдено ни одной категории.',
+      );
       return NextResponse.json({ message: 'Категории в МойСклад не найдены.' });
     }
+    console.log(
+      `[SYNC CATEGORIES] Найдено ${moySkladCategories.length} категорий в МойСклад.`,
+    );
 
-    // === ШАГ 1: Создаем/обновляем все категории, но пока без связей ===
-    // Это гарантирует, что все потенциальные "родители" уже будут существовать
-    // в нашей базе данных перед тем, как мы начнем создавать связи на Шаге 2.
+    // ШАГ 1: Upsert всех категорий (создание/обновление)
     await prisma.$transaction(
       moySkladCategories.map((category) =>
         prisma.category.upsert({
@@ -55,11 +51,20 @@ export async function POST() {
       ),
     );
     console.log(
-      '[SYNC CATEGORIES] Шаг 1/2: Все категории успешно созданы/обновлены.',
+      '[SYNC CATEGORIES] Шаг 1/3: Все категории успешно созданы/обновлены в нашей БД.',
     );
 
-    // === ШАГ 2: Устанавливаем связи (проставляем parentId) ===
-    // Сначала создадим "карту" для быстрого поиска: moyskladId -> наш_внутренний_id
+    // ШАГ 2: Сброс всех существующих связей parentId на null.
+    // Это критически важно, чтобы удалить старые, неактуальные связи,
+    // если ты вдруг переместишь папку в "МойСклад".
+    await prisma.category.updateMany({
+      data: { parentId: null },
+    });
+    console.log(
+      '[SYNC CATEGORIES] Шаг 2/3: Все старые родительские связи сброшены.',
+    );
+
+    // ШАГ 3: Установка новых, актуальных связей
     const ourCategoriesMap = new Map<string, string>();
     const allOurCategories = await prisma.category.findMany({
       select: { id: true, moyskladId: true },
@@ -68,46 +73,48 @@ export async function POST() {
       (cat) => cat.moyskladId && ourCategoriesMap.set(cat.moyskladId, cat.id),
     );
 
-    // Теперь проходим по списку категорий из "МойСклад" и готовим запросы на обновление parentId
-    const updatePromises = moySkladCategories
-      .filter((category) => category.productFolder) // Берем только те, у кого есть родитель
-      .map((category) => {
+    let linksUpdatedCount = 0;
+    const updatePromises = [];
+
+    for (const category of moySkladCategories) {
+      // Ищем только те категории, у которых есть родитель
+      if (category.productFolder) {
         const moyskladParentId = getUUIDFromHref(
-          category.productFolder!.meta.href,
+          category.productFolder.meta.href,
         );
-        const ourParentId = ourCategoriesMap.get(moyskladParentId); // Находим внутренний ID родителя по карте
-        const ourChildId = ourCategoriesMap.get(category.id); // Находим внутренний ID текущей категории
+        const ourParentId = ourCategoriesMap.get(moyskladParentId);
+        const ourChildId = ourCategoriesMap.get(category.id);
 
-        // Если и родитель, и ребенок найдены в нашей базе, готовим запрос на обновление
+        // Если оба существуют в нашей базе, создаем промис на обновление
         if (ourParentId && ourChildId) {
-          return prisma.category.update({
-            where: { id: ourChildId },
-            data: { parentId: ourParentId }, // Проставляем ID родителя
-          });
+          updatePromises.push(
+            prisma.category.update({
+              where: { id: ourChildId },
+              data: { parentId: ourParentId },
+            }),
+          );
+          linksUpdatedCount++;
         }
-        return null; // Если кого-то не нашли, пропускаем
-      })
-      .filter((p) => p !== null) as any[]; // Убираем пропущенные (null)
+      }
+    }
 
-    // Если есть что обновлять, выполняем все запросы на обновление в одной транзакции
+    // Если есть что обновить, выполняем все разом
     if (updatePromises.length > 0) {
       await prisma.$transaction(updatePromises);
     }
     console.log(
-      `[SYNC CATEGORIES] Шаг 2/2: ${updatePromises.length} родительских связей обновлено.`,
+      `[SYNC CATEGORIES] Шаг 3/3: Установлено ${linksUpdatedCount} новых родительских связей.`,
     );
 
     return NextResponse.json({
-      message: 'Синхронизация категорий (с иерархией) успешно завершена.',
-      totalCategories: moySkladCategories.length,
-      linksUpdated: updatePromises.length,
+      message: 'Синхронизация категорий с иерархией завершена.',
+      totalFound: moySkladCategories.length,
+      linksEstablished: linksUpdatedCount,
     });
   } catch (error) {
-    console.error('[API SYNC CATEGORIES ERROR]:', error);
+    console.error('[SYNC CATEGORIES ERROR]:', error);
     return new NextResponse(
-      JSON.stringify({
-        error: 'Внутренняя ошибка сервера при синхронизации категорий.',
-      }),
+      JSON.stringify({ error: 'Внутренняя ошибка сервера.' }),
       { status: 500 },
     );
   }
