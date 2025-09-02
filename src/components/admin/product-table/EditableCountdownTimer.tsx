@@ -2,7 +2,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import type { VariantWithProductInfo } from '@/app/admin/dashboard/page';
+// --- 1. ИМПОРТИРУЕМ НОВЫЙ ТИП ИЗ ПРАВИЛЬНОГО МЕСТА ---
+import type { ProductForTable } from '@/app/admin/dashboard/page';
+
+// Извлекаем тип одного варианта из типа всего продукта для удобства
+type VariantForTimer = ProductForTable['variants'][0];
 
 const MILLISECONDS = {
   day: 86400000,
@@ -29,14 +33,15 @@ const parseTimeFromAdmin = (timeStr: string): number => {
   );
 };
 
+// --- 2. ОБНОВЛЯЕМ PROPS КОМПОНЕНТА ---
 export const EditableCountdownTimer = ({
   variant,
   hasDiscount,
   onUpdate,
 }: {
-  variant: VariantWithProductInfo;
+  variant: VariantForTimer;
   hasDiscount: boolean;
-  onUpdate: (field: keyof VariantWithProductInfo, value: any) => void;
+  onUpdate: (field: keyof VariantForTimer, value: any) => void;
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState('00:00:00');
@@ -54,7 +59,6 @@ export const EditableCountdownTimer = ({
     };
     setTimeLeft(calculateTime());
 
-    // --- ИЗМЕНЕНИЕ: Таймер продолжает идти даже в режиме редактирования ---
     const interval = setInterval(() => setTimeLeft(calculateTime()), 1000);
     return () => clearInterval(interval);
   }, [variant.discountExpiresAt]);
@@ -96,7 +100,6 @@ export const EditableCountdownTimer = ({
     const totalMs = parseTimeFromAdmin(editValue);
     const newExpiryDate = totalMs > 0 ? new Date(Date.now() + totalMs) : null;
 
-    // --- ИЗМЕНЕНИЕ: Вызываем onUpdate, только если значение действительно изменилось ---
     if (String(newExpiryDate) !== String(variant.discountExpiresAt)) {
       onUpdate('discountExpiresAt', newExpiryDate);
     }
@@ -131,9 +134,7 @@ export const EditableCountdownTimer = ({
       : formatTimeForAdmin(timeLeft);
 
   return (
-    // --- ИЗМЕНЕНИЕ: Добавлен padding для расширения области наведения ---
     <div className="group relative flex items-center justify-center px-4">
-      {/* Кнопка "Удалить" */}
       {!isEditing && (
         <button
           onClick={handleClearTimer}
