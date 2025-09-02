@@ -5,28 +5,17 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast, { Toaster } from 'react-hot-toast';
-
-import type { VariantWithProductInfo } from '@/app/admin/dashboard/page';
+// --- 1. ИМПОРТИРУЕМ НОВЫЙ ТИП ---
+import type { ProductForTable } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
 import { ProductTableRow } from './product-table/ProductTableRow';
 
-// Определяем точный тип для filterPresets
+// Тип для filterPresets (без изменений)
 type FilterPresetWithItems = Prisma.FilterPresetGetPayload<{
-  include: {
-    items: {
-      include: {
-        category: true;
-        tag: true;
-      };
-    };
-  };
+  include: { items: { include: { category: true; tag: true } } };
 }>;
 
-type ProductStatus = Prisma.ProductGetPayload<{}>['status'];
-
-const statusCycle: ProductStatus[] = ['DRAFT', 'PUBLISHED'];
-
-// Иконки
+// Иконки (без изменений)
 const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -61,264 +50,49 @@ const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+// --- 2. ОБНОВЛЯЕМ ИНТЕРФЕЙС PROPS ---
 interface ProductTableProps {
-  variants: VariantWithProductInfo[];
+  products: ProductForTable[];
   allCategories: Category[];
   allTags: Tag[];
   filterPresets: FilterPresetWithItems[];
 }
 
 export default function ProductTable({
-  variants: initialVariants,
+  products: initialProducts,
   allCategories,
   allTags,
   filterPresets,
 }: ProductTableProps) {
   const router = useRouter();
-
-  const [variants, setVariants] = useState(initialVariants);
-  const [editedVariantIds, setEditedVariantIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [isSaving, setIsSaving] = useState(false);
+  const [products, setProducts] = useState(initialProducts);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const handleNumericInputChange = (
-    variantId: string,
-    field: keyof VariantWithProductInfo,
-    inputValue: string,
-  ) => {
-    const numericString = inputValue.replace(/[^0-9]/g, '');
-    const value = numericString === '' ? null : parseInt(numericString, 10);
-    handleVariantChange(variantId, field, value);
-  };
-
-  const handleVariantChange = (
-    variantId: string,
-    field: keyof VariantWithProductInfo,
-    value: any,
-  ) => {
-    setVariants((prev) =>
-      prev.map((v) => (v.id === variantId ? { ...v, [field]: value } : v)),
-    );
-    setEditedVariantIds((prev) => new Set(prev).add(variantId));
-  };
-
-  const handleInventoryChange = (
-    variantId: string,
-    inventoryId: string,
-    inputValue: string,
-  ) => {
-    const numericString = inputValue.replace(/[^0-9]/g, '');
-    const newStock = numericString === '' ? 0 : parseInt(numericString, 10);
-
-    setVariants((prev) =>
-      prev.map((v) => {
-        if (v.id === variantId) {
-          const updatedVariant = JSON.parse(JSON.stringify(v));
-          const inventoryItem = updatedVariant.product.variants
-            .flatMap((pv: any) => pv.inventory)
-            .find((inv: any) => inv.id === inventoryId);
-
-          if (inventoryItem) {
-            inventoryItem.stock = newStock;
-          }
-          return updatedVariant;
-        }
-        return v;
-      }),
-    );
-
-    setEditedVariantIds((prev) => new Set(prev).add(variantId));
-  };
-
-  const handleCategoryChange = (
-    productId: string,
-    newCategories: Category[],
-  ) => {
-    setVariants((prev) =>
-      prev.map((v) => {
-        if (v.product.id === productId) {
-          const updatedVariant = JSON.parse(JSON.stringify(v));
-          updatedVariant.product.categories = newCategories;
-          return updatedVariant;
-        }
-        return v;
-      }),
-    );
-
-    const variantsToUpdate = variants.filter((v) => v.product.id === productId);
-    setEditedVariantIds(
-      (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
-    );
-  };
-
-  const handleTagsChange = (productId: string, selectedTagIds: string[]) => {
-    setVariants((prev) =>
-      prev.map((v) => {
-        if (v.product.id === productId) {
-          const newTags = allTags.filter((t) => selectedTagIds.includes(t.id));
-          const updatedVariant = JSON.parse(JSON.stringify(v));
-          updatedVariant.product.tags = newTags;
-          return updatedVariant;
-        }
-        return v;
-      }),
-    );
-    const variantsToUpdate = variants.filter((v) => v.product.id === productId);
-    setEditedVariantIds(
-      (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
-    );
-  };
-
-  const handleDiscountChange = (
-    variant: VariantWithProductInfo,
-    newPercentStr: string,
-  ) => {
-    const newPercent = newPercentStr ? parseInt(newPercentStr, 10) : 0;
-    if (isNaN(newPercent) || newPercent < 0 || newPercent > 100) return;
-
-    const discountTag = allTags.find((t) => t.name.toLowerCase() === 'скидка');
-
-    setVariants((prev) => {
-      const variantsWithPriceChange = prev.map((v) => {
-        if (v.id === variant.id) {
-          const originalPrice = v.oldPrice || v.price;
-          if (newPercent > 0) {
-            return {
-              ...v,
-              price: Math.round(originalPrice * (1 - newPercent / 100)),
-              oldPrice: originalPrice,
-            };
-          } else {
-            return { ...v, price: originalPrice, oldPrice: null };
-          }
-        }
-        return v;
-      });
-
-      const anyVariantHasDiscount = variantsWithPriceChange
-        .filter((v) => v.product.id === variant.product.id)
-        .some((v) => v.oldPrice !== null);
-
-      return variantsWithPriceChange.map((v) => {
-        if (v.product.id === variant.product.id) {
-          if (!discountTag) return v;
-
-          const currentTags = v.product.tags || [];
-          const hasDiscountTag = currentTags.some(
-            (t) => t.id === discountTag.id,
-          );
-
-          let newTags = currentTags;
-          if (anyVariantHasDiscount && !hasDiscountTag) {
-            newTags = [...currentTags, discountTag];
-          } else if (!anyVariantHasDiscount && hasDiscountTag) {
-            newTags = currentTags.filter((t) => t.id !== discountTag.id);
-          }
-
-          return { ...v, product: { ...v.product, tags: newTags } };
-        }
-        return v;
-      });
-    });
-
-    const variantsToUpdate = variants.filter(
-      (v) => v.product.id === variant.product.id,
-    );
-    setEditedVariantIds(
-      (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
-    );
-  };
-
-  const handleProductStatusChange = (
-    productId: string,
-    newStatus: ProductStatus,
-  ) => {
-    setVariants((prev) =>
-      prev.map((v) => {
-        if (v.product.id === productId) {
-          const updatedVariant = JSON.parse(JSON.stringify(v));
-          updatedVariant.product.status = newStatus;
-          return updatedVariant;
-        }
-        return v;
-      }),
-    );
-
-    const variantsToUpdate = variants.filter((v) => v.product.id === productId);
-    setEditedVariantIds(
-      (prev) => new Set([...prev, ...variantsToUpdate.map((v) => v.id)]),
-    );
-  };
-
-  const handleStatusToggle = (
-    currentStatus: ProductStatus,
-    productId: string,
-  ) => {
-    const currentIndex = statusCycle.indexOf(currentStatus);
-    const nextIndex = (currentIndex + 1) % statusCycle.length;
-    const newStatus = statusCycle[nextIndex];
-    handleProductStatusChange(productId, newStatus);
-  };
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedVariantIds(new Set(variants.map((v) => v.id)));
-    } else {
-      setSelectedVariantIds(new Set());
-    }
-  };
-
-  const handleSelectOne = (variantId: string, isSelected: boolean) => {
-    setSelectedVariantIds((prev) => {
-      const newSet = new Set(prev);
-      if (isSelected) {
-        newSet.add(variantId);
-      } else {
-        newSet.delete(variantId);
-      }
-      return newSet;
-    });
-  };
-
-  const handleCopy = (id: string) => navigator.clipboard.writeText(id);
-
-  const handleSave = async () => {
-    if (editedVariantIds.size === 0 || isSaving) return;
-
-    setIsSaving(true);
-    const variantsToUpdate = variants.filter((v) => editedVariantIds.has(v.id));
-
-    try {
-      const response = await fetch('/api/variants/batch-update', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ variants: variantsToUpdate }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Ошибка при сохранении данных');
-      }
-
-      setEditedVariantIds(new Set());
-      toast.success('Изменения успешно сохранены!');
-    } catch (error) {
-      console.error('Failed to save variants:', error);
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      toast.error(`Не удалось сохранить изменения: ${errorMessage}`);
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // --- 3. УПРОЩЕНИЕ: Удаляем большую часть старой логики управления состоянием.
+  // Она будет инкапсулирована внутри компонента ProductTableRow.
+  // Здесь остаются только самые общие функции, как синхронизация.
 
   const handleSync = async () => {
     setIsSyncing(true);
+
+    // Очищаем таблицы перед новой синхронизацией для чистоты данных
+    // Эту часть можно будет убрать, когда синхронизация будет стабильной
+    const clearPromise = new Promise(async (resolve, reject) => {
+      try {
+        await fetch('/api/admin/clear-products', { method: 'POST' });
+        resolve('Таблицы очищены.');
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    toast.promise(clearPromise, {
+      loading: 'Очистка старых данных...',
+      success: (message) => String(message),
+      error: 'Ошибка при очистке!',
+    });
+
+    await clearPromise; // Дожидаемся завершения очистки
 
     const syncPromise = new Promise(async (resolve, reject) => {
       try {
@@ -372,17 +146,7 @@ export default function ProductTable({
           >
             <TagIcon className="h-4 w-4" /> Управление категориями
           </Link>
-          {editedVariantIds.size > 0 && (
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-            >
-              {isSaving
-                ? 'Сохранение...'
-                : `Сохранить (${editedVariantIds.size})`}
-            </button>
-          )}
+          {/* Кнопка "Сохранить" пока не нужна, т.к. редактирование будет в строке */}
         </div>
         <Link
           href="/admin/products/new"
@@ -393,71 +157,46 @@ export default function ProductTable({
       </div>
 
       <div className="overflow-x-auto">
-        <div className="inline-block min-w-full pl-12 align-middle">
+        <div className="inline-block min-w-full align-middle">
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
+                {/* Шапка таблицы остаётся такой же */}
                 <tr>
-                  <th scope="col" className="relative px-6 py-3">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                      onChange={handleSelectAll}
-                      checked={
-                        selectedVariantIds.size === variants.length &&
-                        variants.length > 0
-                      }
-                      ref={(input) => {
-                        if (input) {
-                          input.indeterminate =
-                            selectedVariantIds.size > 0 &&
-                            selectedVariantIds.size < variants.length;
-                        }
-                      }}
-                    />
+                  <th
+                    scope="col"
+                    className="relative w-12 px-1 py-3 text-center"
+                  >
+                    {/* Пустое место для кнопки раскрытия */}
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    Товар
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                     Категории
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
-                    Товар / Арт. / Ост.
+                    Статус
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
-                    K-коины
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                    Остатки
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
-                    Цена до скидки
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
-                    Скидка
-                  </th>
-                  <th className="w-28 px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
-                    Таймер
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                     Цена
+                  </th>
+                  <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">Редактировать</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {variants.map((variant, variantIdx) => (
+                {/* --- 4. ОСНОВНОЕ ИЗМЕНЕНИЕ: Итерируемся по ПРОДУКТАМ --- */}
+                {products.map((product) => (
                   <ProductTableRow
-                    key={variant.id}
-                    variant={variant}
-                    variantIdx={variantIdx}
-                    isSelected={selectedVariantIds.has(variant.id)}
-                    isEdited={editedVariantIds.has(variant.id)}
+                    key={product.id}
+                    product={product}
                     allCategories={allCategories}
                     allTags={allTags}
-                    onSelectOne={handleSelectOne}
-                    onCopy={handleCopy}
-                    onStatusToggle={handleStatusToggle}
-                    onNumericInputChange={handleNumericInputChange}
-                    onDiscountChange={handleDiscountChange}
-                    onVariantChange={handleVariantChange}
-                    onInventoryChange={handleInventoryChange}
-                    onCategoryChange={handleCategoryChange}
-                    onTagsChange={handleTagsChange}
                   />
                 ))}
               </tbody>

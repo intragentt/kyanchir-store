@@ -1,5 +1,4 @@
 // Местоположение: src/app/admin/dashboard/page.tsx
-// ФИНАЛЬНАЯ, КОРРЕКТНАЯ ВЕРСИЯ
 
 import PageContainer from '@/components/layout/PageContainer';
 import ProductTable from '@/components/admin/ProductTable';
@@ -8,95 +7,95 @@ import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-export type VariantWithProductInfo = Prisma.VariantGetPayload<{
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+
+// 1. Создаем новый, правильный тип для наших данных.
+// Теперь это ПРОДУКТ со всеми вложенными связями, а не вариант.
+export type ProductForTable = Prisma.ProductGetPayload<{
   include: {
-    images: true;
-    product: {
+    categories: true;
+    tags: true;
+    attributes: true;
+    variants: {
       include: {
-        variants: {
+        images: true;
+        inventory: {
           include: {
-            inventory: {
-              include: {
-                size: true;
-              };
-            };
+            size: true;
           };
         };
-        categories: true;
-        attributes: true;
-        tags: true;
       };
     };
   };
 }>;
 
-const sizeOrder = ['S', 'M', 'L', 'XL'];
-const sortInventoryBySize = (inventory: any[]) => {
-  return inventory.sort((a, b) => {
-    const indexA = sizeOrder.indexOf(a.size.value);
-    const indexB = sizeOrder.indexOf(b.size.value);
+const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL']; // Расширим на всякий случай
+// 2. Сортировка теперь принимает массив вариантов, а не инвентаря
+const sortVariantsBySize = (variants: any[]) => {
+  return variants.sort((a, b) => {
+    // Предполагаем, что у варианта может быть только один инвентарь (размер)
+    const sizeA = a.inventory[0]?.size.value;
+    const sizeB = b.inventory[0]?.size.value;
+    const indexA = sizeA ? sizeOrder.indexOf(sizeA) : Infinity;
+    const indexB = sizeB ? sizeOrder.indexOf(sizeB) : Infinity;
     return indexA - indexB;
   });
 };
 
 export default async function DashboardPage() {
-  const [allVariants, allCategories, allTags, filterPresets] =
+  // 3. Основной запрос теперь к ПРОДУКТАМ, а не к вариантам
+  const [allProducts, allCategories, allTags, filterPresets] =
     await Promise.all([
-      prisma.variant.findMany({
+      prisma.product.findMany({
         orderBy: {
-          product: {
-            createdAt: 'desc',
-          },
+          createdAt: 'desc',
         },
+        // Подтягиваем ВСЮ необходимую информацию одним мощным запросом
         include: {
-          images: { orderBy: { order: 'asc' } },
-          product: {
+          categories: true,
+          tags: true,
+          attributes: true,
+          variants: {
             include: {
-              variants: {
+              images: { orderBy: { order: 'asc' } },
+              inventory: {
                 include: {
-                  inventory: {
-                    include: {
-                      size: true,
-                    },
-                  },
+                  size: true,
                 },
               },
-              categories: true,
-              attributes: true,
-              tags: true,
             },
           },
         },
       }),
-      prisma.category.findMany({ orderBy: { name: 'asc' } }),
+      prisma.category.findMany({
+        orderBy: { name: 'asc' },
+        where: { parentId: { not: null } }, // Получаем только дочерние категории для назначения
+      }),
       prisma.tag.findMany({ orderBy: { name: 'asc' } }),
       prisma.filterPreset.findMany({
         include: {
           items: {
             orderBy: { order: 'asc' },
-            include: {
-              category: true,
-              tag: true,
-            },
+            include: { category: true, tag: true },
           },
         },
         orderBy: { createdAt: 'asc' },
       }),
     ]);
 
-  // Применяем сортировку к inventory каждого варианта.
-  allVariants.forEach((variant) => {
-    // ВАЖНО: Мы сортируем инвентарь во *вложенных* вариантах продукта
-    variant.product.variants.forEach((productVariant) => {
-      sortInventoryBySize(productVariant.inventory);
-    });
+  // 4. Применяем сортировку размеров к вариантам КАЖДОГО продукта.
+  allProducts.forEach((product) => {
+    sortVariantsBySize(product.variants);
   });
+
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>
       <PageContainer className="py-12">
+        {/* 5. Передаем в таблицу новый prop `products` вместо `variants` */}
         <ProductTable
-          variants={allVariants}
+          products={allProducts}
           allCategories={allCategories}
           allTags={allTags}
           filterPresets={filterPresets}
