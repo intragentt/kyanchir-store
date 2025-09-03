@@ -20,14 +20,11 @@ interface MoySkladProduct {
   salePrices?: MoySkladPrice[];
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ---
-// Эта функция теперь правильно "очищает" ID от параметров запроса (типа ?expand=...)
 function getUUIDFromHref(href: string): string {
   const pathPart = href.split('/').pop() || '';
-  const uuid = pathPart.split('?')[0]; // Отсекаем всё после знака вопроса
+  const uuid = pathPart.split('?')[0];
   return uuid;
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface ParsedProductInfo {
   baseName: string;
@@ -70,7 +67,6 @@ async function runSync() {
 
   const stockMap = new Map<string, number>();
   stockData.forEach((item) => {
-    // Теперь эта функция вернёт чистый ID, и карта остатков будет правильной
     const assortmentId = getUUIDFromHref(item.meta.href);
     if (assortmentId && typeof item.stock === 'number') {
       const currentStock = stockMap.get(assortmentId) || 0;
@@ -132,25 +128,42 @@ async function runSync() {
     }
 
     for (const variantData of variants) {
-      let currentPrice = 0,
-        oldPrice = null;
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: ЛОГИКА ОБРАБОТКИ СКИДОК ---
+
+      let currentPrice = 0;
+      let oldPrice: number | null = null;
+
+      // 1. Ищем в массиве цен объект с типом "Скидка"
       const salePriceObj = (variantData.rawSalePrices || []).find(
         (p) => p.priceType.name === 'Скидка',
       );
+
+      // 2. Ищем в массиве цен объект с типом "Цена продажи"
       const regularPriceObj = (variantData.rawSalePrices || []).find(
         (p) => p.priceType.name === 'Цена продажи',
       );
+
+      // 3. Получаем числовые значения, если они есть.
       const regularPriceValue = regularPriceObj
         ? Math.round(regularPriceObj.value)
         : 0;
       const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
+
+      // 4. Применяем бизнес-логику
+      // Если цена со скидкой существует, больше 0 и меньше обычной цены...
       if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
-        currentPrice = salePriceValue;
-        oldPrice = regularPriceValue;
+        // ...то товар акционный.
+        currentPrice = salePriceValue; // Текущая цена = цена со скидкой
+        oldPrice = regularPriceValue; // Старая цена = обычная цена
       } else {
+        // ...иначе товар продается по обычной цене.
         currentPrice =
           regularPriceValue > 0 ? regularPriceValue : salePriceValue;
+        oldPrice = null; // Старой цены нет
       }
+
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
       const variant = await prisma.variant.upsert({
         where: { moyskladId: variantData.moyskladId },
         update: {
@@ -165,12 +178,14 @@ async function runSync() {
           moyskladId: variantData.moyskladId,
         },
       });
+
       const sizeValue = variantData.size || 'ONE_SIZE';
       const sizeRecord = await prisma.size.upsert({
         where: { value: sizeValue },
         update: {},
         create: { value: sizeValue },
       });
+
       await prisma.inventory.upsert({
         where: {
           variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
