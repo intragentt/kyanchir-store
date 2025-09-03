@@ -61,9 +61,6 @@ async function runSync() {
     };
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: ЛОГИКА СУММИРОВАНИЯ ОСТАТКОВ ---
-  // Теперь мы не просто записываем остаток, а накапливаем сумму
-  // для каждого товара со всех его складов.
   const stockMap = new Map<string, number>();
   stockData.forEach((item) => {
     const assortmentId = getUUIDFromHref(item.meta.href);
@@ -72,7 +69,14 @@ async function runSync() {
       stockMap.set(assortmentId, currentStock + item.stock);
     }
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  // --- НАЧАЛО ДИАГНОСТИКИ ---
+  console.log('--- [DIAGNOSTIC START] ---');
+  console.log('--- Карта остатков (stockMap): ---');
+  // Преобразуем Map в объект для более чистого вывода в лог
+  console.log(Object.fromEntries(stockMap));
+  console.log('--- Начало обработки продуктов: ---');
+  // --- КОНЕЦ ДИАГНОСТИКИ ---
 
   console.log(
     `2/4: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockData.length} (уникальных: ${stockMap.size}).`,
@@ -80,6 +84,14 @@ async function runSync() {
 
   const groupedProducts = new Map<string, GroupedProductVariant[]>();
   for (const product of moySkladProducts) {
+    const stockValue = stockMap.get(product.id) || 0;
+
+    // --- НАЧАЛО ДИАГНОСТИКИ ---
+    console.log(
+      `[LOOKUP] Товар: "${product.name}", ID для поиска: "${product.id}", Найденный остаток: ${stockValue}`,
+    );
+    // --- КОНЕЦ ДИАГНОСТИКИ ---
+
     const { baseName, size } = parseProductName(product.name);
     if (!groupedProducts.has(baseName)) groupedProducts.set(baseName, []);
     groupedProducts.get(baseName)!.push({
@@ -88,9 +100,12 @@ async function runSync() {
       description: product.description,
       productFolder: product.productFolder,
       rawSalePrices: product.salePrices,
-      stock: stockMap.get(product.id) || 0,
+      stock: stockValue, // Используем найденное значение
     });
   }
+
+  console.log('--- [DIAGNOSTIC END] ---');
+
   console.log(
     `3/4: Товары сгруппированы. Уникальных продуктов: ${groupedProducts.size}. Начинаем запись в БД...`,
   );
@@ -138,7 +153,6 @@ async function runSync() {
         ? Math.round(regularPriceObj.value)
         : 0;
       const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
-
       if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
         currentPrice = salePriceValue;
         oldPrice = regularPriceValue;
@@ -146,7 +160,6 @@ async function runSync() {
         currentPrice =
           regularPriceValue > 0 ? regularPriceValue : salePriceValue;
       }
-
       const variant = await prisma.variant.upsert({
         where: { moyskladId: variantData.moyskladId },
         update: {
@@ -161,14 +174,12 @@ async function runSync() {
           moyskladId: variantData.moyskladId,
         },
       });
-
       const sizeValue = variantData.size || 'ONE_SIZE';
       const sizeRecord = await prisma.size.upsert({
         where: { value: sizeValue },
         update: {},
         create: { value: sizeValue },
       });
-
       await prisma.inventory.upsert({
         where: {
           variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
