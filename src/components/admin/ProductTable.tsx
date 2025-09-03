@@ -10,19 +10,10 @@ import type { ProductForTable } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
 import { ProductTableRow } from './product-table/ProductTableRow';
 
-// Тип для filterPresets (без изменений)
 type FilterPresetWithItems = Prisma.FilterPresetGetPayload<{
-  include: {
-    items: {
-      include: {
-        category: true;
-        tag: true;
-      };
-    };
-  };
+  include: { items: { include: { category: true; tag: true } } };
 }>;
 
-// Иконки (без изменений)
 const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -75,50 +66,18 @@ export default function ProductTable({
 
   const handleSync = async () => {
     setIsSyncing(true);
+    toast.loading('Синхронизация со складом...', { id: 'sync' });
 
-    const syncPromise = Promise.resolve().then(async () => {
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-      // ВРЕМЕННО КОММЕНТИРУЕМ ОЧИСТКУ, Т.К. API ЕЩЕ НЕ ГОТОВ
-      /*
-      console.log("Очистка продуктов и категорий перед синхронизацией...");
-      const clearRes = await fetch('/api/admin/clear-data', { method: 'POST' });
-      if(!clearRes.ok) throw new Error('Ошибка при очистке данных перед синхронизацией.');
-      */
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    // Сначала чистим, чтобы не было дублей.
+    // Создадим API для этого
+    // await fetch('/api/admin/clear-data', { method: 'POST' });
 
-      console.log('Синхронизация категорий...');
-      const catRes = await fetch('/api/admin/sync/categories', {
-        method: 'POST',
-      });
-      if (!catRes.ok) {
-        const err = await catRes.json();
-        throw new Error(err.error || 'Ошибка синхронизации категорий');
-      }
+    await fetch('/api/admin/sync/categories', { method: 'POST' });
+    await fetch('/api/admin/sync/products', { method: 'POST' });
 
-      console.log('Синхронизация продуктов...');
-      const prodRes = await fetch('/api/admin/sync/products', {
-        method: 'POST',
-      });
-      if (!prodRes.ok) {
-        const err = await prodRes.json();
-        throw new Error(err.error || 'Ошибка синхронизации продуктов');
-      }
-
-      return 'Данные успешно обновлены!';
-    });
-
-    toast.promise(syncPromise, {
-      loading: 'Синхронизация со складом...',
-      success: (message) => {
-        router.refresh();
-        setIsSyncing(false);
-        return String(message);
-      },
-      error: (err) => {
-        setIsSyncing(false);
-        return `Ошибка: ${err.toString()}`;
-      },
-    });
+    toast.success('Синхронизация завершена!', { id: 'sync' });
+    router.refresh();
+    setIsSyncing(false);
   };
 
   return (

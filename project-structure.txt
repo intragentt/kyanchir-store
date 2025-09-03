@@ -40,6 +40,22 @@
 │   │   │   └── migration.sql
 │   │   ├── 20250827112815_add_password_hash
 │   │   │   └── migration.sql
+│   │   ├── 20250831103116_enhance_user_and_add_support_models
+│   │   │   └── migration.sql
+│   │   ├── 20250831113229_add_agent_username
+│   │   │   └── migration.sql
+│   │   ├── 20250831113511_add_agent_phone
+│   │   │   └── migration.sql
+│   │   ├── 20250831113912_fix_agent_model
+│   │   │   └── migration.sql
+│   │   ├── 20250831130634_prepare_for_multi_email
+│   │   │   └── migration.sql
+│   │   ├── 20250901112310_add_management_user_role
+│   │   │   └── migration.sql
+│   │   ├── 20250901135644_add_moysklad_ids
+│   │   │   └── migration.sql
+│   │   ├── 20250902084543_make_category_name_not_unique
+│   │   │   └── migration.sql
 │   │   └── migration_lock.toml
 │   ├── schema.prisma
 │   └── seed.ts
@@ -90,12 +106,18 @@
 │   │   │   ├── categories
 │   │   │   ├── dashboard
 │   │   │   ├── filters
+│   │   │   ├── mail
+│   │   │   ├── page.tsx
 │   │   │   └── products
 │   │   ├── api
 │   │   │   ├── admin
 │   │   │   ├── auth
 │   │   │   ├── bot
+│   │   │   ├── mail-webhook
+│   │   │   ├── moysklad-webhook
 │   │   │   ├── products
+│   │   │   ├── support-form
+│   │   │   ├── telegram-support-webhook
 │   │   │   ├── telegram-webhook
 │   │   │   ├── upload
 │   │   │   ├── user
@@ -123,6 +145,8 @@
 │   │   │   └── page.tsx
 │   │   ├── styleguide
 │   │   │   └── typography
+│   │   ├── support
+│   │   │   └── page.tsx
 │   │   └── verify-email
 │   │       └── page.tsx
 │   ├── components
@@ -155,6 +179,7 @@
 │   │   │   ├── ProductTable.tsx
 │   │   │   ├── VariantManager.tsx
 │   │   │   ├── edit-product-form
+│   │   │   ├── layout.tsx
 │   │   │   └── product-table
 │   │   ├── header
 │   │   │   ├── DesktopNav.tsx
@@ -222,8 +247,10 @@
 │   ├── lib
 │   │   ├── auth.ts
 │   │   ├── csvParser.ts
+│   │   ├── moysklad-api.ts
 │   │   ├── prisma.ts
 │   │   ├── session.ts
+│   │   ├── telegramService.ts
 │   │   └── types.ts
 │   ├── middleware.ts
 │   ├── store
@@ -236,6 +263,7 @@
 ├── tailwind.config.ts
 ├── telegram.d.ts
 ├── tsconfig.json
-└── tsconfig.seed.json
+├── tsconfig.seed.json
+└── vercel.json
 
-67 directories, 172 files
+81 directories, 186 files

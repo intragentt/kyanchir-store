@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 
-// Интерфейсы и хелперы
+// --- ИНТЕРФЕЙСЫ И ХЕЛПЕРЫ (без изменений) ---
 interface MoySkladPrice {
   value: number;
   priceType: { name: string };
@@ -61,10 +61,8 @@ async function runSync() {
     };
   }
 
-  // === ИСПРАВЛЕНИЕ ЗДЕСЬ: Карта остатков теперь использует ID из meta.href ===
   const stockMap = new Map<string, number>();
   stockData.forEach((item) => {
-    // В отчете по остаткам нет поля "assortment", но есть "meta".
     const assortmentId = getUUIDFromHref(item.meta.href);
     if (assortmentId && typeof item.stock === 'number') {
       stockMap.set(assortmentId, item.stock);
@@ -84,7 +82,7 @@ async function runSync() {
       description: product.description,
       productFolder: product.productFolder,
       rawSalePrices: product.salePrices,
-      stock: stockMap.get(product.id) || 0, // Ищем остаток по ID варианта
+      stock: stockMap.get(product.id) || 0,
     });
   }
   console.log(
@@ -122,6 +120,7 @@ async function runSync() {
     }
 
     for (const variantData of variants) {
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
       let currentPrice = 0,
         oldPrice = null;
       const salePriceObj = (variantData.rawSalePrices || []).find(
@@ -131,9 +130,10 @@ async function runSync() {
         (p) => p.priceType.name === 'Цена продажи',
       );
       const regularPriceValue = regularPriceObj
-        ? Math.round(regularPriceObj.value)
+        ? Math.round(regularPriceObj.value / 100) // Делим на 100 для копеек
         : 0;
-      const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
+      const salePriceValue = salePriceObj ? Math.round(salePriceObj.value / 100) : 0; // Делим на 100 для копеек
+      
       if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
         currentPrice = salePriceValue;
         oldPrice = regularPriceValue;
@@ -142,18 +142,14 @@ async function runSync() {
           regularPriceValue > 0 ? regularPriceValue : salePriceValue;
       }
 
-      let sizeRecord = null;
-      if (variantData.size) {
-        sizeRecord = await prisma.size.upsert({
-          where: { value: variantData.size },
-          update: {},
-          create: { value: variantData.size },
-        });
-      }
-
+      // Создаем или находим вариант товара
       const variant = await prisma.variant.upsert({
         where: { moyskladId: variantData.moyskladId },
-        update: { price: currentPrice, oldPrice: oldPrice },
+        update: {
+          price: currentPrice,
+          oldPrice: oldPrice,
+          productId: product.id, // Убедимся что вариант привязан к правильному продукту
+        },
         create: {
           price: currentPrice,
           oldPrice: oldPrice,
@@ -162,19 +158,31 @@ async function runSync() {
         },
       });
 
-      if (sizeRecord) {
-        await prisma.inventory.upsert({
-          where: {
-            variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
-          },
-          update: { stock: variantData.stock },
-          create: {
-            variantId: variant.id,
-            sizeId: sizeRecord.id,
-            stock: variantData.stock,
-          },
-        });
-      }
+      // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ---
+      // Теперь мы ГАРАНТИРОВАННО получаем запись о размере.
+      // Если размер есть в названии - используем его.
+      // Если нет - используем "ONE_SIZE" как универсальный.
+      const sizeValue = variantData.size || 'ONE_SIZE';
+      const sizeRecord = await prisma.size.upsert({
+        where: { value: sizeValue },
+        update: {},
+        create: { value: sizeValue },
+      });
+
+      // Логика обновления остатков теперь НЕ находится внутри условного блока `if`,
+      // а выполняется для КАЖДОГО варианта.
+      await prisma.inventory.upsert({
+        where: {
+          variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
+        },
+        update: { stock: variantData.stock },
+        create: {
+          variantId: variant.id,
+          sizeId: sizeRecord.id,
+          stock: variantData.stock,
+        },
+      });
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     }
   }
 
@@ -185,7 +193,8 @@ async function runSync() {
   };
 }
 
-// === GET (Cron Job) и POST (кнопка) обработчики ===
+
+// === GET (Cron Job) и POST (кнопка) обработчики (без изменений) ===
 export async function GET(req: NextRequest) {
   try {
     const cronSecret = req.nextUrl.searchParams.get('cron_secret');
@@ -197,7 +206,7 @@ export async function GET(req: NextRequest) {
     console.log('[CRON SYNC] Запуск синхронизации продуктов по расписанию...');
     const result = await runSync();
     console.log(
-      `[CRON SYNC] ${result.message} Обработано: ${result.synchronizedProducts} шт.`,
+      `[CRON SYNC] Синхронизация завершена. Обработано: ${result.synchronizedProducts} шт.`,
     );
     return NextResponse.json(result);
   } catch (error) {
@@ -210,7 +219,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user || session.user.role !== UserRole.ADMIN) {
@@ -218,12 +227,13 @@ export async function POST() {
         status: 403,
       });
     }
+    const userEmail = session.user.email || 'unknown';
     console.log(
-      `[MANUAL SYNC] Запуск ручной синхронизации от пользователя ${session.user.email}...`,
+      `[MANUAL SYNC] Запуск ручной синхронизации от пользователя ${userEmail}...`,
     );
     const result = await runSync();
     console.log(
-      `[MANUAL SYNC] ${result.message} Обработано: ${result.synchronizedProducts} шт.`,
+      `[MANUAL SYNC] Синхронизация успешно завершена. Обработано: ${result.synchronizedProducts} шт.`,
     );
     return NextResponse.json(result);
   } catch (error) {

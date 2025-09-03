@@ -1,5 +1,4 @@
 // Местоположение: src/app/admin/dashboard/page.tsx
-
 import PageContainer from '@/components/layout/PageContainer';
 import ProductTable from '@/components/admin/ProductTable';
 import prisma from '@/lib/prisma';
@@ -40,9 +39,7 @@ export default async function DashboardPage() {
   const [allProducts, allCategories, allTags, filterPresets] =
     await Promise.all([
       prisma.product.findMany({
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
         include: {
           categories: true,
           tags: true,
@@ -51,18 +48,12 @@ export default async function DashboardPage() {
             orderBy: { createdAt: 'asc' },
             include: {
               images: { orderBy: { order: 'asc' } },
-              inventory: {
-                include: {
-                  size: true,
-                },
-              },
+              inventory: { include: { size: true } },
             },
           },
         },
       }),
-      prisma.category.findMany({
-        orderBy: { name: 'asc' },
-      }),
+      prisma.category.findMany({ orderBy: { name: 'asc' } }),
       prisma.tag.findMany({ orderBy: { name: 'asc' } }),
       prisma.filterPreset.findMany({
         include: {
