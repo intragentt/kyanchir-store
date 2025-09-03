@@ -4,25 +4,24 @@
 import { useState, Fragment } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import type { Prisma, Category, Tag } from '@prisma/client';
+import type { Category, Tag } from '@prisma/client';
 
 import type { ProductForTable } from '@/app/admin/dashboard/page';
 import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { PencilIcon } from '@/components/icons/PencilIcon';
-import { VariantRow } from './VariantRow'; // Мы адаптируем этот компонент на следующем шаге
+import { VariantRow } from './VariantRow';
 
-// import { ProductDetailsPanel } from './ProductDetailsPanel'; // Панель деталей пока отключим
+// --- НАЧАЛО ИЗМЕНЕНИЙ: АДАПТИРУЕМ statusConfig под новую модель ---
 
-type ProductStatus = ProductForTable['status'];
-const statusConfig: Record<
-  ProductStatus,
-  { dotClassName: string; label: string }
-> = {
+// 1. Мы больше не можем использовать `ProductStatus` как Record, так как это объект.
+// Вместо этого мы используем `string` и будем обращаться по имени статуса.
+const statusConfig: Record<string, { dotClassName: string; label: string }> = {
   DRAFT: { dotClassName: 'bg-yellow-400', label: 'Черновик' },
   PUBLISHED: { dotClassName: 'bg-green-400', label: 'Опубликован' },
   ARCHIVED: { dotClassName: 'bg-gray-400', label: 'В архиве' },
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface ProductTableRowProps {
   product: ProductForTable;
@@ -38,7 +37,6 @@ export const ProductTableRow = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
 
-  // Считаем сводные данные по продукту, используя новую структуру данных
   const totalStock = product.variants.reduce(
     (sum, variant) =>
       sum + variant.sizes.reduce((s, size) => s + size.stock, 0),
@@ -59,7 +57,6 @@ export const ProductTableRow = ({
 
   return (
     <Fragment>
-      {/* Главная строка продукта. Отвечает только за сводную информацию. */}
       <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
         <td className="flex w-24 items-center gap-2 px-4 py-4">
           <input
@@ -118,12 +115,14 @@ export const ProductTableRow = ({
           {product.categories.map((c) => c.name).join(' / ')}
         </td>
         <td className="px-6 py-4">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ `product.status.name` --- */}
           <span className="inline-flex items-center gap-x-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${statusConfig[product.status]?.dotClassName}`}
+              className={`h-1.5 w-1.5 rounded-full ${statusConfig[product.status.name]?.dotClassName}`}
             />
-            {statusConfig[product.status]?.label || product.status}
+            {statusConfig[product.status.name]?.label || product.status.name}
           </span>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm font-bold">
@@ -141,7 +140,6 @@ export const ProductTableRow = ({
 
       {/* {isDetailsExpanded && <ProductDetailsPanel product={product} />} */}
 
-      {/* Раскрывающаяся часть, которая рендерит дочерние компоненты VariantRow */}
       {isExpanded && (
         <tr>
           <td colSpan={7} className="p-0">

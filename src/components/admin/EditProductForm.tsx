@@ -4,13 +4,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProductWithDetails } from '@/app/admin/products/[id]/edit/page';
-import { Size, Category, Tag, ProductVariant, Prisma } from '@prisma/client';
+import { Size, Category, Tag, Status } from '@prisma/client';
 
 import DetailManager from './edit-product-form/DetailManager';
 import CategoryManager from './edit-product-form/CategoryManager';
-import { VariantManager } from './edit-product-form/VariantManager'; // Наш новый главный компонент
-
-type ProductStatus = Prisma.ProductGetPayload<{}>['status'];
+import { VariantManager } from './edit-product-form/VariantManager';
 
 interface EditProductFormProps {
   product: ProductWithDetails;
@@ -28,34 +26,29 @@ export default function EditProductForm({
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: ГЛАВНЫЕ СОСТОЯНИЯ ---
-  // Теперь у нас есть состояние для данных самого продукта
   const [productData, setProductData] = useState({
     name: product.name,
+    sku: product.sku,
     status: product.status,
     categories: product.categories,
     tags: product.tags,
-    // добавьте другие поля продукта, если они редактируются отдельно
+    alternativeNames: product.alternativeNames,
+    attributes: product.attributes,
   });
 
-  // И отдельное состояние для массива его вариантов
   const [variants, setVariants] = useState<ProductWithDetails['variants']>(
     product.variants,
   );
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  const handleSave = async (newStatus?: ProductStatus) => {
+  const handleSave = async (newStatus?: Status) => {
     setIsSaving(true);
     const finalStatus = newStatus || productData.status;
 
-    // Здесь будет новая логика сборки payload для API
     const payload = {
       ...productData,
       status: finalStatus,
-      variants: variants, // Передаем обновленный массив вариантов
+      variants: variants,
     };
-
-    console.log('Saving payload:', payload);
 
     try {
       const response = await fetch(`/api/products/${product.id}`, {
@@ -65,7 +58,8 @@ export default function EditProductForm({
       });
 
       if (!response.ok) {
-        throw new Error('Ошибка сохранения');
+        const errorText = await response.text();
+        throw new Error(`Ошибка сохранения: ${errorText}`);
       }
 
       alert('Сохранено успешно!');
@@ -81,21 +75,19 @@ export default function EditProductForm({
   return (
     <div>
       <div className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-3">
-        {/* Левая колонка с основной информацией о продукте */}
         <div className="space-y-8 lg:col-span-2">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ОПЕЧАТКУ --- */}
           <DetailManager
             name={productData.name}
             setName={(name) => setProductData((prev) => ({ ...prev, name }))}
-            alternativeNames={[]} // Логику для alternativeNames нужно будет добавить
-            setAlternativeNames={() => {}}
+            alternativeNames={productData.alternativeNames}
+            setAlternativeNames={(altNames) =>
+              setProductData((prev) => ({ ...prev, altNames: altNames }))
+            }
           />
-          {/* 
-            Здесь должны быть другие менеджеры: SkuManager, DescriptionManager, etc.
-            Их нужно будет адаптировать, чтобы они работали с `productData`.
-          */}
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </div>
 
-        {/* Правая колонка для категорий, тегов и публикации */}
         <div className="space-y-8 lg:col-span-1">
           <CategoryManager
             allCategories={allCategories}
@@ -109,9 +101,14 @@ export default function EditProductForm({
               setProductData((prev) => ({ ...prev, tags }))
             }
           />
-          {/* Компонент публикации */}
           <div className="rounded-lg border bg-white p-6">
             <h2 className="text-lg font-semibold">Публикация</h2>
+            <div className="mt-4">
+              <span className="text-sm font-medium text-gray-900">
+                Текущий статус:{' '}
+              </span>
+              <span className="font-bold">{productData.status.name}</span>
+            </div>
             <div className="mt-6 space-y-3">
               <button
                 onClick={() => handleSave()}
@@ -125,7 +122,6 @@ export default function EditProductForm({
         </div>
       </div>
 
-      {/* Секция управления вариантами под основной информацией */}
       <div className="mt-12">
         <VariantManager
           variants={variants}

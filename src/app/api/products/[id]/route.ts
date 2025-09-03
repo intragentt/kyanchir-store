@@ -3,17 +3,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// Мы принимаем весь объект context и извлекаем params внутри функции.
-// Это самый надежный способ типизации для сборки на Vercel.
+// Определяем тип для context, чтобы избежать ошибок сборки
+type RouteContext = {
+  params: {
+    id: string;
+  };
+};
 
-export async function GET(
-  req: NextRequest,
-  context: { params: { id: string } },
-) {
-  const { id } = context.params;
+// GET и DELETE остаются без изменений
+export async function GET(req: NextRequest, { params }: RouteContext) {
+  const { id } = params;
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { variants: true },
+    include: {
+      status: true,
+      variants: {
+        include: {
+          images: true,
+          sizes: {
+            include: {
+              size: true,
+            },
+          },
+        },
+      },
+    },
   });
   if (!product) {
     return new NextResponse('Продукт не найден', { status: 404 });
@@ -21,12 +35,9 @@ export async function GET(
   return NextResponse.json(product);
 }
 
-export async function DELETE(
-  req: NextRequest,
-  context: { params: { id: string } },
-) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
-    const { id } = context.params;
+    const { id } = params;
     await prisma.product.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
@@ -35,15 +46,13 @@ export async function DELETE(
   }
 }
 
-export async function PUT(
-  req: NextRequest,
-  context: { params: { id: string } },
-) {
+export async function PUT(req: NextRequest, { params }: RouteContext) {
   try {
-    const productId = context.params.id;
+    const productId = params.id;
+    // Определяем тип для тела запроса
     const body: {
       name: string;
-      status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+      status: { id: string; name: string }; // Теперь status - это объект
       sku: string | null;
       variants: any[];
       categories: { id: string }[];
@@ -54,7 +63,7 @@ export async function PUT(
 
     const {
       name,
-      status,
+      status, // Получаем объект status
       sku,
       variants,
       categories,
@@ -65,15 +74,17 @@ export async function PUT(
 
     const updatedProduct = await prisma.$transaction(
       async (tx) => {
-        // Шаг 1: Обновляем основные поля продукта
+        // Шаг 1: Обновляем продукт, используя status.id для связи
         await tx.product.update({
           where: { id: productId },
           data: {
             name,
-            status,
             sku,
-            categories: { set: categories.map((cat) => ({ id: cat.id })) },
-            tags: { set: tags.map((tag) => ({ id: tag.id })) },
+            statusId: status.id, // <--- ИСПОЛЬЗУЕМ ID СТАТУСА
+            categories: {
+              set: categories.map((cat: { id: string }) => ({ id: cat.id })),
+            },
+            tags: { set: tags.map((tag: { id: string }) => ({ id: tag.id })) },
           },
         });
 
@@ -81,10 +92,10 @@ export async function PUT(
         await tx.attribute.deleteMany({ where: { productId } });
         if (attributes && attributes.length > 0) {
           await tx.attribute.createMany({
-            data: attributes.map(({ key, value, isMain }) => ({
-              key,
-              value,
-              isMain,
+            data: attributes.map((attr: any) => ({
+              key: attr.key,
+              value: attr.value,
+              isMain: attr.isMain,
               productId,
             })),
           });
@@ -92,7 +103,10 @@ export async function PUT(
         await tx.alternativeName.deleteMany({ where: { productId } });
         if (alternativeNames && alternativeNames.length > 0) {
           await tx.alternativeName.createMany({
-            data: alternativeNames.map(({ value }) => ({ value, productId })),
+            data: alternativeNames.map((altName: any) => ({
+              value: altName.value,
+              productId,
+            })),
           });
         }
 
@@ -147,10 +161,11 @@ export async function PUT(
           }
         }
 
-        // Шаг 4: Возвращаем полностью обновленный продукт
+        // Шаг 4: Возвращаем полностью обновленный продукт с новыми данными
         return tx.product.findUnique({
           where: { id: productId },
           include: {
+            status: true,
             alternativeNames: true,
             variants: {
               include: { images: true, sizes: { include: { size: true } } },
