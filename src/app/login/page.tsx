@@ -65,8 +65,8 @@ export default function LoginPage() {
 
       // --- НАЧАЛО ИЗМЕНЕНИЙ: Перенаправляем на правильную страницу верификации ---
       if (sendCodeRes.ok) {
-        // Было: /login/verify-code
-        router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
+        // Было: /auth/verify
+        router.push(`/login/verify-code?email=${encodeURIComponent(email)}`);
       } else {
         // --- КОНЕЦ ИЗМЕНЕНИЙ ---
         setError('Не удалось отправить код подтверждения.');
