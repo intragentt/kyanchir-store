@@ -8,6 +8,11 @@ import type { Prisma, Category, Tag } from '@prisma/client';
 import { ProductForTable } from '@/app/admin/dashboard/page';
 import { EditableCountdownTimer } from './EditableCountdownTimer';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ТОЧЕЧНЫЕ ИМПОРТЫ ИКОНОК ---
+import { TrashIcon } from '@/components/icons/TrashIcon';
+import { ClockIcon } from '@/components/icons/ClockIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 // --- ТИПЫ И ХЕЛПЕРЫ ---
 type VariantData = ProductForTable['variants'][0];
 type ProductData = Omit<ProductForTable, 'variants'>;
@@ -105,12 +110,10 @@ export function VariantRow({
 
   return (
     <tr className={rowClassName}>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: УДАЛЕНА ЛИШНЯЯ РАМКА --- */}
       <td className="w-12 px-1 py-3 text-center">
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <input
           type="checkbox"
-          className="h-4 w-4 rounded border-gray-300"
+          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           checked={isSelected}
           onChange={(e) => onSelectOne(variant.id, e.target.checked)}
         />
@@ -209,6 +212,14 @@ export function VariantRow({
           onChange={(e) => handleNumericInputChange('price', e.target.value)}
           className="w-24 rounded-md border-gray-300 p-1 text-center text-sm font-bold"
         />
+      </td>
+      <td className="px-6 py-3 text-center">
+        <button
+          disabled
+          className="text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <TrashIcon className="h-5 w-5" />
+        </button>
       </td>
     </tr>
   );
