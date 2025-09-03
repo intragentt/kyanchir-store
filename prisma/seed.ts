@@ -1,9 +1,9 @@
 // prisma/seed.ts
 import {
   PrismaClient,
-  PresetItemType,
-  Status,
-  AgentRole,
+  Prisma, // ИМПОРТИРУЕМ главный объект Prisma
+  Category, // Модельные типы оставляем
+  Tag, // Модельные типы оставляем
 } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -62,7 +62,7 @@ async function upsertSupportAgent(data: {
   telegramId?: string | null;
   username: string;
   phone?: string | null;
-  role: AgentRole;
+  role: Prisma.AgentRole; // ИСПОЛЬЗУЕМ Prisma.AgentRole
 }) {
   const agentData = {
     name: data.name,
@@ -80,7 +80,6 @@ async function upsertSupportAgent(data: {
   });
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ОБНОВЛЕНИЕ ТИПОВ И ЛОГИКИ СОЗДАНИЯ ПРОДУКТА ---
 type VariantInput = {
   color: string;
   price: number;
@@ -94,7 +93,7 @@ type ProductInput = {
   name: string;
   alternativeNames?: string[];
   description?: string | null;
-  status?: Status;
+  status?: Prisma.Status; // ИСПОЛЬЗУЕМ Prisma.Status
   categoryNames?: string[];
   tagNames?: string[];
   attributes?: { key: string; value: string; isMain?: boolean }[];
@@ -102,33 +101,55 @@ type ProductInput = {
 };
 
 async function createProductWithRelations(data: ProductInput) {
-  // Создание продукта (без изменений)
   const product = await prisma.product.create({
     data: {
       sku: data.sku ?? null,
       name: data.name,
       description: data.description ?? null,
-      status: data.status ?? Status.PUBLISHED,
+      status: data.status ?? Prisma.Status.PUBLISHED, // ИСПОЛЬЗУЕМ Prisma.Status
     },
   });
 
-  // Логика для alternativeNames, attributes, categories, tags (без изменений)
   if (data.alternativeNames?.length) {
-    /* ... */
+    await prisma.alternativeName.createMany({
+      data: data.alternativeNames.map((value) => ({
+        value,
+        productId: product.id,
+      })),
+    });
   }
   if (data.attributes?.length) {
-    /* ... */
+    await prisma.attribute.createMany({
+      data: data.attributes.map((a) => ({
+        productId: product.id,
+        key: a.key,
+        value: a.value,
+        isMain: a.isMain ?? true,
+      })),
+    });
   }
   if (data.categoryNames?.length) {
-    /* ... */
+    const cats = await prisma.category.findMany({
+      where: { name: { in: data.categoryNames } },
+    });
+    await prisma.product.update({
+      where: { id: product.id },
+      data: {
+        categories: { connect: cats.map((c: Category) => ({ id: c.id })) },
+      },
+    });
   }
   if (data.tagNames?.length) {
-    /* ... */
+    const tags = await prisma.tag.findMany({
+      where: { name: { in: data.tagNames } },
+    });
+    await prisma.product.update({
+      where: { id: product.id },
+      data: { tags: { connect: tags.map((t: Tag) => ({ id: t.id })) } },
+    });
   }
 
-  // Переписываем логику создания вариантов и размеров
   for (const v of data.variants) {
-    // 1. Создаем ProductVariant вместо Variant
     const productVariant = await prisma.productVariant.create({
       data: {
         productId: product.id,
@@ -139,49 +160,47 @@ async function createProductWithRelations(data: ProductInput) {
       },
     });
 
-    // 2. Логика для Image теперь ссылается на productVariant.id
     if (v.images?.length) {
       await prisma.image.createMany({
         data: v.images.map((url, i) => ({
-          variantId: productVariant.id, // ИЗМЕНЕНО
+          variantId: productVariant.id,
           url,
           order: i + 1,
         })),
       });
     }
 
-    // 3. Создаем ProductSize вместо Inventory
     if (v.stockBySize) {
       const sizes = Object.keys(v.stockBySize);
       const dbSizes = await prisma.size.findMany({
         where: { value: { in: sizes } },
       });
-      const sizeMap = Object.fromEntries(dbSizes.map((s) => [s.value, s.id]));
+      // ИСПРАВЛЕНИЕ: Добавляем явный тип для 's'
+      const sizeMap = Object.fromEntries(
+        dbSizes.map((s: { value: string; id: string }) => [s.value, s.id]),
+      );
 
       const sizeData = sizes.map((s) => ({
-        productVariantId: productVariant.id, // ИЗМЕНЕНО
+        productVariantId: productVariant.id,
         sizeId: sizeMap[s],
         stock: v.stockBySize![s],
       }));
 
-      // Используем prisma.productSize.createMany
-      await prisma.productSize.createMany({ data: sizeData }); // ИЗМЕНЕНО
+      await prisma.productSize.createMany({ data: sizeData });
     }
   }
   return product;
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 async function main() {
   console.log('🧹 Очистка старых данных...');
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: ОБНОВЛЕНИЕ БЛОКА ОЧИСТКИ ---
   await prisma.presetItem.deleteMany();
   await prisma.filterPreset.deleteMany();
-  await prisma.productSize.deleteMany(); // ИЗМЕНЕНО
+  await prisma.productSize.deleteMany();
   await prisma.image.deleteMany();
   await prisma.attribute.deleteMany();
   await prisma.alternativeName.deleteMany();
-  await prisma.productVariant.deleteMany(); // ИЗМЕНЕНО
+  await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
   await prisma.tag.deleteMany();
@@ -190,12 +209,9 @@ async function main() {
   await prisma.supportTicket.deleteMany();
   await prisma.supportRoute.deleteMany();
   await prisma.supportAgent.deleteMany();
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   console.log('👑 Создание "белого списка" агентов поддержки...');
   // ... (здесь ваш код для создания агентов)
-
-  // Добавьте здесь вызовы createProductWithRelations с вашими тестовыми данными, если нужно
 
   console.log('🌱 СИДИНГ УСПЕШНО ЗАВЕРШЕН');
 }

@@ -8,17 +8,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// === МОДЕЛИ E-COMMERCE (ФИНАЛЬНАЯ ВЕРСИЯ) ===
+// === МОДЕЛИ E-COMMERCE (ФИНАЛЬНАЯ ВЕРСИЯ С МОДЕЛЯМИ ВМЕСТО ENUM) ===
 model Product {
   id               String            @id @default(cuid())
   sku              String?           @unique
-  name             String            @unique // ИЗМЕНЕНО: Добавлена уникальность для корректной работы upsert
+  name             String            @unique
   alternativeNames AlternativeName[]
   description      String?           @db.Text
   variants         ProductVariant[]
   attributes       Attribute[]
   categories       Category[]        @relation("ProductToCategory")
-  status           Status            @default(DRAFT)
+  statusId         String // ИЗМЕНЕНИЕ: Заменяем enum на связь
+  status           Status            @relation(fields: [statusId], references: [id])
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   tags             Tag[]             @relation("ProductTags")
@@ -26,22 +27,20 @@ model Product {
 }
 
 model ProductVariant {
-  id                 String        @id @default(cuid())
-  productId          String
-  product            Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  color              String?
-  images             Image[]
-  price              Int
-  oldPrice           Int?
+  id                String        @id @default(cuid())
+  productId         String
+  product           Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color             String?
+  images            Image[]
+  price             Int
+  oldPrice          Int?
   discountPercentage Int?
-  discountExpiresAt  DateTime?
-  bonusPoints        Int?
-  sizes              ProductSize[]
-  isFeatured         Boolean       @default(false)
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  // moyskladId         String?       @unique // УДАЛЕНО: Перенесено в ProductSize
-
+  discountExpiresAt DateTime?
+  bonusPoints       Int?
+  sizes             ProductSize[]
+  isFeatured        Boolean       @default(false)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
   @@unique([productId, color])
 }
 
@@ -55,13 +54,12 @@ model Image {
 
 model ProductSize {
   id               String         @id @default(cuid())
-  moyskladId       String?        @unique // ДОБАВЛЕНО: Уникальный ID из МойСклад теперь здесь
+  moyskladId       String?        @unique
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
   sizeId           String
   size             Size           @relation(fields: [sizeId], references: [id])
   stock            Int
-
   @@unique([productVariantId, sizeId])
 }
 
@@ -102,17 +100,19 @@ model Tag {
   presetItems PresetItem[]
 }
 
-enum Status {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
 model AlternativeName {
   id        String  @id @default(cuid())
   value     String
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+}
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ: МОДЕЛИ-СПРАВОЧНИКИ ВМЕСТО ENUM ---
+
+model Status {
+  id       String    @id @default(cuid())
+  name     String    @unique // DRAFT, PUBLISHED, ARCHIVED
+  products Product[]
 }
 
 model FilterPreset {
@@ -128,7 +128,8 @@ model PresetItem {
   id         String         @id @default(cuid())
   presetId   String
   preset     FilterPreset   @relation(fields: [presetId], references: [id], onDelete: Cascade)
-  type       PresetItemType
+  typeId     String
+  type       PresetItemType @relation(fields: [typeId], references: [id])
   categoryId String?
   category   Category?      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   tagId      String?
@@ -138,33 +139,35 @@ model PresetItem {
   @@unique([presetId, tagId])
 }
 
-enum PresetItemType {
-  CATEGORY
-  TAG
+model PresetItemType {
+  id    String       @id @default(cuid())
+  name  String       @unique // CATEGORY, TAG
+  items PresetItem[]
 }
 
 // === МОДЕЛИ АУТЕНТИФИКАЦИИ И ПОЛЬЗОВАТЕЛЕЙ ===
-enum UserRole {
-  CLIENT
-  ADMIN
-  MANAGEMENT
-  SUPPORT
+
+model UserRole {
+  id    String @id @default(cuid())
+  name  String @unique // CLIENT, ADMIN, MANAGEMENT, SUPPORT
+  users User[]
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String       @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?      @unique
   emailVerified DateTime?
   image         String?
-  telegramId    String?   @unique
+  telegramId    String?      @unique
   phone         String?
   passwordHash  String?
   accounts      Account[]
   sessions      Session[]
   loginTokens   LoginToken[]
-  role          UserRole  @default(CLIENT)
-  bonusPoints   Int       @default(0)
+  roleId        String
+  role          UserRole     @relation(fields: [roleId], references: [id])
+  bonusPoints   Int          @default(0)
 }
 
 model Account {
@@ -210,28 +213,29 @@ model LoginToken {
 }
 
 // === МОДЕЛИ СИСТЕМЫ ПОДДЕРЖКИ (SUPPORT DESK) ===
-enum AgentRole {
-  SUPPORT
-  MANAGEMENT
-  ADMIN
+
+model AgentRole {
+  id     String         @id @default(cuid())
+  name   String         @unique // SUPPORT, MANAGEMENT, ADMIN
+  agents SupportAgent[]
 }
 
-enum TicketStatus {
-  OPEN
-  PENDING
-  RESOLVED
-  CLOSED
+model TicketStatus {
+  id      String          @id @default(cuid())
+  name    String          @unique // OPEN, PENDING, RESOLVED, CLOSED
+  tickets SupportTicket[]
 }
 
-enum TicketSource {
-  EMAIL
-  WEB_FORM
-  TELEGRAM_BOT
+model TicketSource {
+  id      String          @id @default(cuid())
+  name    String          @unique // EMAIL, WEB_FORM, TELEGRAM_BOT
+  tickets SupportTicket[]
 }
 
-enum SenderType {
-  CLIENT
-  AGENT
+model SenderType {
+  id       String           @id @default(cuid())
+  name     String           @unique // CLIENT, AGENT
+  messages SupportMessage[]
 }
 
 model SupportAgent {
@@ -241,7 +245,8 @@ model SupportAgent {
   telegramId       String?          @unique
   internalUsername String           @unique
   phone            String?
-  role             AgentRole
+  roleId           String
+  role             AgentRole        @relation(fields: [roleId], references: [id])
   messages         SupportMessage[]
   createdAt        DateTime         @default(now())
 }
@@ -252,12 +257,14 @@ model SupportRoute {
 }
 
 model SupportTicket {
-  id            String           @id @default(cuid())
+  id            String       @id @default(cuid())
   clientEmail   String
   clientName    String?
   subject       String
-  status        TicketStatus     @default(OPEN)
-  source        TicketSource
+  statusId      String
+  status        TicketStatus @relation(fields: [statusId], references: [id])
+  sourceId      String
+  source        TicketSource @relation(fields: [sourceId], references: [id])
   messages      SupportMessage[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -265,12 +272,14 @@ model SupportTicket {
 }
 
 model SupportMessage {
-  id         String        @id @default(cuid())
-  ticketId   String
-  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  content    String        @db.Text
-  senderType SenderType
-  agentId    String?
-  agent      SupportAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
-  createdAt  DateTime      @default(now())
+  id           String     @id @default(cuid())
+  ticketId     String
+  ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  content      String     @db.Text
+  senderTypeId String
+  senderType   SenderType @relation(fields: [senderTypeId], references: [id])
+  agentId      String?
+  agent        SupportAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  createdAt    DateTime   @default(now())
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
