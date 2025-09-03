@@ -8,7 +8,10 @@ import toast, { Toaster } from 'react-hot-toast';
 
 import type { ProductForTable } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Исправляем путь импорта, чтобы он соответствовал новой структуре, которую мы создадим.
 import { ProductTableRow } from './product-table/ProductTableRow';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type FilterPresetWithItems = Prisma.FilterPresetGetPayload<{
   include: { items: { include: { category: true; tag: true } } };
@@ -67,10 +70,6 @@ export default function ProductTable({
   const handleSync = async () => {
     setIsSyncing(true);
     toast.loading('Синхронизация со складом...', { id: 'sync' });
-
-    // Сначала чистим, чтобы не было дублей.
-    // Создадим API для этого
-    // await fetch('/api/admin/clear-data', { method: 'POST' });
 
     await fetch('/api/admin/sync/categories', { method: 'POST' });
     await fetch('/api/admin/sync/products', { method: 'POST' });

@@ -1,22 +1,34 @@
 // Местоположение: src/components/admin/edit-product-form/SizeManager.tsx
 'use client';
 
-import { Inventory, Size } from '@prisma/client';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ИМПОРТИРУЕМ НУЖНЫЕ ТИПЫ ---
+import { Prisma, Size } from '@prisma/client';
+
+// Определяем тип для одного элемента массива размеров, который приходит из родителя
+type ProductSizeWithDetails = Prisma.ProductSizeGetPayload<{
+  include: {
+    size: true;
+  };
+}>;
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface SizeManagerProps {
   allSizes: Size[];
-  inventory: Inventory[];
-  onInventoryChange: (sizeId: string, stock: number) => void;
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: МЕНЯЕМ `Inventory[]` НА НОВЫЙ ТИП И НАЗВАНИЯ ---
+  sizes: ProductSizeWithDetails[];
+  onSizeUpdate: (sizeId: string, stock: number) => void;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
 export default function SizeManager({
   allSizes,
-  inventory,
-  onInventoryChange,
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ НОВЫЕ ПРОПСЫ ---
+  sizes,
+  onSizeUpdate,
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }: SizeManagerProps) {
-  // Временно используем статичные данные, пока не будет модели для сеток
+  // Эта логика остается для будущего
   const allSizeGrids = ['Одежда (S, M, L, XL)', 'Обувь (36-42)'];
-  // Временно всегда выбираем первую сетку
   const selectedSizeGrid = allSizeGrids[0];
 
   return (
@@ -25,7 +37,6 @@ export default function SizeManager({
         Размеры и остатки
       </div>
 
-      {/* VVV--- ВОЗВРАЩАЕМ БЛОК С ВЫБОРОМ СЕТКИ ---VVV */}
       <div className="mt-4">
         <label
           htmlFor="size-grid"
@@ -36,9 +47,8 @@ export default function SizeManager({
         <select
           id="size-grid"
           value={selectedSizeGrid}
-          // Логика смены сеток пока не реализована, поэтому список неактивен
           disabled
-          className="mt-1 block w-full max-w-xs rounded-md border-gray-300 bg-gray-50 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-opacity-50 sm:text-sm"
+          className="disabled:bg-opacity-50 mt-1 block w-full max-w-xs rounded-md border-gray-300 bg-gray-50 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed sm:text-sm"
         >
           {allSizeGrids.map((grid) => (
             <option key={grid} value={grid}>
@@ -48,12 +58,12 @@ export default function SizeManager({
         </select>
       </div>
 
-      {/* VVV--- ВОЗВРАЩАЕМ ПОЛЯ ДЛЯ ВВОДА ОСТАТКОВ ---VVV */}
       <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
         {allSizes.map((size) => {
-          // Ищем текущий остаток для этого размера
+          // --- НАЧАЛО ИЗМЕНЕНИЙ: ИЩЕМ ОСТАТОК В НОВОМ МАССИВЕ `sizes` ---
           const currentStock =
-            inventory.find((item) => item.sizeId === size.id)?.stock ?? '';
+            sizes.find((item) => item.sizeId === size.id)?.stock ?? '';
+          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
           return (
             <div key={size.id}>
@@ -70,9 +80,10 @@ export default function SizeManager({
                 min="0"
                 value={currentStock}
                 onChange={(e) => {
-                  // При изменении вызываем функцию из родителя
+                  // --- НАЧАЛО ИЗМЕНЕНИЙ: ВЫЗЫВАЕМ НОВУЮ ФУНКЦИЮ `onSizeUpdate` ---
                   const newStock = parseInt(e.target.value, 10) || 0;
-                  onInventoryChange(size.id, newStock);
+                  onSizeUpdate(size.id, newStock);
+                  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
                 }}
                 placeholder="0"
                 className="user-select-text mt-1 block w-full rounded-md border-gray-300 bg-gray-50 p-2 text-center shadow-sm focus:border-indigo-500 focus:ring-indigo-500"

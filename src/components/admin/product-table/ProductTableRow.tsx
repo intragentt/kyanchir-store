@@ -6,16 +6,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Prisma, Category, Tag } from '@prisma/client';
 
-import { formatPrice } from '@/utils/formatPrice';
 import type { ProductForTable } from '@/app/admin/dashboard/page';
-
-// --- НАЧАЛО ИСПРАВЛЕНИЯ: ТОЧЕЧНЫЕ ИМПОРТЫ ДЛЯ КАЖДОЙ ИКОНКИ ---
 import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { PencilIcon } from '@/components/icons/PencilIcon';
-// --- КОНЕЦ ИСПРАВЛЕНИЯ ---
-import { VariantRow } from './VariantRow';
-import { ProductDetailsPanel } from './ProductDetailsPanel';
+import { VariantRow } from './VariantRow'; // Мы адаптируем этот компонент на следующем шаге
+
+// import { ProductDetailsPanel } from './ProductDetailsPanel'; // Панель деталей пока отключим
 
 type ProductStatus = ProductForTable['status'];
 const statusConfig: Record<
@@ -34,99 +31,42 @@ interface ProductTableRowProps {
 }
 
 export const ProductTableRow = ({
-  product: initialProduct,
+  product,
   allCategories,
   allTags,
 }: ProductTableRowProps) => {
-  const [productState, setProductState] = useState(initialProduct);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
-  const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(
-    new Set(),
-  );
 
-  const handleVariantUpdate = (
-    variantId: string,
-    updatedData: Partial<Prisma.VariantGetPayload<{}>>,
-  ) => {
-    setProductState((prevState) => ({
-      ...prevState,
-      variants: prevState.variants.map((v) =>
-        v.id === variantId ? { ...v, ...updatedData } : v,
-      ),
-    }));
-  };
-
-  const handleProductUpdate = (
-    productId: string,
-    updatedData: Partial<Prisma.ProductGetPayload<{}>>,
-  ) => {
-    setProductState((prevState) => ({
-      ...prevState,
-      ...updatedData,
-    }));
-  };
-
-  const handleSelectVariant = (variantId: string, isSelected: boolean) => {
-    setSelectedVariantIds((prev) => {
-      const newSet = new Set(prev);
-      if (isSelected) newSet.add(variantId);
-      else newSet.delete(variantId);
-      return newSet;
-    });
-  };
-
-  const handleSelectAllVariants = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedVariantIds(new Set(productState.variants.map((v) => v.id)));
-    } else {
-      setSelectedVariantIds(new Set());
-    }
-  };
-
-  const totalStock = productState.variants.reduce(
-    (acc, v) => acc + v.inventory.reduce((sum, i) => sum + i.stock, 0),
+  // Считаем сводные данные по продукту, используя новую структуру данных
+  const totalStock = product.variants.reduce(
+    (sum, variant) =>
+      sum + variant.sizes.reduce((s, size) => s + size.stock, 0),
     0,
   );
 
   const priceRange = () => {
-    const prices = productState.variants
-      .map((v) => v.price)
-      .filter((p) => p !== null) as number[];
-    if (prices.length === 0) return formatPrice(0);
+    const prices = product.variants.map((v) => v.price).filter((p) => p > 0);
+    if (prices.length === 0) return '0 RUB';
     const minPrice = Math.min(...prices);
     const maxPrice = Math.max(...prices);
-    if (minPrice === maxPrice) return formatPrice(minPrice);
-    return {
-      value: `${formatPrice(minPrice)?.value} - ${formatPrice(maxPrice)?.value}`,
-      currency: 'RUB',
-    };
+    if (minPrice === maxPrice) return `${minPrice} RUB`;
+    return `${minPrice} - ${maxPrice} RUB`;
   };
-  const formattedPrice = priceRange();
-
-  const areAllVariantsSelected =
-    selectedVariantIds.size === productState.variants.length &&
-    productState.variants.length > 0;
-  const isPartiallySelected =
-    selectedVariantIds.size > 0 && !areAllVariantsSelected;
 
   const rowClassName =
     isExpanded || isDetailsExpanded ? 'bg-indigo-50/50' : 'bg-white';
 
   return (
     <Fragment>
+      {/* Главная строка продукта. Отвечает только за сводную информацию. */}
       <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
         <td className="flex w-24 items-center gap-2 px-4 py-4">
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            checked={areAllVariantsSelected}
-            ref={(input) => {
-              if (input) input.indeterminate = isPartiallySelected;
-            }}
-            onChange={handleSelectAllVariants}
           />
-          {productState.variants.length > 0 && (
+          {product.variants.length > 0 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className={`rounded-md p-1 hover:bg-gray-200 ${isExpanded ? 'bg-indigo-100 text-indigo-700' : ''}`}
@@ -143,19 +83,15 @@ export const ProductTableRow = ({
           <div className="flex items-center">
             <div className="grid flex-shrink-0 grid-cols-2 gap-1">
               <Image
-                src={
-                  productState.variants[0]?.images[0]?.url || '/placeholder.png'
-                }
-                alt={`${productState.name} фото 1`}
+                src={product.variants[0]?.images[0]?.url || '/placeholder.png'}
+                alt={`${product.name} фото 1`}
                 width={40}
                 height={50}
                 className="h-12 w-9 rounded object-cover"
               />
               <Image
-                src={
-                  productState.variants[0]?.images[1]?.url || '/placeholder.png'
-                }
-                alt={`${productState.name} фото 2`}
+                src={product.variants[0]?.images[1]?.url || '/placeholder.png'}
+                alt={`${product.name} фото 2`}
                 width={40}
                 height={50}
                 className="h-12 w-9 rounded object-cover"
@@ -163,10 +99,10 @@ export const ProductTableRow = ({
             </div>
             <div className="ml-4">
               <div className="text-sm font-medium text-gray-900">
-                {productState.name}
+                {product.name}
               </div>
               <div className="text-xs text-gray-500">
-                {productState.variants.length} вариант(а)
+                {product.variants.length} вариант(а)
               </div>
               <button
                 onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
@@ -179,23 +115,23 @@ export const ProductTableRow = ({
           </div>
         </td>
         <td className="px-6 py-4 text-xs">
-          {productState.categories.map((c) => c.name).join(' / ')}
+          {product.categories.map((c) => c.name).join(' / ')}
         </td>
         <td className="px-6 py-4">
           <span className="inline-flex items-center gap-x-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${statusConfig[productState.status]?.dotClassName}`}
+              className={`h-1.5 w-1.5 rounded-full ${statusConfig[product.status]?.dotClassName}`}
             />
-            {statusConfig[productState.status]?.label || productState.status}
+            {statusConfig[product.status]?.label || product.status}
           </span>
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm font-bold">
-          {formattedPrice?.value} RUB
+          {priceRange()}
         </td>
         <td className="px-6 py-4 text-right">
           <Link
-            href={`/admin/products/${productState.id}/edit`}
+            href={`/admin/products/${product.id}/edit`}
             className="text-sm text-indigo-600"
           >
             Ред.
@@ -203,52 +139,30 @@ export const ProductTableRow = ({
         </td>
       </tr>
 
-      {isDetailsExpanded && <ProductDetailsPanel product={productState} />}
+      {/* {isDetailsExpanded && <ProductDetailsPanel product={product} />} */}
 
+      {/* Раскрывающаяся часть, которая рендерит дочерние компоненты VariantRow */}
       {isExpanded && (
         <tr>
-          <td colSpan={8} className="p-0">
+          <td colSpan={7} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 <thead className="text-xs text-gray-500 uppercase">
                   <tr>
-                    <th className="w-12 px-1 py-2 text-center"></th>
-                    <th colSpan={2} className="px-6 py-2 text-left">
-                      Вариант
-                    </th>
-                    <th className="px-6 py-2 text-center">Бонусы</th>
-                    <th className="px-6 py-2 text-center">Старая цена</th>
-                    <th className="px-6 py-2 text-center">Скидка, %</th>
-                    <th className="px-6 py-2 text-center">Акция до</th>
-                    <th className="px-6 py-2 text-center">Цена</th>
-                    <th className="px-6 py-2 text-center"></th>
+                    <th className="w-24 px-4 py-2 text-left"></th>
+                    <th className="px-6 py-2 text-left">Вариант</th>
+                    <th className="px-6 py-2 text-left"></th>
+                    <th className="w-40 px-6 py-2 text-center">Остатки</th>
+                    <th className="w-40 px-6 py-2 text-center">Цена</th>
+                    <th className="w-24 px-6 py-2 text-center"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {productState.variants.map((variant) => (
-                    <VariantRow
-                      key={variant.id}
-                      product={productState}
-                      variant={variant}
-                      isSelected={selectedVariantIds.has(variant.id)}
-                      isEdited={false}
-                      onSelectOne={handleSelectVariant}
-                      onVariantUpdate={handleVariantUpdate}
-                      onProductUpdate={handleProductUpdate}
-                      allCategories={allCategories}
-                      allTags={allTags}
-                    />
+                  {product.variants.map((variant) => (
+                    <VariantRow key={variant.id} variant={variant} />
                   ))}
                 </tbody>
               </table>
-              <div className="flex items-center gap-x-4 px-6 py-3">
-                <button className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
-                  + Добавить вариант
-                </button>
-                <button className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
-                  + Добавить размер
-                </button>
-              </div>
             </div>
           </td>
         </tr>

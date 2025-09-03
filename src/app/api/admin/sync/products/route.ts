@@ -7,7 +7,9 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 
-// --- ИНТЕРФЕЙСЫ И ХЕЛПЕРЫ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: НОВЫЕ ИНТЕРФЕЙСЫ И ХЕЛПЕРЫ ---
+
+// Интерфейсы для данных из МойСклад
 interface MoySkladPrice {
   value: number;
   priceType: { name: string };
@@ -20,26 +22,60 @@ interface MoySkladProduct {
   salePrices?: MoySkladPrice[];
 }
 
+// Хелпер для извлечения UUID из URL
 function getUUIDFromHref(href: string): string {
   const pathPart = href.split('/').pop() || '';
-  const uuid = pathPart.split('?')[0];
-  return uuid;
+  return pathPart.split('?')[0];
 }
 
+// Новый умный парсер для названий из МойСклад
 interface ParsedProductInfo {
-  baseName: string;
+  productName: string;
+  variantName: string;
   size: string | null;
 }
-function parseProductName(name: string): ParsedProductInfo {
-  const sizeMatch = name.match(/\s+\((S|M|L|XS|XL|XXL)\)$/);
+
+function parseMoySkladName(name: string): ParsedProductInfo {
+  // 1. Извлекаем размер в скобках в конце строки
+  const sizeMatch = name.match(/\s+\((S|M|L|XS|XL|XXL|ONE_SIZE)\)$/i);
+  let nameWithoutSize = name.trim();
+  const size = sizeMatch ? sizeMatch[1].toUpperCase() : null;
   if (sizeMatch) {
-    const baseName = name.replace(sizeMatch[0], '').trim();
-    const size = sizeMatch[1];
-    return { baseName, size };
+    nameWithoutSize = name.replace(sizeMatch[0], '').trim();
   }
-  return { baseName: name.trim(), size: null };
+
+  // 2. Извлекаем цвет из оставшейся строки (можно расширять список)
+  const colors = [
+    'черный',
+    'белый',
+    'красный',
+    'синий',
+    'зеленый',
+    'бежевый',
+    'розовый',
+    'голубой',
+    'серый',
+    'коричневый',
+    'фиолетовый',
+    'оранжевый',
+  ];
+  let productName = nameWithoutSize;
+  let variantName = 'Основной'; // Имя варианта по умолчанию
+
+  for (const color of colors) {
+    const regex = new RegExp(`\\s+${color}$`, 'i');
+    if (regex.test(nameWithoutSize)) {
+      productName = nameWithoutSize.replace(regex, '').trim();
+      variantName = color.charAt(0).toUpperCase() + color.slice(1);
+      break;
+    }
+  }
+
+  return { productName, variantName, size };
 }
-interface GroupedProductVariant {
+
+// Интерфейс для хранения данных о конкретном размере
+interface ProductSizeData {
   moyskladId: string;
   size: string | null;
   description?: string;
@@ -48,8 +84,9 @@ interface GroupedProductVariant {
   stock: number;
 }
 
+// Главная функция синхронизации (полностью переработана)
 async function runSync() {
-  console.log('1/4: Получение товаров и остатков из МойСклад...');
+  console.log('1/5: Получение товаров и остатков из МойСклад...');
   const [moySkladResponse, stockResponse] = await Promise.all([
     getMoySkladProducts(),
     getMoySkladStock(),
@@ -65,6 +102,7 @@ async function runSync() {
     };
   }
 
+  // Создаем карту остатков, как и раньше
   const stockMap = new Map<string, number>();
   stockData.forEach((item) => {
     const assortmentId = getUUIDFromHref(item.meta.href);
@@ -75,28 +113,42 @@ async function runSync() {
   });
 
   console.log(
-    `2/4: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockData.length} (уникальных: ${stockMap.size}).`,
+    `2/5: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockData.length}.`,
   );
 
-  const groupedProducts = new Map<string, GroupedProductVariant[]>();
+  // Новая вложенная структура для группировки: Продукт -> Вариант (цвет) -> Массив размеров
+  const groupedProducts = new Map<string, Map<string, ProductSizeData[]>>();
+
   for (const product of moySkladProducts) {
-    const stockValue = stockMap.get(product.id) || 0;
-    const { baseName, size } = parseProductName(product.name);
-    if (!groupedProducts.has(baseName)) groupedProducts.set(baseName, []);
-    groupedProducts.get(baseName)!.push({
+    const { productName, variantName, size } = parseMoySkladName(product.name);
+
+    // Инициализируем вложенные карты, если их нет
+    if (!groupedProducts.has(productName)) {
+      groupedProducts.set(productName, new Map<string, ProductSizeData[]>());
+    }
+    const productVariants = groupedProducts.get(productName)!;
+
+    if (!productVariants.has(variantName)) {
+      productVariants.set(variantName, []);
+    }
+    const variantSizes = productVariants.get(variantName)!;
+
+    variantSizes.push({
       moyskladId: product.id,
       size,
       description: product.description,
       productFolder: product.productFolder,
       rawSalePrices: product.salePrices,
-      stock: stockValue,
+      stock: stockMap.get(product.id) || 0,
     });
   }
 
   console.log(
-    `3/4: Товары сгруппированы. Уникальных продуктов: ${groupedProducts.size}. Начинаем запись в БД...`,
+    `3/5: Товары сгруппированы. Уникальных продуктов: ${groupedProducts.size}.`,
   );
+  console.log('4/5: Начинаем запись в БД...');
 
+  // Кэшируем категории, как и раньше
   const categoryMap = new Map<string, string>();
   const allOurCategories = await prisma.category.findMany({
     select: { id: true, moyskladId: true },
@@ -105,107 +157,116 @@ async function runSync() {
     (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
   );
 
-  for (const [baseName, variants] of groupedProducts.entries()) {
-    const firstVariant = variants[0];
-    const categoryMoySkladId = firstVariant.productFolder
-      ? getUUIDFromHref(firstVariant.productFolder.meta.href)
+  let totalProductsSynced = 0;
+
+  // Новый цикл для обхода вложенной структуры
+  for (const [productName, variantsMap] of groupedProducts.entries()) {
+    // --- Уровень 1: Создание/обновление Продукта ---
+    const firstVariantData = Array.from(variantsMap.values())[0][0];
+    const categoryMoySkladId = firstVariantData.productFolder
+      ? getUUIDFromHref(firstVariantData.productFolder.meta.href)
       : null;
     const ourCategoryId = categoryMoySkladId
       ? categoryMap.get(categoryMoySkladId)
       : undefined;
 
-    let product = await prisma.product.findFirst({ where: { name: baseName } });
-    if (!product) {
-      product = await prisma.product.create({
-        data: {
-          name: baseName,
-          description: firstVariant.description || '',
-          categories: ourCategoryId
-            ? { connect: { id: ourCategoryId } }
-            : undefined,
-        },
-      });
-    }
+    const product = await prisma.product.upsert({
+      where: { name: productName },
+      update: {
+        description: firstVariantData.description || '',
+        categories: ourCategoryId
+          ? { set: [{ id: ourCategoryId }] }
+          : undefined,
+      },
+      create: {
+        name: productName,
+        description: firstVariantData.description || '',
+        categories: ourCategoryId
+          ? { connect: { id: ourCategoryId } }
+          : undefined,
+      },
+    });
 
-    for (const variantData of variants) {
-      // --- НАЧАЛО ИЗМЕНЕНИЙ: ЛОГИКА ОБРАБОТКИ СКИДОК ---
+    for (const [variantName, sizesArray] of variantsMap.entries()) {
+      // --- Уровень 2: Создание/обновление Варианта Продукта (цвета) ---
+      const representativeSize = sizesArray[0]; // Берем данные из первого размера для варианта
 
+      // Логика обработки цен и скидок (остается без изменений)
       let currentPrice = 0;
       let oldPrice: number | null = null;
-
-      // 1. Ищем в массиве цен объект с типом "Скидка"
-      const salePriceObj = (variantData.rawSalePrices || []).find(
-        (p) => p.priceType.name === 'Скидка',
-      );
-
-      // 2. Ищем в массиве цен объект с типом "Цена продажи"
-      const regularPriceObj = (variantData.rawSalePrices || []).find(
+      const regularPriceObj = (representativeSize.rawSalePrices || []).find(
         (p) => p.priceType.name === 'Цена продажи',
       );
-
-      // 3. Получаем числовые значения, если они есть.
+      const salePriceObj = (representativeSize.rawSalePrices || []).find(
+        (p) => p.priceType.name === 'Скидка',
+      );
       const regularPriceValue = regularPriceObj
         ? Math.round(regularPriceObj.value)
         : 0;
       const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
 
-      // 4. Применяем бизнес-логику
-      // Если цена со скидкой существует, больше 0 и меньше обычной цены...
       if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
-        // ...то товар акционный.
-        currentPrice = salePriceValue; // Текущая цена = цена со скидкой
-        oldPrice = regularPriceValue; // Старая цена = обычная цена
+        currentPrice = salePriceValue;
+        oldPrice = regularPriceValue;
       } else {
-        // ...иначе товар продается по обычной цене.
         currentPrice =
           regularPriceValue > 0 ? regularPriceValue : salePriceValue;
-        oldPrice = null; // Старой цены нет
+        oldPrice = null;
       }
 
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
-      const variant = await prisma.variant.upsert({
-        where: { moyskladId: variantData.moyskladId },
+      const productVariant = await prisma.productVariant.upsert({
+        where: {
+          productId_color: { productId: product.id, color: variantName },
+        },
         update: {
           price: currentPrice,
           oldPrice: oldPrice,
-          productId: product.id,
         },
         create: {
+          product: { connect: { id: product.id } },
+          color: variantName,
           price: currentPrice,
           oldPrice: oldPrice,
-          product: { connect: { id: product.id } },
-          moyskladId: variantData.moyskladId,
         },
       });
 
-      const sizeValue = variantData.size || 'ONE_SIZE';
-      const sizeRecord = await prisma.size.upsert({
-        where: { value: sizeValue },
-        update: {},
-        create: { value: sizeValue },
-      });
+      for (const sizeData of sizesArray) {
+        // --- Уровень 3: Создание/обновление Размера Продукта ---
+        const sizeValue = sizeData.size || 'ONE_SIZE';
+        const sizeRecord = await prisma.size.upsert({
+          where: { value: sizeValue },
+          update: {},
+          create: { value: sizeValue },
+        });
 
-      await prisma.inventory.upsert({
-        where: {
-          variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
-        },
-        update: { stock: variantData.stock },
-        create: {
-          variantId: variant.id,
-          sizeId: sizeRecord.id,
-          stock: variantData.stock,
-        },
-      });
+        // Здесь мы используем moyskladId для уникальной идентификации размера
+        await prisma.productSize.upsert({
+          where: { moyskladId: sizeData.moyskladId },
+          update: {
+            stock: sizeData.stock,
+            productVariantId: productVariant.id,
+            sizeId: sizeRecord.id,
+          },
+          create: {
+            moyskladId: sizeData.moyskladId,
+            stock: sizeData.stock,
+            productVariant: { connect: { id: productVariant.id } },
+            size: { connect: { id: sizeRecord.id } },
+          },
+        });
+      }
     }
+    totalProductsSynced++;
   }
 
-  console.log('4/4: Синхронизация завершена успешно.');
+  console.log('5/5: Синхронизация завершена успешно.');
   return {
     message: `Синхронизация успешно завершена.`,
-    synchronizedProducts: groupedProducts.size,
+    synchronizedProducts: totalProductsSynced,
   };
 }
+
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 // === GET (Cron Job) и POST (кнопка) обработчики (без изменений) ===
 export async function GET(req: NextRequest) {
@@ -219,7 +280,7 @@ export async function GET(req: NextRequest) {
     console.log('[CRON SYNC] Запуск синхронизации продуктов по расписанию...');
     const result = await runSync();
     console.log(
-      `[CRON SYNC] Синхронизация завершена. Обработано: ${result.synchronizedProducts} шт.`,
+      `[CRON SYNC] Синхронизация завершена. Обработано: ${result.synchronizedProducts} продуктов.`,
     );
     return NextResponse.json(result);
   } catch (error) {
@@ -246,7 +307,7 @@ export async function POST(req: NextRequest) {
     );
     const result = await runSync();
     console.log(
-      `[MANUAL SYNC] Синхронизация успешно завершена. Обработано: ${result.synchronizedProducts} шт.`,
+      `[MANUAL SYNC] Синхронизация успешно завершена. Обработано: ${result.synchronizedProducts} продуктов.`,
     );
     return NextResponse.json(result);
   } catch (error) {

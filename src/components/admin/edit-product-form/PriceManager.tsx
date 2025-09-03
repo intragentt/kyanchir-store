@@ -1,36 +1,34 @@
 // Местоположение: src/components/admin/edit-product-form/PriceManager.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Упрощаем Props ---
+// Компонент теперь получает все данные и функции для их изменения от родителя
 interface PriceManagerProps {
   price: number;
   oldPrice: number | null;
   bonusPoints: number | null;
-  onPriceChange: (field: string, value: number | null) => void;
-  discountTimerEnabled: boolean;
-  onDiscountTimerToggle: (enabled: boolean) => void;
-  discountHours: number;
-  onDiscountHoursChange: (hours: number) => void;
-  // VVV--- ИЗМЕНЕНИЕ: Добавляем пропсы для минут ---VVV
-  discountMinutes: number;
-  onDiscountMinutesChange: (minutes: number) => void;
+  discountExpiresAt: Date | null;
+  onUpdate: (field: string, value: number | null | Date) => void;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function PriceManager({
   price,
   oldPrice,
   bonusPoints,
-  onPriceChange,
-  discountTimerEnabled,
-  onDiscountTimerToggle,
-  discountHours,
-  onDiscountHoursChange,
-  discountMinutes,
-  onDiscountMinutesChange,
+  discountExpiresAt,
+  onUpdate,
 }: PriceManagerProps) {
-  const [hasDiscount, setHasDiscount] = useState(!!oldPrice);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишние состояния, оставляем только расчеты ---
+  const hasDiscount = oldPrice !== null && oldPrice > 0;
   const [discountPercentage, setDiscountPercentage] = useState(0);
+
+  // Состояние для полей таймера
+  const [hours, setHours] = useState(24);
+  const [minutes, setMinutes] = useState(0);
+  const [isTimerEnabled, setIsTimerEnabled] = useState(!!discountExpiresAt);
 
   useEffect(() => {
     const basePrice = oldPrice || price;
@@ -43,14 +41,41 @@ export default function PriceManager({
   }, [price, oldPrice, hasDiscount]);
 
   const handleDiscountToggle = (isChecked: boolean) => {
-    setHasDiscount(isChecked);
     if (isChecked) {
-      onPriceChange('oldPrice', price);
+      // При включении скидки, текущая цена становится старой
+      onUpdate('oldPrice', price);
     } else {
-      onPriceChange('oldPrice', null);
-      onDiscountTimerToggle(false);
+      // При выключении, цена возвращается к старой, а старая сбрасывается
+      onUpdate('price', oldPrice || price);
+      onUpdate('oldPrice', null);
+      onUpdate('discountExpiresAt', null); // И выключаем таймер
+      setIsTimerEnabled(false);
     }
   };
+
+  const handleTimerToggle = (isChecked: boolean) => {
+    setIsTimerEnabled(isChecked);
+    if (!isChecked) {
+      onUpdate('discountExpiresAt', null);
+    } else {
+      // При включении таймера - устанавливаем его значение
+      const totalMilliseconds = hours * 60 * 60 * 1000 + minutes * 60 * 1000;
+      onUpdate('discountExpiresAt', new Date(Date.now() + totalMilliseconds));
+    }
+  };
+
+  const handleTimeChange = (type: 'hours' | 'minutes', value: number) => {
+    const newHours = type === 'hours' ? value : hours;
+    const newMinutes = type === 'minutes' ? value : minutes;
+    setHours(newHours);
+    setMinutes(newMinutes);
+    if (isTimerEnabled) {
+      const totalMilliseconds =
+        newHours * 60 * 60 * 1000 + newMinutes * 60 * 1000;
+      onUpdate('discountExpiresAt', new Date(Date.now() + totalMilliseconds));
+    }
+  };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <div className="rounded-lg border bg-white p-6">
@@ -70,10 +95,8 @@ export default function PriceManager({
               type="number"
               id="price"
               readOnly={hasDiscount}
-              value={hasDiscount ? oldPrice || '' : price || ''}
-              onChange={(e) =>
-                onPriceChange('price', parseInt(e.target.value, 10))
-              }
+              value={hasDiscount ? (oldPrice ?? '') : (price ?? '')}
+              onChange={(e) => onUpdate('price', parseInt(e.target.value, 10))}
               className={`mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 ${hasDiscount ? 'cursor-not-allowed bg-gray-200' : 'bg-gray-50'}`}
             />
           </div>
@@ -103,9 +126,9 @@ export default function PriceManager({
                 <input
                   type="number"
                   id="newPrice"
-                  value={price || ''}
+                  value={price ?? ''}
                   onChange={(e) =>
-                    onPriceChange('price', parseInt(e.target.value, 10))
+                    onUpdate('price', parseInt(e.target.value, 10))
                   }
                   className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                 />
@@ -119,21 +142,19 @@ export default function PriceManager({
                 </div>
               </div>
             </div>
-
             <div className="pt-2">
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  checked={discountTimerEnabled}
-                  onChange={(e) => onDiscountTimerToggle(e.target.checked)}
+                  checked={isTimerEnabled}
+                  onChange={(e) => handleTimerToggle(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-sm font-medium text-gray-700">
                   Установить таймер на скидку
                 </span>
               </label>
-              {discountTimerEnabled && (
-                // VVV--- ИЗМЕНЕНИЕ: Добавляем поле для минут ---VVV
+              {isTimerEnabled && (
                 <div className="mt-2 grid grid-cols-2 gap-4">
                   <div>
                     <label
@@ -145,9 +166,9 @@ export default function PriceManager({
                     <input
                       type="number"
                       id="discountHours"
-                      value={discountHours || ''}
+                      value={hours}
                       onChange={(e) =>
-                        onDiscountHoursChange(parseInt(e.target.value, 10))
+                        handleTimeChange('hours', parseInt(e.target.value, 10))
                       }
                       className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
@@ -162,9 +183,12 @@ export default function PriceManager({
                     <input
                       type="number"
                       id="discountMinutes"
-                      value={discountMinutes || ''}
+                      value={minutes}
                       onChange={(e) =>
-                        onDiscountMinutesChange(parseInt(e.target.value, 10))
+                        handleTimeChange(
+                          'minutes',
+                          parseInt(e.target.value, 10),
+                        )
                       }
                       className="mt-1 block w-full rounded-md border-gray-300 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     />
@@ -185,9 +209,9 @@ export default function PriceManager({
           <input
             type="number"
             id="bonusPoints"
-            value={bonusPoints || ''}
+            value={bonusPoints ?? ''}
             onChange={(e) =>
-              onPriceChange('bonusPoints', parseInt(e.target.value, 10))
+              onUpdate('bonusPoints', parseInt(e.target.value, 10))
             }
             placeholder="Например, 150"
             className="mt-1 block w-full rounded-md border-gray-300 bg-gray-50 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"

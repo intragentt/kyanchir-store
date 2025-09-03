@@ -6,17 +6,22 @@ import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+
+// 1. Обновляем тип, чтобы он соответствовал новой схеме
 export type ProductForTable = Prisma.ProductGetPayload<{
   include: {
     categories: true;
     tags: true;
     attributes: true;
     variants: {
+      // Теперь это ProductVariant (например, по цвету)
       include: {
         images: true;
-        inventory: {
+        sizes: {
+          // Внутри варианта теперь лежат размеры (ProductSize)
           include: {
-            size: true;
+            size: true; // А внутри размера - сама модель Size (S, M, L)
           };
         };
       };
@@ -24,20 +29,14 @@ export type ProductForTable = Prisma.ProductGetPayload<{
   };
 }>;
 
-const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const sortVariantsBySize = (variants: any[]) => {
-  return variants.sort((a, b) => {
-    const sizeA = a.inventory[0]?.size.value;
-    const sizeB = b.inventory[0]?.size.value;
-    const indexA = sizeA ? sizeOrder.indexOf(sizeA) : Infinity;
-    const indexB = sizeB ? sizeOrder.indexOf(sizeB) : Infinity;
-    return indexA - indexB;
-  });
-};
+// 2. Старая функция сортировки больше не нужна, так как 'variants' - это цвета, а не размеры.
+// const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+// const sortVariantsBySize = (variants: any[]) => { ... };
 
 export default async function DashboardPage() {
   const [allProducts, allCategories, allTags, filterPresets] =
     await Promise.all([
+      // 3. Обновляем главный запрос к базе данных
       prisma.product.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
@@ -45,10 +44,16 @@ export default async function DashboardPage() {
           tags: true,
           attributes: true,
           variants: {
+            // Загружаем варианты (цвета)
             orderBy: { createdAt: 'asc' },
             include: {
               images: { orderBy: { order: 'asc' } },
-              inventory: { include: { size: true } },
+              sizes: {
+                // Для каждого варианта загружаем его размеры
+                include: {
+                  size: true, // И информацию о самом размере (S, M, L)
+                },
+              },
             },
           },
         },
@@ -66,9 +71,11 @@ export default async function DashboardPage() {
       }),
     ]);
 
-  allProducts.forEach((product) => {
-    sortVariantsBySize(product.variants);
-  });
+  // 4. Удаляем вызов старой сортировки
+  // allProducts.forEach((product) => {
+  //   sortVariantsBySize(product.variants);
+  // });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>

@@ -8,14 +8,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// === МОДЕЛИ E-COMMERCE ===
+// === МОДЕЛИ E-COMMERCE (ФИНАЛЬНАЯ ВЕРСИЯ) ===
 model Product {
   id               String            @id @default(cuid())
   sku              String?           @unique
-  name             String
+  name             String            @unique // ИЗМЕНЕНО: Добавлена уникальность для корректной работы upsert
   alternativeNames AlternativeName[]
   description      String?           @db.Text
-  variants         Variant[]
+  variants         ProductVariant[]
   attributes       Attribute[]
   categories       Category[]        @relation("ProductToCategory")
   status           Status            @default(DRAFT)
@@ -25,10 +25,10 @@ model Product {
   moyskladId       String?           @unique
 }
 
-model Variant {
-  id                 String      @id @default(cuid())
+model ProductVariant {
+  id                 String        @id @default(cuid())
   productId          String
-  product            Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product            Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   color              String?
   images             Image[]
   price              Int
@@ -36,37 +36,39 @@ model Variant {
   discountPercentage Int?
   discountExpiresAt  DateTime?
   bonusPoints        Int?
-  inventory          Inventory[]
-  isFeatured         Boolean     @default(false)
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-  moyskladId         String?     @unique
+  sizes              ProductSize[]
+  isFeatured         Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  // moyskladId         String?       @unique // УДАЛЕНО: Перенесено в ProductSize
 
   @@unique([productId, color])
 }
 
 model Image {
-  id        String  @id @default(cuid())
-  url       String  @db.Text
+  id        String         @id @default(cuid())
+  url       String         @db.Text
   variantId String
-  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  order     Int     @default(0)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  order     Int            @default(0)
 }
 
-model Inventory {
-  id        String  @id @default(cuid())
-  variantId String
-  variant   Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  sizeId    String
-  size      Size    @relation(fields: [sizeId], references: [id])
-  stock     Int
-  @@unique([variantId, sizeId])
+model ProductSize {
+  id               String         @id @default(cuid())
+  moyskladId       String?        @unique // ДОБАВЛЕНО: Уникальный ID из МойСклад теперь здесь
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  sizeId           String
+  size             Size           @relation(fields: [sizeId], references: [id])
+  stock            Int
+
+  @@unique([productVariantId, sizeId])
 }
 
 model Size {
-  id        String      @id @default(cuid())
-  value     String      @unique
-  inventory Inventory[]
+  id           String        @id @default(cuid())
+  value        String        @unique
+  productSizes ProductSize[]
 }
 
 model Attribute {
@@ -80,9 +82,7 @@ model Attribute {
 
 model Category {
   id          String       @id @default(cuid())
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  name        String       // УБРАЛИ @unique, чтобы разрешить дубликаты имен из МойСклад
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  name        String
   products    Product[]    @relation("ProductToCategory")
   parentId    String?
   parent      Category?    @relation("SubCategories", fields: [parentId], references: [id], onDelete: SetNull)

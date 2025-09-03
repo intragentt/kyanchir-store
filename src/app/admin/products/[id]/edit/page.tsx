@@ -2,19 +2,25 @@
 export const dynamic = 'force-dynamic';
 
 import PageContainer from '@/components/layout/PageContainer';
-import prisma from '@/lib/prisma'; // <-- ИСПРАВЛЕННЫЙ ИМПОРТ
+import prisma from '@/lib/prisma';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditProductForm from '@/components/admin/EditProductForm';
 import { Prisma } from '@prisma/client';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ОБНОВЛЕНИЕ ТИПА И ЗАПРОСА ---
+
+// 1. Обновляем тип, чтобы он соответствовал новой схеме Prisma
+// Product -> ProductVariant -> ProductSize
 export type ProductWithDetails = Prisma.ProductGetPayload<{
   include: {
     alternativeNames: true;
     variants: {
+      // Теперь это ProductVariant[]
       include: {
         images: true;
-        inventory: {
+        sizes: {
+          // Теперь это ProductSize[]
           include: {
             size: true;
           };
@@ -24,7 +30,7 @@ export type ProductWithDetails = Prisma.ProductGetPayload<{
     };
     attributes: true;
     categories: true;
-    tags: true; // Добавлена связь с тегами
+    tags: true;
   };
 }>;
 
@@ -37,16 +43,18 @@ export default async function EditProductPage({
 }: EditProductPageProps) {
   const { id } = await params;
 
-  // --- ИЗМЕНЕНИЕ: Добавлена загрузка тегов ---
+  // 2. Обновляем главный запрос к базе данных
   const [product, allSizes, allCategories, allTags] = await Promise.all([
     prisma.product.findUnique({
       where: { id },
       include: {
         alternativeNames: true,
         variants: {
+          // Запрашиваем ProductVariant
           include: {
-            images: true,
-            inventory: {
+            images: { orderBy: { order: 'asc' } },
+            sizes: {
+              // Внутри каждого варианта запрашиваем его размеры (ProductSize)
               include: {
                 size: true,
               },
@@ -56,7 +64,7 @@ export default async function EditProductPage({
         },
         attributes: true,
         categories: true,
-        tags: true, // Включаем теги в запрос
+        tags: true,
       },
     }),
     prisma.size.findMany({
@@ -66,10 +74,11 @@ export default async function EditProductPage({
       orderBy: { name: 'asc' },
     }),
     prisma.tag.findMany({
-      // Загружаем все теги
       orderBy: { name: 'asc' },
     }),
   ]);
+
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!product) {
     notFound();
@@ -95,7 +104,6 @@ export default async function EditProductPage({
         </div>
 
         <div className="mt-8">
-          {/* --- ИЗМЕНЕНИЕ: Передаем теги в компонент --- */}
           <EditProductForm
             product={product}
             allSizes={allSizes}
