@@ -3,28 +3,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ТИПИЗАЦИЮ И НАЗВАНИЯ МОДЕЛЕЙ ---
-
-// Определяем правильный, надежный тип для context
-type RouteContext = {
-  params: {
-    id: string;
-  };
-};
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ПРИМЕНЯЕМ САМЫЙ НАДЕЖНЫЙ СПОСОБ ТИПИЗАЦИИ ---
 
 // GET /api/variants/[id]
 export async function GET(
   req: NextRequest,
-  { params }: RouteContext, // Используем правильный тип
+  context: { params: { id: string } }, // Принимаем context целиком
 ) {
-  const { id } = params;
+  const { id } = context.params; // Извлекаем params внутри
 
-  // Меняем .variant на .productVariant и .inventory на .sizes
   const variant = await prisma.productVariant.findUnique({
     where: { id },
     include: {
       product: true,
-      sizes: { include: { size: true } }, // ИЗМЕНЕНО
+      sizes: { include: { size: true } },
       images: true,
     },
   });
@@ -41,16 +33,15 @@ export async function GET(
 // PUT /api/variants/[id]
 export async function PUT(
   req: NextRequest,
-  { params }: RouteContext, // Используем правильный тип
+  context: { params: { id: string } }, // Принимаем context целиком
 ) {
   try {
-    const { id } = params;
+    const { id } = context.params; // Извлекаем params внутри
     const body = await req.json();
 
-    // Меняем .variant на .productVariant
     const updated = await prisma.productVariant.update({
       where: { id },
-      data: body, // Передаем тело запроса напрямую для обновления
+      data: body,
     });
 
     return NextResponse.json(updated);
@@ -65,11 +56,10 @@ export async function PUT(
 // DELETE /api/variants/[id]
 export async function DELETE(
   req: NextRequest,
-  { params }: RouteContext, // Используем правильный тип
+  context: { params: { id: string } }, // Принимаем context целиком
 ) {
   try {
-    const { id } = params;
-    // Меняем .variant на .productVariant
+    const { id } = context.params; // Извлекаем params внутри
     await prisma.productVariant.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
