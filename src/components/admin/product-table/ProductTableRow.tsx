@@ -30,7 +30,6 @@ const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
-// --- НАЧАЛО ИЗМЕНЕНИЙ: НОВАЯ ИКОНКА ---
 const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -40,7 +39,6 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type ProductStatus = ProductForTable['status'];
 const statusConfig: Record<
@@ -233,7 +231,19 @@ export const ProductTableRow = ({
           <td colSpan={8} className="bg-gray-50/50 p-0">
             <div className="border-l-4 border-indigo-200 px-4 py-2">
               <table className="min-w-full">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: КНОПКА ДОБАВЛЕНИЯ ВАРИАНТА --- */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ШАПКА ТАБЛИЦЫ ВАРИАНТОВ --- */}
+                <thead className="text-xs text-gray-500">
+                  <tr>
+                    <th className="w-24 px-4 py-2"></th>
+                    <th className="px-6 py-2 text-left">Вариант</th>
+                    <th className="px-6 py-2 text-center">Остаток</th>
+                    <th className="px-6 py-2 text-center">Старая Цена</th>
+                    <th className="px-6 py-2 text-center">Скидка, %</th>
+                    <th className="px-6 py-2 text-center">Цена</th>
+                    <th className="px-6 py-2 text-center">Действия</th>
+                  </tr>
+                </thead>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {productState.variants.map((variant) => (
                     <VariantRow
@@ -257,7 +267,6 @@ export const ProductTableRow = ({
                     </td>
                   </tr>
                 </tbody>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </table>
             </div>
           </td>
@@ -331,7 +340,8 @@ const VariantRow = ({
   };
 
   return (
-    <tr className="hover:bg-gray-100/50">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: ПЕРЕСТРОЙКА СТРОКИ ВАРИАНТА ---
+    <tr className="text-sm hover:bg-gray-100/50">
       <td className="w-24 px-4 py-3">
         <input
           type="checkbox"
@@ -340,7 +350,6 @@ const VariantRow = ({
           onChange={(e) => onSelectOne(variant.id, e.target.checked)}
         />
       </td>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ПРЕВЬЮ ФОТО --- */}
       <td className="px-6 py-3">
         <div className="flex items-center gap-2">
           <Image
@@ -357,40 +366,31 @@ const VariantRow = ({
             height={48}
             className="h-12 w-9 rounded-sm object-cover"
           />
+          <span className="font-medium">
+            {variant.inventory.map((inv) => inv.size.value).join(', ')}
+          </span>
         </div>
       </td>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-      <td className="px-6 py-3 text-xs text-gray-500">(категории)</td>
-      <td className="px-6 py-3 text-xs text-gray-500">(статус)</td>
       <td className="px-6 py-3 text-center">
         {variant.inventory.map((inv) => (
           <div key={inv.id}>
-            {inv.size.value}:{' '}
             <input
               type="number"
               defaultValue={inv.stock}
-              className="w-10 p-0.5 text-center"
+              className="w-12 rounded-md border-gray-300 p-1 text-center shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
         ))}
       </td>
-      <td className="px-6 py-3 text-center text-sm">
-        {variant.oldPrice && variant.oldPrice > variant.price ? (
-          <div className="flex flex-col items-center justify-center">
-            <span className="text-xs text-gray-500 line-through">
-              {formatPrice(variant.oldPrice)?.value} RUB
-            </span>
-            <span className="font-bold text-red-600">
-              {formatPrice(variant.price)?.value} RUB
-            </span>
-          </div>
-        ) : (
-          <span className="font-medium text-gray-900">
-            {formatPrice(variant.price)?.value} RUB
-          </span>
-        )}
+      <td className="px-6 py-3 text-center text-gray-500">
+        {variant.oldPrice ? `${formatPrice(variant.oldPrice)?.value} RUB` : '—'}
       </td>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: КНОПКА УДАЛЕНИЯ --- */}
+      <td className="px-6 py-3 text-center font-medium text-green-600">
+        {discountPercent > 0 ? `${discountPercent}%` : '—'}
+      </td>
+      <td className="px-6 py-3 text-center font-bold text-gray-900">
+        {formatPrice(variant.price)?.value} RUB
+      </td>
       <td className="px-6 py-3 text-center">
         <button
           disabled
@@ -399,7 +399,7 @@ const VariantRow = ({
           <TrashIcon className="h-5 w-5" />
         </button>
       </td>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </tr>
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 };
