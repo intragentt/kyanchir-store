@@ -1,60 +1,74 @@
 // Местоположение: src/middleware.ts
-
-import { withAuth } from 'next-auth/middleware';
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
-export default withAuth(
-  // `withAuth` обогащает `req` объектом `req.nextauth.token`.
-  function middleware(req) {
-    // Эта функция будет выполняться только для АВТОРИЗОВАННЫХ пользователей
-    // на страницах, указанных в `matcher`.
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переработанный middleware ---
 
-    const token = req.nextauth.token;
-    const { pathname } = req.nextUrl;
+// 1. Список "гостевых" страниц, доступных всем
+const GUEST_PATHS = ['/login', '/register'];
+// 2. Список страниц, требующих авторизации
+const PROTECTED_PATHS = ['/profile', '/admin'];
+// 3. Список ролей, которым разрешен доступ в админку
+const ADMIN_ROLES = ['ADMIN', 'MANAGEMENT'];
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: "ЖУЧОК" ДЛЯ ОТЛАДКИ ---
-    console.log('--- [MIDDLEWARE DEBUG] ---');
-    console.log('Pathname:', pathname);
-    console.log('Token received:', JSON.stringify(token, null, 2)); // Выводим токен в виде красивого JSON
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-    // --- НАША ЛОГИКА ДОСТУПА ---
-    // Если пользователь залогинен, но не админ/менеджер, и пытается
-    // зайти в админку, перенаправляем его.
-    if (
-      pathname.startsWith('/admin') &&
-      // --- ИЗМЕНЕНИЕ: Сравниваем свойство .name, а не весь объект ---
-      token?.role?.name !== 'ADMIN' &&
-      token?.role?.name !== 'MANAGEMENT'
-      // --- КОНЕЦ ИЗМЕНЕНИЯ ---
-    ) {
-      console.log(
-        `>>> ACCESS DENIED for role "${token?.role?.name}". Redirecting to homepage.`,
-      );
-      return NextResponse.redirect(new URL('/', req.url));
+  // 1. Пропускаем системные запросы Next.js
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/static/') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
+  }
+
+  // 2. Получаем токен пользователя (если он есть)
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  const isAuthenticated = !!token;
+  const userRole = token?.role as string | undefined; // Prisma возвращает роль как string
+
+  console.log('--- [MIDDLEWARE DEBUG] ---');
+  console.log('Path:', pathname);
+  console.log('Authenticated:', isAuthenticated);
+  console.log('User Role:', userRole);
+
+  // 3. Логика для гостевых страниц
+  if (GUEST_PATHS.some((path) => pathname.startsWith(path))) {
+    // Если пользователь уже авторизован и пытается зайти на /login,
+    // перенаправляем его в профиль
+    if (isAuthenticated) {
+      return NextResponse.redirect(new URL('/profile', req.url));
+    }
+    // В остальных случаях - пропускаем гостя
+    return NextResponse.next();
+  }
+
+  // 4. Логика для защищенных страниц
+  if (PROTECTED_PATHS.some((path) => pathname.startsWith(path))) {
+    // Если пользователь НЕ авторизован, отправляем его на страницу входа
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL('/login', req.url));
     }
 
-    // Для всех остальных авторизованных пользователей просто пропускаем дальше.
-    console.log(
-      `>>> Access GRANTED for role "${token?.role?.name}". Continuing to ${pathname}.`,
-    );
-    return NextResponse.next();
-  },
-  {
-    // --- НАСТРОЙКИ withAuth ---
-    callbacks: {
-      // Этот коллбэк определяет, "авторизован" ли пользователь в принципе.
-      authorized: ({ token }) => !!token,
-    },
+    // Если пользователь пытается зайти в админку, но у него нет нужной роли
+    if (pathname.startsWith('/admin') && !ADMIN_ROLES.includes(userRole!)) {
+      console.log(`ACCESS DENIED for role "${userRole}" to path "${pathname}"`);
+      // Перенаправляем на главную страницу
+      return NextResponse.redirect(new URL('/', req.url));
+    }
+  }
 
-    // Указываем, где наша кастомная страница логина,
-    pages: {
-      signIn: '/login',
-    },
-  },
-);
+  // 5. Для всех остальных случаев - просто пропускаем
+  return NextResponse.next();
+}
 
-// Конфигурация matcher остается прежней.
+// Конфигурация matcher теперь должна включать все пути,
+// которые мы хотим проверять.
 export const config = {
-  matcher: ['/profile/:path*', '/admin/:path*'],
+  matcher: ['/login', '/register', '/profile/:path*', '/admin/:path*'],
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---```
