@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditProductForm from '@/components/admin/EditProductForm';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ФУНДАМЕНТАЛЬНУЮ ОШИБКУ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: УБИРАЕМ ПРОБЛЕМНУЮ ТИПИЗАЦИЮ ---
 
 async function getProductWithDetails(id: string) {
   const product = await prisma.product.findUnique({
@@ -38,19 +38,17 @@ export type ProductWithDetails = NonNullable<
   Awaited<ReturnType<typeof getProductWithDetails>>
 >;
 
-// 1. Определяем ПРАВИЛЬНЫЙ и простой тип для пропсов страницы
-interface EditProductPageProps {
-  params: { id: string };
-}
+// Мы УБИРАЕМ интерфейс EditProductPageProps отсюда, чтобы TypeScript вывел его сам.
 
-// 2. Используем этот тип в сигнатуре функции
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+// Применяем самый простой тип, который только возможен
 export default async function EditProductPage({
   params,
-}: EditProductPageProps) {
-  // 3. Убираем `await`, так как `params` - это ОБЪЕКТ, а не Promise
+}: {
+  params: { id: string };
+}) {
   const { id } = params;
-
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const [product, allSizes, allCategories, allTags] = await Promise.all([
     getProductWithDetails(id),
