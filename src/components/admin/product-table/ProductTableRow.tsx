@@ -8,17 +8,15 @@ import type { Prisma, Category, Tag } from '@prisma/client';
 
 import { formatPrice } from '@/utils/formatPrice';
 import type { ProductForTable } from '@/app/admin/dashboard/page';
-import ShortLogo from '@/components/icons/ShortLogo';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ИМПОРТ ИЗОЛИРОВАННЫХ ИКОНОК ---
+// --- НАЧАЛО ИСПРАВЛЕНИЯ: ТОЧЕЧНЫЕ ИМПОРТЫ ДЛЯ КАЖДОЙ ИКОНКИ ---
 import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
-import { TrashIcon } from '@/components/icons/TrashIcon';
 import { PencilIcon } from '@/components/icons/PencilIcon';
-import { ClockIcon } from '@/components/icons/ClockIcon';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+// --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+import { VariantRow } from './VariantRow';
+import { ProductDetailsPanel } from './ProductDetailsPanel';
 
-// --- ТИПЫ ---
 type ProductStatus = ProductForTable['status'];
 const statusConfig: Record<
   ProductStatus,
@@ -28,12 +26,6 @@ const statusConfig: Record<
   PUBLISHED: { dotClassName: 'bg-green-400', label: 'Опубликован' },
   ARCHIVED: { dotClassName: 'bg-gray-400', label: 'В архиве' },
 };
-type VariantData = ProductForTable['variants'][0];
-type ProductData = Omit<ProductForTable, 'variants'>;
-
-// =====================================================================
-// === ГЛАВНЫЙ КОМПОНЕНТ: КОНТЕЙНЕР ДЛЯ ПРОДУКТА (PRODUCTTABLEROW) ===
-// =====================================================================
 
 interface ProductTableRowProps {
   product: ProductForTable;
@@ -52,13 +44,10 @@ export const ProductTableRow = ({
   const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(
     new Set(),
   );
-  const [editedVariantIds, setEditedVariantIds] = useState<Set<string>>(
-    new Set(),
-  );
 
   const handleVariantUpdate = (
     variantId: string,
-    updatedData: Partial<VariantData>,
+    updatedData: Partial<Prisma.VariantGetPayload<{}>>,
   ) => {
     setProductState((prevState) => ({
       ...prevState,
@@ -66,14 +55,18 @@ export const ProductTableRow = ({
         v.id === variantId ? { ...v, ...updatedData } : v,
       ),
     }));
-    setEditedVariantIds((prev) => new Set(prev).add(variantId));
   };
+
   const handleProductUpdate = (
     productId: string,
-    updatedData: Partial<ProductData>,
+    updatedData: Partial<Prisma.ProductGetPayload<{}>>,
   ) => {
-    setProductState((prevState) => ({ ...prevState, ...updatedData }));
+    setProductState((prevState) => ({
+      ...prevState,
+      ...updatedData,
+    }));
   };
+
   const handleSelectVariant = (variantId: string, isSelected: boolean) => {
     setSelectedVariantIds((prev) => {
       const newSet = new Set(prev);
@@ -82,6 +75,7 @@ export const ProductTableRow = ({
       return newSet;
     });
   };
+
   const handleSelectAllVariants = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedVariantIds(new Set(productState.variants.map((v) => v.id)));
@@ -94,6 +88,7 @@ export const ProductTableRow = ({
     (acc, v) => acc + v.inventory.reduce((sum, i) => sum + i.stock, 0),
     0,
   );
+
   const priceRange = () => {
     const prices = productState.variants
       .map((v) => v.price)
@@ -208,230 +203,32 @@ export const ProductTableRow = ({
         </td>
       </tr>
 
-      {isDetailsExpanded && (
-        <tr>
-          <td colSpan={8} className="p-0">
-            <div className="border-l-4 border-green-200 bg-green-50/30 p-4">
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label
-                    htmlFor={`desc-${productState.id}`}
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Описание
-                  </label>
-                  <textarea
-                    id={`desc-${productState.id}`}
-                    rows={6}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    defaultValue={productState.description || ''}
-                    placeholder="Введите описание товара..."
-                  />
-                  <button className="mt-2 rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50">
-                    Сохранить описание
-                  </button>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-gray-700">
-                    Атрибуты
-                  </h3>
-                  <div className="mt-2 space-y-2">
-                    {productState.attributes.map((attr) => (
-                      <div key={attr.id} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          defaultValue={attr.key}
-                          className="flex-1 rounded-md border-gray-300 shadow-sm sm:text-sm"
-                          placeholder="Название (напр. Состав)"
-                        />
-                        <input
-                          type="text"
-                          defaultValue={attr.value}
-                          className="flex-1 rounded-md border-gray-300 shadow-sm sm:text-sm"
-                          placeholder="Значение (напр. 100% хлопок)"
-                        />
-                        <button
-                          disabled
-                          className="text-gray-400 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <TrashIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    ))}
-                    <button className="w-full rounded-md border-2 border-dashed border-gray-300 bg-white py-1.5 text-xs font-semibold text-gray-500 hover:border-gray-400 hover:text-gray-700">
-                      + Добавить атрибут
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
+      {isDetailsExpanded && <ProductDetailsPanel product={productState} />}
 
       {isExpanded && (
         <tr>
           <td colSpan={8} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30 px-4 py-2">
-              <table className="min-w-full">
-                <thead className="text-xs text-gray-500">
-                  <tr>
-                    <th className="w-12 px-4 py-2"></th>
-                    <th className="px-1 py-2 text-left">Размер / Название</th>
-                    <th className="px-2 py-2 text-center">Склад</th>
-                    <th className="px-2 py-2 text-center">Корзина 24ч</th>
-                    <th className="px-2 py-2 text-center">Избранное</th>
-                    <th className="px-2 py-2 text-center">Акция до</th>
-                    <th className="px-2 py-2 text-center">Старая Цена</th>
-                    <th className="px-2 py-2 text-center">Скидка, %</th>
-                    <th className="px-2 py-2 text-center">Цена</th>
-                    <th className="px-2 py-2 text-center">Действия</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {productState.variants.map((variant) => (
-                    <VariantRow
-                      key={variant.id}
-                      product={productState}
-                      variant={variant}
-                      allCategories={allCategories}
-                      allTags={allTags}
-                      isSelected={selectedVariantIds.has(variant.id)}
-                      isEdited={editedVariantIds.has(variant.id)}
-                      onSelectOne={handleSelectVariant}
-                      onVariantUpdate={handleVariantUpdate}
-                      onProductUpdate={handleProductUpdate}
-                    />
-                  ))}
-                  <tr>
-                    <td colSpan={10} className="py-2 pl-16 text-left">
-                      <button className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
-                        + Добавить вариант
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div className="divide-y divide-gray-200">
+                {productState.variants.map((variant) => (
+                  <VariantRow
+                    key={variant.id}
+                    product={productState}
+                    variant={variant}
+                    isSelected={selectedVariantIds.has(variant.id)}
+                    isEdited={false}
+                    onSelectOne={handleSelectVariant}
+                    onVariantUpdate={handleVariantUpdate}
+                    onProductUpdate={handleProductUpdate}
+                    allCategories={allCategories}
+                    allTags={allTags}
+                  />
+                ))}
+              </div>
             </div>
           </td>
         </tr>
       )}
     </Fragment>
-  );
-};
-
-// ==========================================================
-// === ДОЧЕРНИЙ КОМПОНЕНТ: РЕДАКТИРУЕМАЯ СТРОКА ВАРИАНТА ===
-// ==========================================================
-interface VariantRowProps {
-  product: ProductData;
-  variant: VariantData;
-  isSelected: boolean;
-  isEdited: boolean;
-  onSelectOne: (variantId: string, isSelected: boolean) => void;
-  onVariantUpdate: (
-    variantId: string,
-    updatedData: Partial<VariantData>,
-  ) => void;
-  onProductUpdate: (
-    productId: string,
-    updatedData: Partial<ProductData>,
-  ) => void;
-  allCategories: Category[];
-  allTags: Tag[];
-}
-
-const VariantRow = ({
-  variant,
-  isSelected,
-  onSelectOne,
-  onVariantUpdate,
-}: VariantRowProps) => {
-  const discountPercent =
-    variant.oldPrice && variant.price < variant.oldPrice
-      ? Math.round(
-          ((variant.oldPrice - variant.price) / variant.oldPrice) * 100,
-        )
-      : 0;
-
-  const hasSameDescriptionAsProduct = true; // Заглушка
-
-  return (
-    <tr className="text-sm hover:bg-gray-100/50">
-      <td className="w-12 px-4 py-2">
-        <input
-          type="checkbox"
-          className="h-4 w-4 rounded"
-          checked={isSelected}
-          onChange={(e) => onSelectOne(variant.id, e.target.checked)}
-        />
-      </td>
-      <td className="px-1 py-2 text-left">
-        <div className="flex items-center gap-2">
-          <Image
-            src={variant.images[0]?.url || '/placeholder.png'}
-            alt="Фото 1"
-            width={36}
-            height={48}
-            className="h-12 w-9 rounded-sm object-cover"
-          />
-          <Image
-            src={variant.images[1]?.url || '/placeholder.png'}
-            alt="Фото 2"
-            width={36}
-            height={48}
-            className="h-12 w-9 rounded-sm object-cover"
-          />
-          <div>
-            <span className="font-medium text-gray-800">
-              {variant.inventory.map((inv) => inv.size.value).join(', ')}
-            </span>
-            {hasSameDescriptionAsProduct && (
-              <div className="cursor-pointer text-xs text-indigo-500 hover:underline">
-                (изменить описание)
-              </div>
-            )}
-          </div>
-        </div>
-      </td>
-      <td className="px-2 py-2 text-center">
-        {variant.inventory.map((inv) => (
-          <div key={inv.id}>
-            <input
-              type="number"
-              defaultValue={inv.stock}
-              className="w-12 rounded-md border-gray-300 p-1 text-center shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            />
-          </div>
-        ))}
-      </td>
-      <td className="px-2 py-2 text-center text-gray-500">0</td>
-      <td className="px-2 py-2 text-center text-gray-500">0</td>
-      <td className="px-2 py-2 text-center">
-        {discountPercent > 0 && (
-          <div className="flex items-center justify-center gap-1 text-xs text-orange-600">
-            <ClockIcon className="h-4 w-4" />
-            <span>1д 4ч</span>
-          </div>
-        )}
-      </td>
-      <td className="px-2 py-2 text-center text-gray-500">
-        {variant.oldPrice ? `${formatPrice(variant.oldPrice)?.value} RUB` : '—'}
-      </td>
-      <td className="px-2 py-2 text-center font-medium text-green-600">
-        {discountPercent > 0 ? `${discountPercent}%` : '—'}
-      </td>
-      <td className="px-2 py-2 text-center font-bold text-gray-900">
-        {formatPrice(variant.price)?.value} RUB
-      </td>
-      <td className="px-2 py-2 text-center">
-        <button
-          disabled
-          className="text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <TrashIcon className="h-5 w-5" />
-        </button>
-      </td>
-    </tr>
   );
 };
