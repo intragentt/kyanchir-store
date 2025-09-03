@@ -31,7 +31,7 @@ interface VariantRowProps {
   onProductUpdate: (
     productId: string,
     updatedData: Partial<ProductData>,
-  ) => void; // Мы оставляем его для будущих нужд (напр., редактирование SKU)
+  ) => void;
   allCategories: Category[];
   allTags: Tag[];
 }
@@ -50,19 +50,15 @@ export function VariantRow({
   const [variant, setVariant] = useState(initialVariant);
   const [editingDiscount, setEditingDiscount] = useState<string | null>(null);
 
-  // Обновляем локальное состояние, если пропсы изменились
   useEffect(() => {
     setVariant(initialVariant);
   }, [initialVariant]);
 
   const handleLocalUpdateAndNotify = (updatedData: Partial<VariantData>) => {
-    // 1. Обновляем локальный стейт для немедленного отклика UI
     setVariant((prev) => ({ ...prev, ...updatedData }));
-    // 2. "Сообщаем наверх" родителю об изменении, чтобы он тоже обновил свое состояние
     onVariantUpdate(variant.id, updatedData);
   };
 
-  // Все хендлеры теперь вызывают универсальную функцию
   const handleNumericInputChange = (
     field: keyof VariantData,
     inputValue: string,
@@ -109,7 +105,9 @@ export function VariantRow({
 
   return (
     <tr className={rowClassName}>
-      <td className="w-12 border-l-4 border-indigo-200 px-1 py-3 text-center">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: УДАЛЕНА ЛИШНЯЯ РАМКА --- */}
+      <td className="w-12 px-1 py-3 text-center">
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <input
           type="checkbox"
           className="h-4 w-4 rounded border-gray-300"
@@ -121,7 +119,6 @@ export function VariantRow({
         <div className="flex items-center">
           <div className="grid h-12 w-24 flex-shrink-0 grid-cols-2 gap-1">
             <div className="relative aspect-[3/4]">
-              {' '}
               <Image
                 src={variant.images[0]?.url || '/placeholder.png'}
                 alt={`${product.name} ${variant.color || ''} фото 1`}
@@ -130,7 +127,6 @@ export function VariantRow({
               />
             </div>
             <div className="relative aspect-[3/4]">
-              {' '}
               <Image
                 src={variant.images[1]?.url || '/placeholder.png'}
                 alt={`${product.name} ${variant.color || ''} фото 2`}
