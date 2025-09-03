@@ -42,7 +42,7 @@ export type ProductWithDetails = NonNullable<
 >;
 
 interface EditProductPageProps {
-  params: { id: string }; // Упрощаем тип для params, Promise здесь не нужен
+  params: { id: string };
 }
 
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
