@@ -7,14 +7,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditProductForm from '@/components/admin/EditProductForm';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ СТАНДАРТНЫЙ TYPESCRIPT ДЛЯ ТИПОВ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: УБИРАЕМ ПРОБЛЕМНУЮ ТИПИЗАЦИЮ ---
 
-// 1. Создаем async функцию, которая получает наш продукт со всеми деталями
 async function getProductWithDetails(id: string) {
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
-      status: true, // Не забываем статус!
+      status: true,
       alternativeNames: true,
       variants: {
         orderBy: { createdAt: 'asc' },
@@ -35,27 +34,26 @@ async function getProductWithDetails(id: string) {
   return product;
 }
 
-// 2. Выводим тип из того, что возвращает функция.
-// NonNullable<> используется на случай, если findUnique вернет null.
 export type ProductWithDetails = NonNullable<
   Awaited<ReturnType<typeof getProductWithDetails>>
 >;
 
-interface EditProductPageProps {
-  params: { id: string };
-}
+// Мы УБИРАЕМ интерфейс EditProductPageProps отсюда, чтобы TypeScript вывел его сам.
 
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
+// Применяем самый простой тип, который только возможен
 export default async function EditProductPage({
   params,
-}: EditProductPageProps) {
+}: {
+  params: { id: string };
+}) {
   const { id } = params;
 
   const [product, allSizes, allCategories, allTags] = await Promise.all([
-    getProductWithDetails(id), // Используем нашу новую функцию
+    getProductWithDetails(id),
     prisma.size.findMany({
-      orderBy: { value: 'asc' }, // Лучше сортировать по значению
+      orderBy: { value: 'asc' },
     }),
     prisma.category.findMany({
       orderBy: { name: 'asc' },
@@ -100,4 +98,3 @@ export default async function EditProductPage({
     </main>
   );
 }
-
