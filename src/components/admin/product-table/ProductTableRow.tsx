@@ -39,6 +39,27 @@ const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
+// --- НАЧАЛО ИЗМЕНЕНИЙ: НОВЫЕ ИКОНКИ ---
+const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
+    <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+    <path
+      fillRule="evenodd"
+      d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+const ClockIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
+    <path
+      fillRule="evenodd"
+      d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type ProductStatus = ProductForTable['status'];
 const statusConfig: Record<
@@ -143,9 +164,15 @@ export const ProductTableRow = ({
   const isPartiallySelected =
     selectedVariantIds.size > 0 && !areAllVariantsSelected;
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: ЛОГИКА ПОДСВЕТКИ ---
+  const rowClassName = isExpanded
+    ? 'bg-indigo-50/50' // Класс для подсветки, когда раскрыто
+    : 'bg-white';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
     <Fragment>
-      <tr className="border-t bg-white hover:bg-gray-50">
+      <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
         <td className="flex w-24 items-center gap-2 px-4 py-4">
           <input
             type="checkbox"
@@ -159,7 +186,9 @@ export const ProductTableRow = ({
           {productState.variants.length > 0 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="rounded-md p-1 hover:bg-gray-100"
+              // --- НАЧАЛО ИЗМЕНЕНИЙ: ПОДСВЕТКА СТРЕЛКИ ---
+              className={`rounded-md p-1 hover:bg-gray-200 ${isExpanded ? 'bg-indigo-100 text-indigo-700' : ''}`}
+              // --- КОНЕЦ ИЗМЕНЕНИЙ ---
             >
               {isExpanded ? (
                 <ChevronDownIcon className="h-5 w-5" />
@@ -198,6 +227,14 @@ export const ProductTableRow = ({
               <div className="text-xs text-gray-500">
                 {productState.variants.length} вариант(а)
               </div>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: КНОПКА ОПИСАНИЯ --- */}
+              <button className="mt-1 flex items-center gap-1 text-xs text-indigo-600 hover:underline disabled:cursor-not-allowed disabled:text-gray-400 disabled:no-underline">
+                <PencilIcon className="h-3 w-3" />
+                {productState.description
+                  ? 'Изменить описание'
+                  : 'Добавить описание'}
+              </button>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           </div>
         </td>
@@ -228,10 +265,11 @@ export const ProductTableRow = ({
 
       {isExpanded && (
         <tr>
-          <td colSpan={8} className="bg-gray-50/50 p-0">
-            <div className="border-l-4 border-indigo-200 px-4 py-2">
+          <td colSpan={8} className="p-0">
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ПОДСВЕТКА РАСКРЫТОЙ ОБЛАСТИ --- */}
+            <div className="border-l-4 border-indigo-200 bg-indigo-50/30 px-4 py-2">
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <table className="min-w-full">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: НОВАЯ РАСШИРЕННАЯ ШАПКА --- */}
                 <thead className="text-xs text-gray-500">
                   <tr>
                     <th className="w-12 px-4 py-2"></th>
@@ -239,13 +277,15 @@ export const ProductTableRow = ({
                     <th className="px-2 py-2 text-center">Склад</th>
                     <th className="px-2 py-2 text-center">Корзина 24ч</th>
                     <th className="px-2 py-2 text-center">Избранное</th>
+                    {/* --- НАЧАЛО ИЗМЕНЕНИЙ: КОЛОНКА ТАЙМЕРА --- */}
+                    <th className="px-2 py-2 text-center">Акция до</th>
+                    {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                     <th className="px-2 py-2 text-center">Старая Цена</th>
                     <th className="px-2 py-2 text-center">Скидка, %</th>
                     <th className="px-2 py-2 text-center">Цена</th>
                     <th className="px-2 py-2 text-center">Действия</th>
                   </tr>
                 </thead>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {productState.variants.map((variant) => (
                     <VariantRow
@@ -262,7 +302,7 @@ export const ProductTableRow = ({
                     />
                   ))}
                   <tr>
-                    <td colSpan={9} className="py-2 pl-16 text-left">
+                    <td colSpan={10} className="py-2 pl-16 text-left">
                       <button className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
                         + Добавить вариант
                       </button>
@@ -341,8 +381,11 @@ const VariantRow = ({
     onVariantUpdate(variant.id, updatedData);
   };
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: ПЛЕЙСХОЛДЕР ДЛЯ ОПИСАНИЯ ВАРИАНТА ---
+  const hasSameDescriptionAsProduct = true; // Заглушка
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: НОВАЯ СТРУКТУРА СТРОКИ ВАРИАНТА ---
     <tr className="text-sm hover:bg-gray-100/50">
       <td className="w-12 px-4 py-2">
         <input
@@ -372,7 +415,13 @@ const VariantRow = ({
             <span className="font-medium text-gray-800">
               {variant.inventory.map((inv) => inv.size.value).join(', ')}
             </span>
-            <div className="text-xs text-gray-400">(название варианта)</div>
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: КНОПКА ОПИСАНИЯ ВАРИАНТА --- */}
+            {hasSameDescriptionAsProduct && (
+              <div className="cursor-pointer text-xs text-indigo-500 hover:underline">
+                (изменить описание)
+              </div>
+            )}
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
         </div>
       </td>
@@ -389,6 +438,16 @@ const VariantRow = ({
       </td>
       <td className="px-2 py-2 text-center text-gray-500">0</td>
       <td className="px-2 py-2 text-center text-gray-500">0</td>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ТАЙМЕР ВАРИАНТА --- */}
+      <td className="px-2 py-2 text-center">
+        {discountPercent > 0 && (
+          <div className="flex items-center justify-center gap-1 text-xs text-orange-600">
+            <ClockIcon className="h-4 w-4" />
+            <span>1д 4ч</span>
+          </div>
+        )}
+      </td>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <td className="px-2 py-2 text-center text-gray-500">
         {variant.oldPrice ? `${formatPrice(variant.oldPrice)?.value} RUB` : '—'}
       </td>
@@ -407,6 +466,5 @@ const VariantRow = ({
         </button>
       </td>
     </tr>
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 };
