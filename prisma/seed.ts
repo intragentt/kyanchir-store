@@ -1,198 +1,11 @@
 // prisma/seed.ts
-import {
-  PrismaClient,
-  Prisma, // ИМПОРТИРУЕМ главный объект Prisma
-  Category, // Модельные типы оставляем
-  Tag, // Модельные типы оставляем
-} from '@prisma/client';
+import { PrismaClient, Category, Tag } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// ---------- helpers ----------
-async function upsertSize(value: string) {
-  return prisma.size.upsert({
-    where: { value },
-    update: {},
-    create: { value },
-  });
-}
-
-async function upsertTag(name: string, color?: string, order = 0) {
-  return prisma.tag.upsert({
-    where: { name },
-    update: { color, order },
-    create: { name, color, order },
-  });
-}
-
-async function upsertCategory(
-  name: string,
-  opts?: { parentId?: string; color?: string; order?: number },
-) {
-  const existing = await prisma.category.findFirst({
-    where: {
-      name: name,
-      parentId: opts?.parentId ?? null,
-    },
-  });
-
-  if (existing) {
-    return prisma.category.update({
-      where: { id: existing.id },
-      data: {
-        color: opts?.color,
-        order: opts?.order ?? 0,
-      },
-    });
-  } else {
-    return prisma.category.create({
-      data: {
-        name,
-        parentId: opts?.parentId,
-        color: opts?.color,
-        order: opts?.order ?? 0,
-      },
-    });
-  }
-}
-
-async function upsertSupportAgent(data: {
-  name: string;
-  email: string;
-  telegramId?: string | null;
-  username: string;
-  phone?: string | null;
-  role: Prisma.AgentRole; // ИСПОЛЬЗУЕМ Prisma.AgentRole
-}) {
-  const agentData = {
-    name: data.name,
-    email: data.email,
-    telegramId: data.telegramId,
-    internalUsername: data.username,
-    phone: data.phone,
-    role: data.role,
-  };
-
-  return prisma.supportAgent.upsert({
-    where: { email: data.email },
-    update: agentData,
-    create: agentData,
-  });
-}
-
-type VariantInput = {
-  color: string;
-  price: number;
-  oldPrice?: number | null;
-  isFeatured?: boolean;
-  images?: string[];
-  stockBySize?: Record<string, number>;
-};
-type ProductInput = {
-  sku?: string | null;
-  name: string;
-  alternativeNames?: string[];
-  description?: string | null;
-  status?: Prisma.Status; // ИСПОЛЬЗУЕМ Prisma.Status
-  categoryNames?: string[];
-  tagNames?: string[];
-  attributes?: { key: string; value: string; isMain?: boolean }[];
-  variants: VariantInput[];
-};
-
-async function createProductWithRelations(data: ProductInput) {
-  const product = await prisma.product.create({
-    data: {
-      sku: data.sku ?? null,
-      name: data.name,
-      description: data.description ?? null,
-      status: data.status ?? Prisma.Status.PUBLISHED, // ИСПОЛЬЗУЕМ Prisma.Status
-    },
-  });
-
-  if (data.alternativeNames?.length) {
-    await prisma.alternativeName.createMany({
-      data: data.alternativeNames.map((value) => ({
-        value,
-        productId: product.id,
-      })),
-    });
-  }
-  if (data.attributes?.length) {
-    await prisma.attribute.createMany({
-      data: data.attributes.map((a) => ({
-        productId: product.id,
-        key: a.key,
-        value: a.value,
-        isMain: a.isMain ?? true,
-      })),
-    });
-  }
-  if (data.categoryNames?.length) {
-    const cats = await prisma.category.findMany({
-      where: { name: { in: data.categoryNames } },
-    });
-    await prisma.product.update({
-      where: { id: product.id },
-      data: {
-        categories: { connect: cats.map((c: Category) => ({ id: c.id })) },
-      },
-    });
-  }
-  if (data.tagNames?.length) {
-    const tags = await prisma.tag.findMany({
-      where: { name: { in: data.tagNames } },
-    });
-    await prisma.product.update({
-      where: { id: product.id },
-      data: { tags: { connect: tags.map((t: Tag) => ({ id: t.id })) } },
-    });
-  }
-
-  for (const v of data.variants) {
-    const productVariant = await prisma.productVariant.create({
-      data: {
-        productId: product.id,
-        color: v.color,
-        price: v.price,
-        oldPrice: v.oldPrice ?? null,
-        isFeatured: v.isFeatured ?? false,
-      },
-    });
-
-    if (v.images?.length) {
-      await prisma.image.createMany({
-        data: v.images.map((url, i) => ({
-          variantId: productVariant.id,
-          url,
-          order: i + 1,
-        })),
-      });
-    }
-
-    if (v.stockBySize) {
-      const sizes = Object.keys(v.stockBySize);
-      const dbSizes = await prisma.size.findMany({
-        where: { value: { in: sizes } },
-      });
-      // ИСПРАВЛЕНИЕ: Добавляем явный тип для 's'
-      const sizeMap = Object.fromEntries(
-        dbSizes.map((s: { value: string; id: string }) => [s.value, s.id]),
-      );
-
-      const sizeData = sizes.map((s) => ({
-        productVariantId: productVariant.id,
-        sizeId: sizeMap[s],
-        stock: v.stockBySize![s],
-      }));
-
-      await prisma.productSize.createMany({ data: sizeData });
-    }
-  }
-  return product;
-}
-
 async function main() {
+  // --- ШАГ 1: ОЧИСТКА ---
+  // Сначала удаляем записи из таблиц, которые зависят от других...
   console.log('🧹 Очистка старых данных...');
   await prisma.presetItem.deleteMany();
   await prisma.filterPreset.deleteMany();
@@ -202,16 +15,104 @@ async function main() {
   await prisma.alternativeName.deleteMany();
   await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.supportMessage.deleteMany();
+  await prisma.supportTicket.deleteMany();
+  await prisma.supportAgent.deleteMany();
+  await prisma.user.deleteMany();
+
+  // ...затем удаляем записи из самих справочников.
   await prisma.category.deleteMany();
   await prisma.tag.deleteMany();
   await prisma.size.deleteMany();
-  await prisma.supportMessage.deleteMany();
-  await prisma.supportTicket.deleteMany();
   await prisma.supportRoute.deleteMany();
-  await prisma.supportAgent.deleteMany();
+  await prisma.status.deleteMany();
+  await prisma.userRole.deleteMany();
+  await prisma.agentRole.deleteMany();
+  await prisma.ticketStatus.deleteMany();
+  await prisma.ticketSource.deleteMany();
+  await prisma.senderType.deleteMany();
+  await prisma.presetItemType.deleteMany();
 
-  console.log('👑 Создание "белого списка" агентов поддержки...');
-  // ... (здесь ваш код для создания агентов)
+  // --- ШАГ 2: СОЗДАНИЕ ЗАПИСЕЙ В СПРАВОЧНИКАХ ---
+  console.log('📚 Создание записей в справочниках...');
+
+  // Статусы Продуктов
+  const statusDraft = await prisma.status.create({ data: { name: 'DRAFT' } });
+  const statusPublished = await prisma.status.create({
+    data: { name: 'PUBLISHED' },
+  });
+  const statusArchived = await prisma.status.create({
+    data: { name: 'ARCHIVED' },
+  });
+
+  // Роли Пользователей
+  const roleClient = await prisma.userRole.create({ data: { name: 'CLIENT' } });
+  const roleAdmin = await prisma.userRole.create({ data: { name: 'ADMIN' } });
+
+  // Роли Агентов
+  const agentRoleSupport = await prisma.agentRole.create({
+    data: { name: 'SUPPORT' },
+  });
+  const agentRoleAdmin = await prisma.agentRole.create({
+    data: { name: 'ADMIN' },
+  });
+
+  // Справочники для системы поддержки
+  await prisma.ticketStatus.createMany({
+    data: [{ name: 'OPEN' }, { name: 'CLOSED' }],
+  });
+  await prisma.ticketSource.createMany({
+    data: [{ name: 'EMAIL' }, { name: 'WEB_FORM' }],
+  });
+  await prisma.senderType.createMany({
+    data: [{ name: 'CLIENT' }, { name: 'AGENT' }],
+  });
+
+  // --- ШАГ 3: СОЗДАНИЕ ОСНОВНЫХ ДАННЫХ (Примеры) ---
+  console.log('👑 Создание администратора...');
+
+  // Создаем пользователя-админа, используя ID роли 'ADMIN'
+  await prisma.user.create({
+    data: {
+      email: 'admin@kyanchir.ru',
+      name: 'Admin',
+      roleId: roleAdmin.id,
+      // В реальном проекте здесь должен быть хеш пароля
+    },
+  });
+
+  console.log('👕 Создание тестового продукта...');
+
+  // Создаем размеры
+  const sizeS = await prisma.size.create({ data: { value: 'S' } });
+  const sizeM = await prisma.size.create({ data: { value: 'M' } });
+
+  // Создаем продукт, используя ID статуса 'PUBLISHED'
+  const testProduct = await prisma.product.create({
+    data: {
+      name: 'Тестовый Корсет',
+      description: 'Это описание для тестового продукта.',
+      statusId: statusPublished.id,
+      sku: 'KYA-TEST-001',
+    },
+  });
+
+  // Создаем вариант для этого продукта
+  const testVariant = await prisma.productVariant.create({
+    data: {
+      productId: testProduct.id,
+      color: 'Черный',
+      price: 2500,
+    },
+  });
+
+  // Создаем остатки для этого варианта
+  await prisma.productSize.createMany({
+    data: [
+      { productVariantId: testVariant.id, sizeId: sizeS.id, stock: 10 },
+      { productVariantId: testVariant.id, sizeId: sizeM.id, stock: 15 },
+    ],
+  });
 
   console.log('🌱 СИДИНГ УСПЕШНО ЗАВЕРШЕН');
 }
