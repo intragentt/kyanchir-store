@@ -7,10 +7,8 @@ import type { Prisma, Category, Tag } from '@prisma/client';
 
 import { ProductForTable } from '@/app/admin/dashboard/page';
 import { EditableCountdownTimer } from './EditableCountdownTimer';
-
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ТОЧЕЧНЫЕ ИМПОРТЫ ИКОНОК ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЕН ПУТЬ ИМПОРТА ---
 import { TrashIcon } from '@/components/icons/TrashIcon';
-import { ClockIcon } from '@/components/icons/ClockIcon';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 // --- ТИПЫ И ХЕЛПЕРЫ ---
