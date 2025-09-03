@@ -13,14 +13,28 @@ export async function POST(req: Request) {
       );
     }
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Ищем пользователя по email, чтобы получить его ID ---
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Пользователь не найден' },
+        { status: 404 },
+      );
+    }
+
+    // Теперь ищем токен, используя правильный идентификатор - ID пользователя
     const verificationToken = await prisma.verificationToken.findUnique({
       where: {
         identifier_token: {
-          identifier: email,
-          token,
+          identifier: user.id, // Ищем по userId
+          token: token,
         },
       },
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     if (!verificationToken || verificationToken.expires < new Date()) {
       return NextResponse.json(
@@ -39,8 +53,8 @@ export async function POST(req: Request) {
     await prisma.verificationToken.delete({
       where: {
         identifier_token: {
-          identifier: email,
-          token,
+          identifier: user.id, // Удаляем по той же уникальной комбинации
+          token: token,
         },
       },
     });
