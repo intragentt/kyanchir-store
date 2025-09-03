@@ -6,69 +6,56 @@ import prisma from '@/lib/prisma';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditProductForm from '@/components/admin/EditProductForm';
-import { Prisma } from '@prisma/client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ОБНОВЛЕНИЕ ТИПА И ЗАПРОСА ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ СТАНДАРТНЫЙ TYPESCRIPT ДЛЯ ТИПОВ ---
 
-// 1. Обновляем тип, чтобы он соответствовал новой схеме Prisma
-// Product -> ProductVariant -> ProductSize
-export type ProductWithDetails = Prisma.ProductGetPayload<{
-  include: {
-    alternativeNames: true;
-    variants: {
-      // Теперь это ProductVariant[]
-      include: {
-        images: true;
-        sizes: {
-          // Теперь это ProductSize[]
-          include: {
-            size: true;
-          };
-        };
-      };
-      orderBy: { createdAt: 'asc' };
-    };
-    attributes: true;
-    categories: true;
-    tags: true;
-  };
-}>;
+// 1. Создаем async функцию, которая получает наш продукт со всеми деталями
+async function getProductWithDetails(id: string) {
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: {
+      status: true, // Не забываем статус!
+      alternativeNames: true,
+      variants: {
+        orderBy: { createdAt: 'asc' },
+        include: {
+          images: { orderBy: { order: 'asc' } },
+          sizes: {
+            include: {
+              size: true,
+            },
+          },
+        },
+      },
+      attributes: true,
+      categories: true,
+      tags: true,
+    },
+  });
+  return product;
+}
+
+// 2. Выводим тип из того, что возвращает функция.
+// NonNullable<> используется на случай, если findUnique вернет null.
+export type ProductWithDetails = NonNullable<
+  Awaited<ReturnType<typeof getProductWithDetails>>
+>;
 
 interface EditProductPageProps {
-  params: Promise<{ id: string }>;
+  params: { id: string }; // Упрощаем тип для params, Promise здесь не нужен
 }
+
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default async function EditProductPage({
   params,
 }: EditProductPageProps) {
-  const { id } = await params;
+  const { id } = params;
 
-  // 2. Обновляем главный запрос к базе данных
   const [product, allSizes, allCategories, allTags] = await Promise.all([
-    prisma.product.findUnique({
-      where: { id },
-      include: {
-        alternativeNames: true,
-        variants: {
-          // Запрашиваем ProductVariant
-          include: {
-            images: { orderBy: { order: 'asc' } },
-            sizes: {
-              // Внутри каждого варианта запрашиваем его размеры (ProductSize)
-              include: {
-                size: true,
-              },
-            },
-          },
-          orderBy: { createdAt: 'asc' },
-        },
-        attributes: true,
-        categories: true,
-        tags: true,
-      },
-    }),
+    getProductWithDetails(id), // Используем нашу новую функцию
     prisma.size.findMany({
-      orderBy: { id: 'asc' },
+      orderBy: { value: 'asc' }, // Лучше сортировать по значению
     }),
     prisma.category.findMany({
       orderBy: { name: 'asc' },
@@ -77,8 +64,6 @@ export default async function EditProductPage({
       orderBy: { name: 'asc' },
     }),
   ]);
-
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!product) {
     notFound();

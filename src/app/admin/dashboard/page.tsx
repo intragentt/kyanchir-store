@@ -2,47 +2,51 @@
 import PageContainer from '@/components/layout/PageContainer';
 import ProductTable from '@/components/admin/ProductTable';
 import prisma from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+// Удаляем `import { Prisma } from '@prisma/client'`, он больше не нужен для типов здесь
 
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: НОВЫЙ, ПРАВИЛЬНЫЙ СПОСОБ ПОЛУЧЕНИЯ ТИПОВ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ СТАНДАРТНЫЙ TYPESCRIPT ---
 
-// 1. Определяем структуру данных, которую мы хотим получать, с помощью Prisma.validator
-const productWithDetails = Prisma.validator<Prisma.ProductDefaultArgs>()({
-  include: {
-    categories: true,
-    tags: true,
-    attributes: true,
-    variants: {
-      orderBy: { createdAt: 'asc' },
-      include: {
-        images: { orderBy: { order: 'asc' } },
-        sizes: {
-          include: {
-            size: true,
+// 1. Создаем async функцию, которая получает наши данные
+async function getProductsForTable() {
+  const products = await prisma.product.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      status: true,
+      categories: true,
+      tags: true,
+      attributes: true,
+      variants: {
+        orderBy: { createdAt: 'asc' },
+        include: {
+          images: { orderBy: { order: 'asc' } },
+          sizes: {
+            include: {
+              size: true,
+            },
           },
         },
       },
     },
-  },
-});
+  });
+  return products;
+}
 
-// 2. Создаем и экспортируем наш тип на основе этой структуры
-export type ProductForTable = Prisma.ProductGetPayload<
-  typeof productWithDetails
->;
+// 2. Выводим тип одного продукта из того, что возвращает функция.
+// Awaited<...> "разворачивает" Promise.
+// ReturnType<...> получает тип того, что возвращает функция.
+// [0] берет тип одного элемента из массива.
+export type ProductForTable = Awaited<
+  ReturnType<typeof getProductsForTable>
+>[0];
 
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default async function DashboardPage() {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ СОЗДАННУЮ СТРУКТУРУ В ЗАПРОСЕ ---
   const [allProducts, allCategories, allTags, filterPresets] =
     await Promise.all([
-      prisma.product.findMany({
-        orderBy: { createdAt: 'desc' },
-        ...productWithDetails, // Используем наш валидатор здесь
-      }),
+      getProductsForTable(), // Используем нашу новую функцию
       prisma.category.findMany({ orderBy: { name: 'asc' } }),
       prisma.tag.findMany({ orderBy: { name: 'asc' } }),
       prisma.filterPreset.findMany({
@@ -55,7 +59,6 @@ export default async function DashboardPage() {
         orderBy: { createdAt: 'asc' },
       }),
     ]);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <main>

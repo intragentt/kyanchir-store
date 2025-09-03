@@ -5,10 +5,10 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
-import { UserRole } from '@prisma/client';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ИМПОРТ ---
+import type { UserRole } from '@prisma/client'; // Импортируем UserRole как ТИП
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-// Это наш "Единый Источник Правды" для конфигурации Auth.js.
-// Отсюда его смогут безопасно импортировать все части приложения.
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -24,7 +24,9 @@ export const authOptions: NextAuthOptions = {
         }
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: { role: true },
         });
+
         if (!user || !user.passwordHash) {
           return null;
         }
@@ -55,6 +57,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         const user = await prisma.user.findUnique({
           where: { id: loginToken.userId },
+          include: { role: true },
         });
         return user || null;
       },
@@ -67,9 +70,7 @@ export const authOptions: NextAuthOptions = {
         token: { label: 'Verification Code', type: 'text' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.token) {
-          return null;
-        }
+        if (!credentials?.email || !credentials?.token) return null;
         const verificationToken = await prisma.verificationToken.findUnique({
           where: {
             identifier_token: {
@@ -78,11 +79,11 @@ export const authOptions: NextAuthOptions = {
             },
           },
         });
-        if (!verificationToken || verificationToken.expires < new Date()) {
+        if (!verificationToken || verificationToken.expires < new Date())
           return null;
-        }
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: { role: true },
         });
         if (user) {
           await prisma.verificationToken.delete({
@@ -109,19 +110,16 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id;
+        // @ts-ignore - user из authorize уже содержит role, TypeScript может этого не знать сразу
         token.role = user.role;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
       }
       return session;
     },
   },
 };
-
-// Функция `getAuthSession` удалена, так как мы используем `getServerSession(authOptions)` напрямую.

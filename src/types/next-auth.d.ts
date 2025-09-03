@@ -2,41 +2,26 @@
 
 import 'next-auth';
 import 'next-auth/jwt';
-import { UserRole } from '@prisma/client'; // <-- Импортируем наш Enum
-
-// Расширяем стандартные типы NextAuth
+import { UserRole } from '@prisma/client'; // UserRole теперь - это МОДЕЛЬ, а не enum
 
 declare module 'next-auth' {
-  /**
-   * Возвращается хуками вроде `useSession` или `getServerSession`
-   */
   interface Session {
-    user?: {
+    user: {
       id: string;
-      role: UserRole; // <-- НАШЕ НОВОЕ ПОЛЕ
-    } & {
-      // <-- Объединяем со стандартными полями
+      role: UserRole; // <-- Теперь это ОБЪЕКТ { id: string, name: string }
       name?: string | null;
       email?: string | null;
       image?: string | null;
     };
   }
 
-  /**
-   * Модель User, как она приходит из authorize или адаптера
-   */
   interface User {
-    id: string;
-    role: UserRole; // <-- НАШЕ НОВОЕ ПОЛЕ
+    role: UserRole; // <-- User из базы данных тоже содержит ОБЪЕКТ role
   }
 }
 
 declare module 'next-auth/jwt' {
-  /**
-   * Возвращается, когда мы используем JWT-стратегию
-   */
   interface JWT {
-    id: string;
-    role: UserRole; // <-- НАШЕ НОВОЕ ПОЛЕ
+    role: UserRole; // <-- Токен тоже будет хранить ОБЪЕКТ role
   }
 }
