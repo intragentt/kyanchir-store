@@ -63,9 +63,12 @@ export default function LoginPage() {
         body: JSON.stringify({ email }),
       });
 
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: Перенаправляем на правильную страницу верификации ---
       if (sendCodeRes.ok) {
-        router.push(`/login/verify-code?email=${encodeURIComponent(email)}`);
+        // Было: /login/verify-code
+        router.push(`/auth/verify?email=${encodeURIComponent(email)}`);
       } else {
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
         setError('Не удалось отправить код подтверждения.');
       }
     } catch (err) {
@@ -97,7 +100,7 @@ export default function LoginPage() {
             </p>
           )}
           <form
-            className="font-body space-y-4 text-left"
+            className="space-y-4 text-left font-body"
             onSubmit={handleLoginSubmit}
             noValidate
           >
@@ -110,7 +113,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                 placeholder="Email"
               />
               {email && (
@@ -131,7 +134,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none"
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                 placeholder="Пароль"
               />
               {password && (
@@ -164,7 +167,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+              className="w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
             >
               {isLoading ? 'Проверка...' : 'Войти'}
             </button>
@@ -172,10 +175,10 @@ export default function LoginPage() {
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
             )}
           </form>
-          <div className="font-body text-center">
+          <div className="text-center font-body">
             <a
               href="#"
-              className="hover:text-opacity-80 text-sm font-semibold text-[#6B80C5]"
+              className="text-sm font-semibold text-[#6B80C5] hover:text-opacity-80"
             >
               Забыли пароль?
             </a>
@@ -189,18 +192,18 @@ export default function LoginPage() {
           </div>
           <button
             onClick={redirectToTelegramBot}
-            className="font-body flex w-full items-center justify-center gap-x-2 rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
+            className="flex w-full items-center justify-center gap-x-2 rounded-md border border-zinc-300 bg-white px-4 py-2 font-body text-sm font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50"
           >
             <TelegramOfficialIcon className="h-6 w-6" />
             Войти через Telegram
           </button>
         </div>
-        <div className="font-body mt-6 rounded-lg border border-zinc-200 bg-white p-6 text-center text-sm">
+        <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6 text-center font-body text-sm">
           <p className="text-zinc-600">
             Нет аккаунта?{' '}
             <Link
               href="/register"
-              className="hover:text-opacity-80 font-semibold text-[#6B80C5]"
+              className="font-semibold text-[#6B80C5] hover:text-opacity-80"
             >
               Регистрация
             </Link>
