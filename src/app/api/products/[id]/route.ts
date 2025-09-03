@@ -2,17 +2,22 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЕНИЕ ТИПИЗАЦИИ GET и DELETE ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ЯВНОЕ ОПРЕДЕЛЕНИЕ ТИПА ДЛЯ PARAMS ---
+interface RouteContext {
+  params: {
+    id: string;
+  };
+}
+
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } }, // УБРАН Promise<>
+  { params }: RouteContext, // Используем новый тип
 ) {
-  const { id } = params; // Упрощено получение id
+  const { id } = params;
   const product = await prisma.product.findUnique({
     where: { id },
-    include: { variants: true }, // Оставляем простой include для GET, если не нужна вся вложенность
+    include: { variants: true },
   });
   if (!product) {
     return new NextResponse('Продукт не найден', { status: 404 });
@@ -22,10 +27,10 @@ export async function GET(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }, // УБРАН Promise<>
+  { params }: RouteContext, // Используем новый тип
 ) {
   try {
-    const { id } = params; // Упрощено получение id
+    const { id } = params;
     await prisma.product.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
@@ -33,12 +38,10 @@ export async function DELETE(
     return new NextResponse('Ошибка на сервере', { status: 500 });
   }
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-// PUT-запрос, который мы исправили в прошлый раз, остается без изменений
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }, // Здесь тип уже был правильный
+  { params }: RouteContext, // Используем новый тип
 ) {
   try {
     const productId = params.id;
@@ -173,3 +176,4 @@ export async function PUT(
     return new NextResponse(errorMessage, { status: 500 });
   }
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
