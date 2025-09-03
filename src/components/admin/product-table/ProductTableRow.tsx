@@ -1,64 +1,24 @@
 // Местоположение: src/components/admin/product-table/ProductTableRow.tsx
 'use client';
 
-import { useState, Fragment, useEffect, useRef } from 'react';
+import { useState, Fragment } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Prisma, Category, Tag } from '@prisma/client';
 
 import { formatPrice } from '@/utils/formatPrice';
 import type { ProductForTable } from '@/app/admin/dashboard/page';
-import { EditableCountdownTimer } from './EditableCountdownTimer';
 import ShortLogo from '@/components/icons/ShortLogo';
 
-// --- ИКОНКИ И ТИПЫ ---
-const ChevronDownIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
-    <path
-      fillRule="evenodd"
-      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
-    <path
-      fillRule="evenodd"
-      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
-    <path
-      fillRule="evenodd"
-      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-const PencilIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
-    <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-    <path
-      fillRule="evenodd"
-      d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-const ClockIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
-    <path
-      fillRule="evenodd"
-      d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.414-1.415L11 9.586V6z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ИМПОРТ ИЗОЛИРОВАННЫХ ИКОНОК ---
+import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
+import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
+import { TrashIcon } from '@/components/icons/TrashIcon';
+import { PencilIcon } from '@/components/icons/PencilIcon';
+import { ClockIcon } from '@/components/icons/ClockIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
+// --- ТИПЫ ---
 type ProductStatus = ProductForTable['status'];
 const statusConfig: Record<
   ProductStatus,
@@ -87,8 +47,8 @@ export const ProductTableRow = ({
   allTags,
 }: ProductTableRowProps) => {
   const [productState, setProductState] = useState(initialProduct);
-  const [isExpanded, setIsExpanded] = useState(false); // Для вариантов
-  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false); // Для панели деталей
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isDetailsExpanded, setIsDetailsExpanded] = useState(false);
   const [selectedVariantIds, setSelectedVariantIds] = useState<Set<string>>(
     new Set(),
   );
@@ -96,7 +56,6 @@ export const ProductTableRow = ({
     new Set(),
   );
 
-  // ... (существующие хендлеры без изменений) ...
   const handleVariantUpdate = (
     variantId: string,
     updatedData: Partial<VariantData>,
@@ -161,7 +120,6 @@ export const ProductTableRow = ({
 
   return (
     <Fragment>
-      {/* === ОСНОВНАЯ СТРОКА ТОВАРА === */}
       <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
         <td className="flex w-24 items-center gap-2 px-4 py-4">
           <input
@@ -250,13 +208,11 @@ export const ProductTableRow = ({
         </td>
       </tr>
 
-      {/* === ПАНЕЛЬ ДЕТАЛЕЙ (ОПИСАНИЕ И АТРИБУТЫ) === */}
       {isDetailsExpanded && (
         <tr>
           <td colSpan={8} className="p-0">
             <div className="border-l-4 border-green-200 bg-green-50/30 p-4">
               <div className="grid grid-cols-2 gap-6">
-                {/* Левая колонка: Описание */}
                 <div>
                   <label
                     htmlFor={`desc-${productState.id}`}
@@ -275,7 +231,6 @@ export const ProductTableRow = ({
                     Сохранить описание
                   </button>
                 </div>
-                {/* Правая колонка: Атрибуты */}
                 <div>
                   <h3 className="text-sm font-medium text-gray-700">
                     Атрибуты
@@ -283,14 +238,12 @@ export const ProductTableRow = ({
                   <div className="mt-2 space-y-2">
                     {productState.attributes.map((attr) => (
                       <div key={attr.id} className="flex items-center gap-2">
-                        {/* --- НАЧАЛО ИСПРАВЛЕНИЯ: attr.name -> attr.key --- */}
                         <input
                           type="text"
                           defaultValue={attr.key}
                           className="flex-1 rounded-md border-gray-300 shadow-sm sm:text-sm"
                           placeholder="Название (напр. Состав)"
                         />
-                        {/* --- КОНЕЦ ИСПРАВЛЕНИЯ --- */}
                         <input
                           type="text"
                           defaultValue={attr.value}
@@ -316,7 +269,6 @@ export const ProductTableRow = ({
         </tr>
       )}
 
-      {/* === ПАНЕЛЬ ВАРИАНТОВ (существующая) === */}
       {isExpanded && (
         <tr>
           <td colSpan={8} className="p-0">
