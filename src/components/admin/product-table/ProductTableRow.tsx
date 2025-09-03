@@ -335,9 +335,26 @@ const VariantRow = ({
           </div>
         ))}
       </td>
-      <td className="px-6 py-3 text-center">
-        {formatPrice(variant.price)?.value} RUB
+
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: УМНОЕ ОТОБРАЖЕНИЕ ЦЕНЫ --- */}
+      <td className="px-6 py-3 text-center text-sm">
+        {variant.oldPrice && variant.oldPrice > variant.price ? (
+          <div className="flex flex-col items-center justify-center">
+            <span className="text-xs text-gray-500 line-through">
+              {formatPrice(variant.oldPrice)?.value} RUB
+            </span>
+            <span className="font-bold text-red-600">
+              {formatPrice(variant.price)?.value} RUB
+            </span>
+          </div>
+        ) : (
+          <span className="font-medium text-gray-900">
+            {formatPrice(variant.price)?.value} RUB
+          </span>
+        )}
       </td>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
       <td className="px-6 py-3"></td>
     </tr>
   );
