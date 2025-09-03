@@ -3,11 +3,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ВОЗВРАЩАЕМСЯ К СТАНДАРТНОЙ ТИПИЗАЦИИ NEXT.JS ---
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }, // Стандартный, встроенный тип
-) {
+// --- НАЧАЛО ИЗМЕНЕНИЙ: САМАЯ СТРОГАЯ И ПРАВИЛЬНАЯ ТИПИЗАЦИЯ ---
+
+// Мы явно определяем тип для второго аргумента, как этого требует Next.js
+type RouteContext = {
+  params: {
+    id: string;
+  };
+};
+
+export async function GET(req: NextRequest, { params }: RouteContext) {
   const { id } = params;
   const product = await prisma.product.findUnique({
     where: { id },
@@ -19,10 +24,7 @@ export async function GET(
   return NextResponse.json(product);
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { id: string } }, // Стандартный, встроенный тип
-) {
+export async function DELETE(req: NextRequest, { params }: RouteContext) {
   try {
     const { id } = params;
     await prisma.product.delete({ where: { id } });
@@ -33,10 +35,7 @@ export async function DELETE(
   }
 }
 
-export async function PUT(
-  req: NextRequest,
-  { params }: { params: { id: string } }, // Стандартный, встроенный тип
-) {
+export async function PUT(req: NextRequest, { params }: RouteContext) {
   try {
     const productId = params.id;
     const body: {
