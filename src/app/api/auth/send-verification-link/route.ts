@@ -33,7 +33,11 @@ export async function POST(req: Request) {
       },
     });
 
-    const verificationLink = `${process.env.NEXTAUTH_URL}/verify-email?token=${token}`;
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Генерируем "умную" ссылку с email и токеном ---
+    const verificationLink = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${token}&email=${encodeURIComponent(
+      email,
+    )}`;
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     const transport = createTransport({
       host: process.env.EMAIL_SERVER_HOST,
@@ -48,7 +52,6 @@ export async function POST(req: Request) {
       to: email,
       from: process.env.EMAIL_FROM,
       subject: 'Подтвердите ваш email для Kyanchir',
-      // --- ИСПРАВЛЕНИЕ: ВОССТАНОВЛЕН ПОЛНЫЙ HTML БЛОК ---
       html: `<div style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">
                <h2 style="color: #333;">Подтверждение Email</h2>
                <p>Пожалуйста, нажмите на кнопку ниже, чтобы подтвердить ваш email адрес.</p>
