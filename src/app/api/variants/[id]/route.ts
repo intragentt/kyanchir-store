@@ -1,18 +1,30 @@
+// Местоположение: src/app/api/variants/[id]/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ТИПИЗАЦИЮ И НАЗВАНИЯ МОДЕЛЕЙ ---
+
+// Определяем правильный, надежный тип для context
+type RouteContext = {
+  params: {
+    id: string;
+  };
+};
+
 // GET /api/variants/[id]
 export async function GET(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  req: NextRequest,
+  { params }: RouteContext, // Используем правильный тип
 ) {
-  const { id } = await params;
+  const { id } = params;
 
-  const variant = await prisma.variant.findUnique({
+  // Меняем .variant на .productVariant и .inventory на .sizes
+  const variant = await prisma.productVariant.findUnique({
     where: { id },
     include: {
       product: true,
-      inventory: { include: { size: true } },
+      sizes: { include: { size: true } }, // ИЗМЕНЕНО
       images: true,
     },
   });
@@ -29,47 +41,16 @@ export async function GET(
 // PUT /api/variants/[id]
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: RouteContext, // Используем правильный тип
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const body = await req.json();
 
-    const { name, description, ...variantData } = body;
-
-    const updated = await prisma.variant.update({
+    // Меняем .variant на .productVariant
+    const updated = await prisma.productVariant.update({
       where: { id },
-      data: {
-        ...(variantData.color !== undefined && { color: variantData.color }),
-        ...(variantData.price !== undefined && {
-          price: Number(variantData.price),
-        }),
-        ...(variantData.oldPrice !== undefined && {
-          oldPrice:
-            variantData.oldPrice === null ? null : Number(variantData.oldPrice),
-        }),
-        ...(variantData.discountPercentage !== undefined && {
-          discountPercentage:
-            variantData.discountPercentage === null
-              ? null
-              : Number(variantData.discountPercentage),
-        }),
-        ...(variantData.isFeatured !== undefined && {
-          isFeatured: !!variantData.isFeatured,
-        }),
-        // Обновление изображений/инвентаря обычно делают отдельными роутами,
-        // но если присылаешь массив images целиком — нужно сначала удалить/пересоздать.
-        ...(name !== undefined || description !== undefined
-          ? {
-              product: {
-                update: {
-                  ...(name !== undefined && { name }),
-                  ...(description !== undefined && { description }),
-                },
-              },
-            }
-          : {}),
-      },
+      data: body, // Передаем тело запроса напрямую для обновления
     });
 
     return NextResponse.json(updated);
@@ -83,15 +64,17 @@ export async function PUT(
 
 // DELETE /api/variants/[id]
 export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
+  req: NextRequest,
+  { params }: RouteContext, // Используем правильный тип
 ) {
   try {
-    const { id } = await params;
-    await prisma.variant.delete({ where: { id } });
+    const { id } = params;
+    // Меняем .variant на .productVariant
+    await prisma.productVariant.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (e) {
     console.error('Ошибка при удалении варианта:', e);
     return new NextResponse('Ошибка на сервере при удалении', { status: 500 });
   }
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
