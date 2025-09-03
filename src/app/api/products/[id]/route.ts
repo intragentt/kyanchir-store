@@ -3,16 +3,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ЯВНОЕ ОПРЕДЕЛЕНИЕ ТИПА ДЛЯ PARAMS ---
-interface RouteContext {
-  params: {
-    id: string;
-  };
-}
-
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ВОЗВРАЩАЕМСЯ К СТАНДАРТНОЙ ТИПИЗАЦИИ NEXT.JS ---
 export async function GET(
   _req: NextRequest,
-  { params }: RouteContext, // Используем новый тип
+  { params }: { params: { id: string } }, // Стандартный, встроенный тип
 ) {
   const { id } = params;
   const product = await prisma.product.findUnique({
@@ -27,7 +21,7 @@ export async function GET(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: RouteContext, // Используем новый тип
+  { params }: { params: { id: string } }, // Стандартный, встроенный тип
 ) {
   try {
     const { id } = params;
@@ -41,7 +35,7 @@ export async function DELETE(
 
 export async function PUT(
   req: NextRequest,
-  { params }: RouteContext, // Используем новый тип
+  { params }: { params: { id: string } }, // Стандартный, встроенный тип
 ) {
   try {
     const productId = params.id;
