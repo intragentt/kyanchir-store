@@ -121,6 +121,8 @@ async function runSync() {
 
     for (const variantData of variants) {
       // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+
+      // ИСПРАВЛЕНИЕ #1: Убираем деление на 100, чтобы вернуть корректные цены
       let currentPrice = 0,
         oldPrice = null;
       const salePriceObj = (variantData.rawSalePrices || []).find(
@@ -130,10 +132,10 @@ async function runSync() {
         (p) => p.priceType.name === 'Цена продажи',
       );
       const regularPriceValue = regularPriceObj
-        ? Math.round(regularPriceObj.value / 100) // Делим на 100 для копеек
+        ? Math.round(regularPriceObj.value) // Возвращаем как было
         : 0;
-      const salePriceValue = salePriceObj ? Math.round(salePriceObj.value / 100) : 0; // Делим на 100 для копеек
-      
+      const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0; // Возвращаем как было
+
       if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
         currentPrice = salePriceValue;
         oldPrice = regularPriceValue;
@@ -142,13 +144,12 @@ async function runSync() {
           regularPriceValue > 0 ? regularPriceValue : salePriceValue;
       }
 
-      // Создаем или находим вариант товара
       const variant = await prisma.variant.upsert({
         where: { moyskladId: variantData.moyskladId },
         update: {
           price: currentPrice,
           oldPrice: oldPrice,
-          productId: product.id, // Убедимся что вариант привязан к правильному продукту
+          productId: product.id,
         },
         create: {
           price: currentPrice,
@@ -158,10 +159,6 @@ async function runSync() {
         },
       });
 
-      // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ ---
-      // Теперь мы ГАРАНТИРОВАННО получаем запись о размере.
-      // Если размер есть в названии - используем его.
-      // Если нет - используем "ONE_SIZE" как универсальный.
       const sizeValue = variantData.size || 'ONE_SIZE';
       const sizeRecord = await prisma.size.upsert({
         where: { value: sizeValue },
@@ -169,8 +166,11 @@ async function runSync() {
         create: { value: sizeValue },
       });
 
-      // Логика обновления остатков теперь НЕ находится внутри условного блока `if`,
-      // а выполняется для КАЖДОГО варианта.
+      // ИСПРАВЛЕНИЕ #2: Добавляем лог для диагностики остатков
+      console.log(
+        `[SYNC DEBUG] Продукт: "${baseName}", Размер: ${sizeValue}, Остаток: ${variantData.stock}`,
+      );
+
       await prisma.inventory.upsert({
         where: {
           variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
@@ -192,7 +192,6 @@ async function runSync() {
     synchronizedProducts: groupedProducts.size,
   };
 }
-
 
 // === GET (Cron Job) и POST (кнопка) обработчики (без изменений) ===
 export async function GET(req: NextRequest) {
