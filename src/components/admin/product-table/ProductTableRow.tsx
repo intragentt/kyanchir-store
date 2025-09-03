@@ -231,19 +231,21 @@ export const ProductTableRow = ({
           <td colSpan={8} className="bg-gray-50/50 p-0">
             <div className="border-l-4 border-indigo-200 px-4 py-2">
               <table className="min-w-full">
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: НОВАЯ РАСШИРЕННАЯ ШАПКА --- */}
                 <thead className="text-xs text-gray-500">
                   <tr>
-                    <th className="w-24 px-4 py-2"></th>
-                    {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИЗМЕНЕНИЕ ЗАГОЛОВКА --- */}
-                    <th className="px-6 py-2 text-left">Размер</th>
-                    {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-                    <th className="px-6 py-2 text-center">Остаток</th>
-                    <th className="px-6 py-2 text-center">Старая Цена</th>
-                    <th className="px-6 py-2 text-center">Скидка, %</th>
-                    <th className="px-6 py-2 text-center">Цена</th>
-                    <th className="px-6 py-2 text-center">Действия</th>
+                    <th className="w-12 px-4 py-2"></th>
+                    <th className="px-1 py-2 text-left">Размер / Название</th>
+                    <th className="px-2 py-2 text-center">Склад</th>
+                    <th className="px-2 py-2 text-center">Корзина 24ч</th>
+                    <th className="px-2 py-2 text-center">Избранное</th>
+                    <th className="px-2 py-2 text-center">Старая Цена</th>
+                    <th className="px-2 py-2 text-center">Скидка, %</th>
+                    <th className="px-2 py-2 text-center">Цена</th>
+                    <th className="px-2 py-2 text-center">Действия</th>
                   </tr>
                 </thead>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {productState.variants.map((variant) => (
                     <VariantRow
@@ -260,7 +262,7 @@ export const ProductTableRow = ({
                     />
                   ))}
                   <tr>
-                    <td colSpan={8} className="py-2 pl-16 text-left">
+                    <td colSpan={9} className="py-2 pl-16 text-left">
                       <button className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
                         + Добавить вариант
                       </button>
@@ -340,8 +342,9 @@ const VariantRow = ({
   };
 
   return (
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: НОВАЯ СТРУКТУРА СТРОКИ ВАРИАНТА ---
     <tr className="text-sm hover:bg-gray-100/50">
-      <td className="w-24 px-4 py-3">
+      <td className="w-12 px-4 py-2">
         <input
           type="checkbox"
           className="h-4 w-4 rounded"
@@ -349,19 +352,31 @@ const VariantRow = ({
           onChange={(e) => onSelectOne(variant.id, e.target.checked)}
         />
       </td>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ОТОБРАЖЕНИЕ НАЗВАНИЯ/РАЗМЕРА ВАРИАНТА --- */}
-      <td className="px-6 py-3 text-left">
+      <td className="px-1 py-2 text-left">
         <div className="flex items-center gap-2">
-          <div className="flex h-12 w-9 items-center justify-center rounded-sm bg-gray-200">
-            <ShortLogo className="h-4 w-4 text-gray-400" />
+          <Image
+            src={variant.images[0]?.url || '/placeholder.png'}
+            alt="Фото 1"
+            width={36}
+            height={48}
+            className="h-12 w-9 rounded-sm object-cover"
+          />
+          <Image
+            src={variant.images[1]?.url || '/placeholder.png'}
+            alt="Фото 2"
+            width={36}
+            height={48}
+            className="h-12 w-9 rounded-sm object-cover"
+          />
+          <div>
+            <span className="font-medium text-gray-800">
+              {variant.inventory.map((inv) => inv.size.value).join(', ')}
+            </span>
+            <div className="text-xs text-gray-400">(название варианта)</div>
           </div>
-          <span className="font-medium">
-            {variant.inventory.map((inv) => inv.size.value).join(', ')}
-          </span>
         </div>
       </td>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-      <td className="px-6 py-3 text-center">
+      <td className="px-2 py-2 text-center">
         {variant.inventory.map((inv) => (
           <div key={inv.id}>
             <input
@@ -372,16 +387,18 @@ const VariantRow = ({
           </div>
         ))}
       </td>
-      <td className="px-6 py-3 text-center text-gray-500">
+      <td className="px-2 py-2 text-center text-gray-500">0</td>
+      <td className="px-2 py-2 text-center text-gray-500">0</td>
+      <td className="px-2 py-2 text-center text-gray-500">
         {variant.oldPrice ? `${formatPrice(variant.oldPrice)?.value} RUB` : '—'}
       </td>
-      <td className="px-6 py-3 text-center font-medium text-green-600">
+      <td className="px-2 py-2 text-center font-medium text-green-600">
         {discountPercent > 0 ? `${discountPercent}%` : '—'}
       </td>
-      <td className="px-6 py-3 text-center font-bold text-gray-900">
+      <td className="px-2 py-2 text-center font-bold text-gray-900">
         {formatPrice(variant.price)?.value} RUB
       </td>
-      <td className="px-6 py-3 text-center">
+      <td className="px-2 py-2 text-center">
         <button
           disabled
           className="text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
@@ -390,5 +407,6 @@ const VariantRow = ({
         </button>
       </td>
     </tr>
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 };
