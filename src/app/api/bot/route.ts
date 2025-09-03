@@ -1,4 +1,4 @@
-// Местоположение: src/app/api/bot/create-login-link/route.ts (НОВЫЙ ФАЙЛ)
+// Местоположение: src/app/api/bot/route.ts
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { addMinutes } from 'date-fns';
@@ -25,9 +25,20 @@ export async function POST(request: Request) {
 
     // 3. Находим или создаем пользователя в нашей базе
     const user = await prisma.user.upsert({
-      where: { telegramId },
+      where: { telegramId: String(telegramId) },
       update: { phone, name: firstName },
-      create: { telegramId, phone, name: firstName },
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      create: {
+        telegramId: String(telegramId),
+        phone,
+        name: firstName,
+        role: {
+          connect: {
+            name: 'USER', // <-- Применяем то же самое исправление
+          },
+        },
+      },
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     });
 
     // 4. Создаем для него одноразовый "пропуск"

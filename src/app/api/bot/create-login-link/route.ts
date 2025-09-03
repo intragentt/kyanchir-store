@@ -18,7 +18,9 @@ export async function POST(request: Request) {
       );
       console.log(`Первые 15 символов: '${authHeader.substring(0, 15)}'`);
       console.log(
-        `Последние 15 символов: '${authHeader.substring(authHeader.length - 15)}'`,
+        `Последние 15 символов: '${authHeader.substring(
+          authHeader.length - 15,
+        )}'`,
       );
     } else {
       console.log("!!! ОШИБКА: Заголовок 'Authorization' НЕ ПОЛУЧЕН.");
@@ -54,24 +56,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // ... (остальная часть кода без изменений) ...
     const { telegramId, firstName, phone } = await request.json();
+
     if (!telegramId || !phone) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 },
       );
     }
+
     const user = await prisma.user.upsert({
-      where: { telegramId },
+      where: { telegramId: String(telegramId) },
       update: { phone, name: firstName },
-      create: { telegramId, phone, name: firstName },
+      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      create: {
+        telegramId: String(telegramId),
+        phone,
+        name: firstName,
+        role: {
+          connect: {
+            name: 'USER', // <-- ВОТ ИСПРАВЛЕНИЕ. Подключаемся к существующей роли 'USER'
+          },
+        },
+      },
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     });
+
     const token = crypto.randomBytes(32).toString('hex');
     const expires = addMinutes(new Date(), 5);
+
     await prisma.loginToken.create({
       data: { token, expires, userId: user.id },
     });
+
     return NextResponse.json({ token });
   } catch (error) {
     console.error('[Bot API] Error creating login link:', error);

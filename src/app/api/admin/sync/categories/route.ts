@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma';
 import { getMoySkladCategories } from '@/lib/moysklad-api';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { UserRole } from '@prisma/client';
+// Мы не импортируем UserRole, так как он не нужен для сравнения значений
 
 interface MoySkladCategory {
   id: string;
@@ -19,7 +19,12 @@ function getUUIDFromHref(href: string): string {
 
 export async function POST() {
   const session = await getServerSession(authOptions);
-  if (!session?.user || session.user.role !== UserRole.ADMIN) {
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ СРАВНЕНИЕ ---
+  // TypeScript подсказал, что session.user.role - это ОБЪЕКТ.
+  // Поэтому мы должны сравнивать его свойство .name со строкой.
+  if (!session?.user || session.user.role?.name !== 'ADMIN') {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
       status: 403,
     });
@@ -55,8 +60,6 @@ export async function POST() {
     );
 
     // ШАГ 2: Сброс всех существующих связей parentId на null.
-    // Это критически важно, чтобы удалить старые, неактуальные связи,
-    // если ты вдруг переместишь папку в "МойСклад".
     await prisma.category.updateMany({
       data: { parentId: null },
     });
@@ -77,7 +80,6 @@ export async function POST() {
     const updatePromises = [];
 
     for (const category of moySkladCategories) {
-      // Ищем только те категории, у которых есть родитель
       if (category.productFolder) {
         const moyskladParentId = getUUIDFromHref(
           category.productFolder.meta.href,
@@ -85,7 +87,6 @@ export async function POST() {
         const ourParentId = ourCategoriesMap.get(moyskladParentId);
         const ourChildId = ourCategoriesMap.get(category.id);
 
-        // Если оба существуют в нашей базе, создаем промис на обновление
         if (ourParentId && ourChildId) {
           updatePromises.push(
             prisma.category.update({
@@ -98,7 +99,6 @@ export async function POST() {
       }
     }
 
-    // Если есть что обновить, выполняем все разом
     if (updatePromises.length > 0) {
       await prisma.$transaction(updatePromises);
     }

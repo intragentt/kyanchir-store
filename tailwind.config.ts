@@ -1,131 +1,116 @@
 // Местоположение: tailwind.config.ts
 // Метафора: "Палитра художника и набор инструментов дизайнера".
-// Этот файл — единственный источник правды для всей дизайн-системы проекта.
-// Все, что касается внешнего вида — цвета, размеры, шрифты — определяется здесь.
 
 import type { Config } from 'tailwindcss';
+import plugin from 'tailwindcss/plugin';
 
 const config: Config = {
-  // "Карта сокровищ": Указываем Tailwind, где искать используемые классы.
-  // Это нужно для того, чтобы в финальной сборке остались только те стили,
-  // которые мы реально используем, делая CSS-файл максимально маленьким.
+  // "Карта сокровищ"
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
-    // "Линейка для адаптивности": Определяем наши точки-брейкпоинты.
-    // Это "насечки", на которых дизайн может "переключаться" для разных экранов.
+    // "Линейка для адаптивности"
     screens: {
       sm: '640px',
       md: '768px',
       lg: '1024px',
       xl: '1280px',
-      // Наша особая, выверенная "насечка". Нужна для решения конкретных проблем
-      // с выравниванием. Пример того, как мы подстраиваем инструменты под себя.
       'kyanchir-lg': '1025px',
       '2xl': '1536px',
     },
-    // В секции `extend` мы не заменяем стандартные настройки Tailwind, а ДОПОЛНЯЕМ их.
     extend: {
-      // "Фирменная палитра": Набор наших уникальных цветов.
-      // Мы используем "говорящие" имена (brand.lilac, feedback.error),
-      // чтобы код был интуитивно понятным, а замена фирменного цвета занимала одну секунду.
+      // "Фирменная палитра"
       colors: {
-        brand: {
-          lilac: '#6B80C5',
-          'lilac-light': '#C1D0FF',
-        },
+        brand: { lilac: '#6B80C5', 'lilac-light': '#C1D0FF' },
         accent: {
           pink: '#C1D0FF',
           'pink-light': '#FBC0E3',
           'pink-pale': '#FFE1F3',
         },
-        feedback: {
-          error: '#E06F6F',
-          red: '#D32F2F',
-        },
-        text: {
-          primary: '#272727',
-          secondary: '#6B80C5',
-        },
-        background: {
-          primary: '#FFFFFF',
-          secondary: '#FFE1F3',
-        },
+        feedback: { error: '#E06F6F', red: '#D32F2F' },
+        text: { primary: '#272727', secondary: '#6B80C5' },
+        background: { primary: '#FFFFFF', secondary: '#FFE1F3' },
       },
-      // "Набор фирменных шрифтов": Даем шрифтам "роли".
-      // Использование `var(...)` — это элегантный трюк. Мы не дублируем названия шрифтов,
-      // а ссылаемся на "главный чертеж" (CSS-переменные), определенный в `src/app/fonts.ts`.
-      // Это делает систему чистой и централизованной.
+      // "Набор фирменных шрифтов"
       fontFamily: {
         heading: ['var(--font-heading)', 'sans-serif'],
         body: ['var(--font-body)', 'sans-serif'],
         mono: ['var(--font-mono)', 'monospace'],
       },
-      // "Типографика": Самая сложная и важная часть нашего дизайна.
-      // Мы используем два подхода к изменению размера текста.
+      // "Типографика"
       fontSize: {
-        // === 1. СТУПЕНЧАТЫЙ АДАПТИВ (для основного контента) ===
-        // Размер текста меняется скачками на определенных брейкпоинтах (`@screen md`).
-        // Это как переключить передачу в машине — надежно и предсказуемо.
-        h1: [
-          '3rem', // Базовый размер для мобильных
-          {
-            lineHeight: '1.2',
-            letterSpacing: '-0.02em',
-            '@screen md': { fontSize: '4.5rem' },
-            '@screen lg': { fontSize: '6rem' },
-          },
-        ],
-        h2: [
-          '2.25rem',
-          {
-            lineHeight: '1.25',
-            letterSpacing: '-0.01em',
-            '@screen md': { fontSize: '3rem' },
-            '@screen lg': { fontSize: '3.75rem' },
-          },
-        ],
-        h3: [
-          '1.875rem',
-          {
-            lineHeight: '1.3',
-            letterSpacing: '0em',
-            '@screen md': { fontSize: '2.25rem' },
-            '@screen lg': { fontSize: '2.5rem' },
-          },
-        ],
-        'body-base': [
-          '1rem',
-          {
-            lineHeight: '1.6',
-            '@screen md': { fontSize: '1.125rem' },
-          },
-        ],
-        // ... (и другие ступенчатые размеры)
-
-        // === 2. ПЛАВНЫЙ (ЖИДКИЙ) АДАПТИВ (для баннеров) ===
-        // Здесь мы используем магию `clamp()`. Размер текста плавно "течет",
-        // увеличиваясь и уменьшаясь вместе с шириной экрана.
-        // `clamp(МИН, ЖЕЛАТЕЛЬНЫЙ, МАКС)`
         'clamp-banner-main': ['clamp(1rem, 5vw, 3rem)', { lineHeight: '1.1' }],
         'clamp-banner-info': [
           'clamp(0.8rem, 3vw, 1.25rem)',
           { lineHeight: '1.2' },
         ],
-        // ... (и другие плавные размеры, включая отладочные)
       },
+      typographyStyles: ({ theme }: { theme: any }) => ({
+        h1: {
+          fontSize: '3rem',
+          lineHeight: '1.2',
+          letterSpacing: '-0.02em',
+          '@screen md': { fontSize: '4.5rem' },
+          '@screen lg': { fontSize: '6rem' },
+        },
+        h2: {
+          fontSize: '2.25rem',
+          lineHeight: '1.25',
+          letterSpacing: '-0.01em',
+          '@screen md': { fontSize: '3rem' },
+          '@screen lg': { fontSize: '3.75rem' },
+        },
+        h3: {
+          fontSize: '1.875rem',
+          lineHeight: '1.3',
+          letterSpacing: '0em',
+          '@screen md': { fontSize: '2.25rem' },
+          '@screen lg': { fontSize: '2.5rem' },
+        },
+        'body-base': {
+          fontSize: '1rem',
+          lineHeight: '1.6',
+          '@screen md': { fontSize: '1.125rem' },
+        },
+      }),
     },
   },
-  // "Дополнительные инструменты" для нашего "дизайнера".
   plugins: [
-    // Инструмент, который позволяет красиво обрезать длинный текст, добавляя "...".
     require('@tailwindcss/line-clamp'),
-    // Инструмент, который придает нашим формам (полям ввода, кнопкам)
-    // приятный, стандартизированный вид "из коробки".
     require('@tailwindcss/forms'),
+    plugin(function ({ addUtilities, theme }) {
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: Явно указываем тип для newUtilities ---
+      const newUtilities: { [key: string]: any } = {};
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+      const typographyStyles = theme('typographyStyles');
+
+      for (const key in typographyStyles) {
+        const {
+          '@screen md': mdStyles,
+          '@screen lg': lgStyles,
+          ...baseStyles
+        } = typographyStyles[key];
+
+        const utilityClass = `.text-${key}`;
+        newUtilities[utilityClass] = baseStyles;
+
+        if (mdStyles) {
+          newUtilities[`@media (min-width: ${theme('screens.md')})`] = {
+            [utilityClass]: mdStyles,
+          };
+        }
+        if (lgStyles) {
+          newUtilities[`@media (min-width: ${theme('screens.lg')})`] = {
+            [utilityClass]: lgStyles,
+          };
+        }
+      }
+
+      addUtilities(newUtilities);
+    }),
   ],
 };
 

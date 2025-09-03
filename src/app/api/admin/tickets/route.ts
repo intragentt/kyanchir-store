@@ -2,19 +2,20 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { authOptions } from '@/lib/auth'; // Импортируем authOptions напрямую
-import { getServerSession } from 'next-auth/next'; // Импортируем getServerSession
-import { UserRole } from '@prisma/client';
+import { authOptions } from '@/lib/auth';
+import { getServerSession } from 'next-auth/next';
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ (1/2): Решаем ошибку сборки Next.js ---
+// Явно указываем, что этот маршрут всегда динамический, так как он зависит от сессии.
+export const dynamic = 'force-dynamic';
+// --- КОНЕЦ ИЗМЕНЕНИЙ (1/2) ---
 
 /**
  * API-эндпоинт для получения списка тикетов в админ-панели.
  * Доступно только для ролей ADMIN и MANAGEMENT.
  */
 export async function GET(req: Request) {
-  // `req` теперь используется
   try {
-    // Используем самый надежный способ получения сессии в Route Handlers,
-    // явно передавая ему объект запроса.
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id || !session.user.role) {
@@ -24,9 +25,10 @@ export async function GET(req: Request) {
       );
     }
 
+    // Сохраняем твою логику проверки ролей
     if (
-      session.user.role !== UserRole.ADMIN &&
-      session.user.role !== UserRole.MANAGEMENT
+      session.user.role.name !== 'ADMIN' &&
+      session.user.role.name !== 'MANAGEMENT'
     ) {
       return NextResponse.json(
         { error: 'Доступ запрещен. Недостаточно прав.' },
@@ -34,11 +36,21 @@ export async function GET(req: Request) {
       );
     }
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ (2/2): Улучшаем запрос для админки ---
+    // Включаем связанные данные, которые понадобятся на фронтенде
     const tickets = await prisma.supportTicket.findMany({
       orderBy: {
         createdAt: 'desc',
       },
+      include: {
+        status: true, // Включаем объект статуса (чтобы показать его имя/цвет)
+        source: true, // Включаем источник
+        _count: {
+          select: { messages: true }, // Считаем количество сообщений в тикете
+        },
+      },
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ (2/2) ---
 
     return NextResponse.json(tickets);
   } catch (error) {

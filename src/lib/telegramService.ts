@@ -2,7 +2,9 @@
 
 import TelegramBot from 'node-telegram-bot-api';
 import prisma from '@/lib/prisma';
-import { AgentRole } from '@prisma/client';
+// --- НАЧАЛО ИЗМЕНЕНИЙ (1/2): Удаляем неверный импорт ---
+// import { AgentRole } from '@prisma/client';
+// --- КОНЕЦ ИЗМЕНЕНИЙ (1/2) ---
 
 const token = process.env.TELEGRAM_SUPPORT_BOT_TOKEN;
 
@@ -51,7 +53,6 @@ export const setWebhook = async () => {
   }
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 /**
  * Отправляет уведомления о новом тикете всем релевантным агентам.
  */
@@ -63,24 +64,31 @@ export const notifyAgents = async (ticket: {
 }) => {
   const bot = getBotInstance();
 
-  // Теперь уведомляем всех, кроме тех, у кого нет роли. Админы и так включены.
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (2/2): Исправляем логику фильтрации ---
   const agentsToNotify = await prisma.supportAgent.findMany({
     where: {
       telegramId: { not: null },
-      role: { in: [AgentRole.ADMIN, AgentRole.MANAGEMENT, AgentRole.SUPPORT] },
+      // Фильтруем по полю 'name' внутри связанной модели 'role'
+      role: {
+        name: {
+          in: ['ADMIN', 'MANAGEMENT', 'SUPPORT'], // <-- Используем строки
+        },
+      },
     },
   });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ (2/2) ---
 
   if (agentsToNotify.length === 0) {
     console.warn(`Нет агентов для уведомления о тикете ${ticket.id}`);
     return;
   }
 
-  const ticketUrl = `https://t.me/kyanchir_uw_maill_bot?start=ticket_${ticket.id}`;
+  const ticketUrl = `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}?start=ticket_${ticket.id}`;
   const messageText = `
 📬 **Новое обращение!** (на ${ticket.assignedEmail || 'support'}) <a href="${ticketUrl}">&#8203;</a>
 <b>От:</b> ${ticket.clientEmail}
 <b>Тема:</b> ${ticket.subject}
+<i>ID тикета: ${ticket.id}</i>
 <i>Используйте "Ответить" (Reply), чтобы написать клиенту.</i>
   `;
 
@@ -96,7 +104,7 @@ export const notifyAgents = async (ticket: {
       [
         {
           text: 'Посмотреть на сайте ↗️',
-          url: `${process.env.NEXTAUTH_URL}/admin/tickets/${ticket.id}`,
+          url: `${process.env.NEXTAUTH_URL}/admin/mail?ticketId=${ticket.id}`,
         },
       ],
     ],
@@ -122,4 +130,3 @@ export const notifyAgents = async (ticket: {
     `Уведомления о тикете ${ticket.id} отправлены ${agentsToNotify.length} агентам.`,
   );
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---

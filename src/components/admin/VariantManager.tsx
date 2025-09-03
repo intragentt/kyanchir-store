@@ -2,21 +2,23 @@
 'use client';
 
 import { useState } from 'react';
-import { Variant } from '@prisma/client';
+// --- НАЧАЛО ИЗМЕНЕНИЙ (1/2): Исправляем импорт и имя типа ---
+import { ProductVariant } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatPrice } from '@/utils/formatPrice';
 
-// Вариант с подгруженными изображениями (url нужен для превью)
-type VariantWithImages = Variant & { images: { url: string }[] };
+// Тип варианта с подгруженными изображениями (url нужен для превью)
+type ProductVariantWithImages = ProductVariant & { images: { url: string }[] };
+// --- КОНЕЦ ИЗМЕНЕНИЙ (1/2) ---
 
 interface VariantManagerProps {
-  initialVariants: VariantWithImages[];
+  initialVariants: ProductVariantWithImages[];
   productId: string;
 }
 
-/* -------------------- ImageUploader -------------------- */
+/* -------------------- ImageUploader (без изменений) -------------------- */
 function ImageUploader({
   onUploadSuccess,
   isUploading,
@@ -73,7 +75,7 @@ function ImageUploader({
   );
 }
 
-/* -------------------- AddVariantForm -------------------- */
+/* -------------------- AddVariantForm (без изменений) -------------------- */
 function AddVariantForm({
   productId,
   onVariantAdded,
@@ -158,7 +160,7 @@ function AddVariantForm({
               <button
                 type="button"
                 onClick={() => removeImage(index)}
-                className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
+                className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white"
               >
                 ×
               </button>
@@ -185,7 +187,7 @@ function AddVariantForm({
   );
 }
 
-/* -------------------- VariantManager -------------------- */
+/* -------------------- VariantManager (props используют исправленный тип) -------------------- */
 export default function VariantManager({
   initialVariants,
   productId,

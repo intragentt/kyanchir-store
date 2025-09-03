@@ -23,18 +23,20 @@ export default withAuth(
     // зайти в админку, перенаправляем его.
     if (
       pathname.startsWith('/admin') &&
-      token?.role !== 'ADMIN' &&
-      token?.role !== 'MANAGEMENT'
+      // --- ИЗМЕНЕНИЕ: Сравниваем свойство .name, а не весь объект ---
+      token?.role?.name !== 'ADMIN' &&
+      token?.role?.name !== 'MANAGEMENT'
+      // --- КОНЕЦ ИЗМЕНЕНИЯ ---
     ) {
       console.log(
-        `>>> ACCESS DENIED for role "${token?.role}". Redirecting to homepage.`,
+        `>>> ACCESS DENIED for role "${token?.role?.name}". Redirecting to homepage.`,
       );
       return NextResponse.redirect(new URL('/', req.url));
     }
 
     // Для всех остальных авторизованных пользователей просто пропускаем дальше.
     console.log(
-      `>>> Access GRANTED for role "${token?.role}". Continuing to ${pathname}.`,
+      `>>> Access GRANTED for role "${token?.role?.name}". Continuing to ${pathname}.`,
     );
     return NextResponse.next();
   },

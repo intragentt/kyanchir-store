@@ -8,13 +8,17 @@ type MessageWithAgent = SupportMessage & {
   agent: { name: string; role: AgentRole } | null;
 };
 
-const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
+const SourceIcon = ({
+  sourceId,
+}: {
+  sourceId: SupportTicket['sourceId'] | null;
+}) => {
   let icon = '📧';
   let tooltip = 'Пришло с почты';
-  if (source === 'WEB_FORM') {
+  if (sourceId === 'WEB_FORM') {
     icon = '🌐';
     tooltip = 'Заполнена форма на сайте';
-  } else if (source === 'TELEGRAM_BOT') {
+  } else if (sourceId === 'TELEGRAM_BOT') {
     icon = '🤖';
     tooltip = 'Обращение из Telegram бота';
   }
@@ -72,7 +76,6 @@ export default function MailClient({
       setMessages(data);
     } catch (e: any) {
       console.error(e.message);
-      // Можно установить состояние ошибки для отображения в UI
     } finally {
       setIsLoadingMessages(false);
     }
@@ -89,7 +92,6 @@ export default function MailClient({
 
     setIsSending(true);
 
-    // Пока что выводим в консоль
     console.log({
       message: 'Отправка ответа (пока заглушка)',
       ticketId: selectedTicket.id,
@@ -103,8 +105,7 @@ export default function MailClient({
       );
       setReplyText('');
       setIsSending(false);
-      // TODO: После реальной отправки нужно будет обновить список сообщений
-    }, 1000); // Имитация задержки
+    }, 1000);
   };
 
   const availableEmails = [
@@ -115,7 +116,7 @@ export default function MailClient({
     'hello@kyanchir.ru',
   ];
 
-  const openTicketsCount = tickets.filter((t) => t.status === 'OPEN').length;
+  const openTicketsCount = tickets.filter((t) => t.statusId === 'OPEN').length;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg bg-white shadow-md">
@@ -174,7 +175,7 @@ export default function MailClient({
                 </span>
               </div>
               <p className="flex items-center truncate text-sm text-gray-700">
-                <SourceIcon source={ticket.source} />
+                <SourceIcon sourceId={ticket.sourceId} />
                 {ticket.subject}
               </p>
             </li>
@@ -186,7 +187,7 @@ export default function MailClient({
           <>
             <div className="mb-4 border-b pb-4">
               <h1 className="mb-1 flex items-center text-2xl font-bold">
-                <SourceIcon source={selectedTicket.source} />
+                <SourceIcon sourceId={selectedTicket.sourceId} />
                 {selectedTicket.subject}
               </h1>
               <p className="text-sm text-gray-600">
@@ -211,24 +212,26 @@ export default function MailClient({
               {messages.length === 0 && !isLoadingMessages && (
                 <p className="text-center text-gray-400">Сообщений пока нет.</p>
               )}
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ПОСЛЕДНИЕ ОШИБКИ ТИПОВ --- */}
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex flex-col ${msg.senderType === 'CLIENT' ? 'items-start' : 'items-end'}`}
+                  className={`flex flex-col ${msg.senderTypeId === 'CLIENT' ? 'items-start' : 'items-end'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2 ${msg.senderType === 'CLIENT' ? 'bg-gray-200 text-gray-800' : 'bg-blue-600 text-white'}`}
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${msg.senderTypeId === 'CLIENT' ? 'bg-gray-200 text-gray-800' : 'bg-blue-600 text-white'}`}
                   >
-                    <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                    <p className="whitespace-pre-wrap text-sm">{msg.content}</p>
                   </div>
                   <p className="mt-1 text-xs text-gray-400">
-                    {msg.senderType === 'AGENT'
+                    {msg.senderTypeId === 'AGENT'
                       ? msg.agent?.name || 'Агент'
                       : selectedTicket.clientEmail}
                     , {formatDate(msg.createdAt)}
                   </p>
                 </div>
               ))}
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
             <div className="mt-auto border-t pt-4">
               <textarea

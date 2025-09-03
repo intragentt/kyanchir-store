@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 // POST /api/variants
 export async function POST(req: NextRequest) {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (1/2): Добавляем защиту ---
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role?.name !== 'ADMIN') {
+    return new NextResponse('Unauthorized', { status: 401 });
+  }
+  // --- КОНЕЦ ИЗМЕНЕНИЙ (1/2) ---
+
   try {
     const body = await req.json();
     const { productId, color, price, oldPrice, discountPercentage, images } =
@@ -15,7 +24,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const created = await prisma.variant.create({
+    // --- НАЧАЛО ИЗМЕНЕНИЙ (2/2): Исправляем имя модели ---
+    const created = await prisma.productVariant.create({
+      // --- КОНЕЦ ИЗМЕНЕНИЙ (2/2) ---
       data: {
         product: { connect: { id: productId } },
         color: color ?? null,
@@ -34,6 +45,9 @@ export async function POST(req: NextRequest) {
               },
             }
           : {}),
+      },
+      include: {
+        images: true, // Возвращаем созданный вариант вместе с изображениями
       },
     });
 

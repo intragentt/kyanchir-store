@@ -4,14 +4,19 @@
 import { useState, useEffect } from 'react';
 import { SupportTicket } from '@prisma/client';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Меняем 'source' на 'sourceId' ---
 // Компонент-хелпер для отображения иконок источника
-const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
+const SourceIcon = ({
+  sourceId,
+}: {
+  sourceId: SupportTicket['sourceId'] | null;
+}) => {
   let icon = '📧'; // Email по умолчанию
   let tooltip = 'Пришло с почты';
-  if (source === 'WEB_FORM') {
+  if (sourceId === 'WEB_FORM') {
     icon = '🌐';
     tooltip = 'Заполнена форма на сайте';
-  } else if (source === 'TELEGRAM_BOT') {
+  } else if (sourceId === 'TELEGRAM_BOT') {
     icon = '🤖';
     tooltip = 'Обращение из Telegram бота';
   }
@@ -21,6 +26,7 @@ const SourceIcon = ({ source }: { source: SupportTicket['source'] | null }) => {
     </span>
   );
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 // Функция для красивого форматирования даты
 const formatDate = (dateString: Date) => {
@@ -85,9 +91,11 @@ export default function AdminMailPage() {
     'hello@kyanchir.ru',
   ];
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Меняем 'status' на 'statusId' для консистентности ---
   const openTicketsCount = state.tickets.filter(
-    (t) => t.status === 'OPEN',
+    (t) => t.statusId === 'OPEN',
   ).length;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-lg bg-white shadow-md">
@@ -149,7 +157,9 @@ export default function AdminMailPage() {
                 </span>
               </div>
               <p className="flex items-center truncate text-sm text-gray-700">
-                <SourceIcon source={ticket.source} />
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Меняем 'source' на 'sourceId' --- */}
+                <SourceIcon sourceId={ticket.sourceId} />
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 {ticket.subject}
               </p>
             </li>
@@ -161,7 +171,9 @@ export default function AdminMailPage() {
           <>
             <div className="mb-4 border-b pb-4">
               <h1 className="mb-1 flex items-center text-2xl font-bold">
-                <SourceIcon source={selectedTicket.source} />
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Меняем 'source' на 'sourceId' --- */}
+                <SourceIcon sourceId={selectedTicket.sourceId} />
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 {selectedTicket.subject}
               </h1>
               <p className="text-sm text-gray-600">

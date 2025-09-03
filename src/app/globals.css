@@ -4,7 +4,11 @@
 */
 
 /* --- ШАГ 1: АКТИВАЦИЯ TAILWIND --- */
-@import "tailwindcss";
+/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ НОВЫЙ, ПРАВИЛЬНЫЙ СИНТАКСИС --- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */
 
 /* --- ШАГ 2: ОПРЕДЕЛЕНИЕ БАЗОВОГО СЛОЯ --- */
 @layer base {
@@ -30,13 +34,10 @@
     font-family: var(--font-body);
     overscroll-behavior-y: contain;
 
-    /* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем отступ сверху, так как шапка Telegram теперь делает это за нас --- */
-    /* padding-top: env(safe-area-inset-top); */
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     padding-bottom: env(safe-area-inset-bottom);
     box-sizing: border-box;
-    /* --- КОНЕЦ ИЗМЕНЕНИЙ --- */
   }
 
   .content-hidden {

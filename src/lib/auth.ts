@@ -1,13 +1,11 @@
 // Местоположение: src/lib/auth.ts
 
-import { NextAuthOptions } from 'next-auth';
+import { NextAuthOptions, getServerSession } from 'next-auth'; // Добавляем getServerSession
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ИМПОРТ ---
-import type { UserRole } from '@prisma/client'; // Импортируем UserRole как ТИП
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import type { UserRole } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -24,7 +22,7 @@ export const authOptions: NextAuthOptions = {
         }
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { role: true },
+          include: { role: true }, // Роль уже включена, это отлично!
         });
 
         if (!user || !user.passwordHash) {
@@ -57,7 +55,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         const user = await prisma.user.findUnique({
           where: { id: loginToken.userId },
-          include: { role: true },
+          include: { role: true }, // Роль уже включена, это отлично!
         });
         return user || null;
       },
@@ -83,7 +81,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
-          include: { role: true },
+          include: { role: true }, // Роль уже включена, это отлично!
         });
         if (user) {
           await prisma.verificationToken.delete({
@@ -108,18 +106,37 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.AUTH_SECRET,
   callbacks: {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем коллбэки для правильной передачи ВСЕХ данных ---
     async jwt({ token, user }) {
+      // При первом входе (когда `user` существует)
       if (user) {
-        // @ts-ignore - user из authorize уже содержит role, TypeScript может этого не знать сразу
-        token.role = user.role;
+        token.id = user.id;
+        // TypeScript может не знать, что `user` здесь имеет поле `role`, поэтому используем @ts-ignore
+        // @ts-ignore
+        if (user.role) {
+          // @ts-ignore
+          token.role = user.role;
+        }
       }
       return token;
     },
     async session({ session, token }) {
+      // Для каждой сессии добавляем данные из токена
       if (session.user) {
-        session.user.role = token.role as UserRole;
+        session.user.id = token.id as string;
+        // Точно так же передаем роль из токена в объект сессии
+        // @ts-ignore
+        if (token.role) {
+          // @ts-ignore
+          session.user.role = token.role;
+        }
       }
       return session;
     },
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   },
 };
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем удобный helper для получения сессии на сервере ---
+export const auth = () => getServerSession(authOptions);
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---

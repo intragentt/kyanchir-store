@@ -5,14 +5,10 @@ import { getBotInstance, setWebhook } from '@/lib/telegramService';
 import prisma from '@/lib/prisma';
 import TelegramBot from 'node-telegram-bot-api';
 import nodemailer from 'nodemailer';
-import { SenderType, TicketStatus } from '@prisma/client';
 
 const bot = getBotInstance();
 setWebhook();
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ГЛОБАЛЬНЫЕ ИЗМЕНЕНИЯ ---
-
-// Простое временное хранилище для текстов ответов { messageId: replyText }
 const temporaryReplies = new Map<number, string>();
 
 const AGENT_KEYBOARD: TelegramBot.ReplyKeyboardMarkup = {
@@ -39,24 +35,35 @@ async function handleCallbackQuery(callbackQuery: TelegramBot.CallbackQuery) {
 
   try {
     if (action === 'ticket') {
-      // Обработка статусов: ack, close
       const ticketId = rest[0];
-      let newStatus: TicketStatus | undefined;
+      let newStatusName: string | undefined;
       let responseText = '';
 
       if (type === 'ack') {
-        newStatus = TicketStatus.PENDING;
+        newStatusName = 'PENDING';
         responseText = `⏳ Тикет взят в работу агентом ${agent.name}`;
       } else if (type === 'close') {
-        newStatus = TicketStatus.RESOLVED;
+        newStatusName = 'RESOLVED';
         responseText = `✅ Тикет закрыт агентом ${agent.name}`;
       }
 
-      if (newStatus) {
+      if (newStatusName) {
+        const statusToSet = await prisma.ticketStatus.findUnique({
+          where: { name: newStatusName },
+        });
+        if (!statusToSet)
+          throw new Error(`Status ${newStatusName} not found in DB`);
+
+        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+        // Обновляем ТОЛЬКО статус. Поля agentId в тикете нет.
         await prisma.supportTicket.update({
           where: { id: ticketId },
-          data: { status: newStatus },
+          data: {
+            statusId: statusToSet.id,
+          },
         });
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
         await bot.editMessageText(
           `${message.text}\n\n---\n<b>${responseText}</b>`,
           { chat_id: chatId, message_id: messageId, parse_mode: 'HTML' },
@@ -66,10 +73,9 @@ async function handleCallbackQuery(callbackQuery: TelegramBot.CallbackQuery) {
         });
       }
     } else if (action === 'reply') {
-      // Обработка выбора email для ответа
       const ticketId = rest[0];
       const originalMessageId = parseInt(rest[1]);
-      const fromEmail = type.replace(/-/g, '@'); // Восстанавливаем email из формата `support-kyanchir.ru`
+      const fromEmail = type.replace(/-/g, '@');
 
       const replyText = temporaryReplies.get(originalMessageId);
       if (!replyText) {
@@ -98,23 +104,29 @@ async function handleCallbackQuery(callbackQuery: TelegramBot.CallbackQuery) {
       });
 
       await transporter.sendMail({
-        from: `"${agent.name} (Kyanchir Support)" <${fromEmail}>`, // Отправляем с выбранного email
+        from: `"${agent.name} (Kyanchir Support)" <${fromEmail}>`,
         to: ticket.clientEmail,
         subject: `Re: ${ticket.subject}`,
         text: replyText,
         html: `<p>${replyText.replace(/\n/g, '<br>')}</p>`,
       });
 
+      const agentSenderType = await prisma.senderType.findUnique({
+        where: { name: 'AGENT' },
+      });
+      if (!agentSenderType) throw new Error('SenderType AGENT not found in DB');
+
+      // Здесь agentId на своем месте, так как он есть в модели SupportMessage
       await prisma.supportMessage.create({
         data: {
           ticketId: ticket.id,
           content: replyText,
-          senderType: SenderType.AGENT,
+          senderTypeId: agentSenderType.id,
           agentId: agent.id,
         },
       });
 
-      temporaryReplies.delete(originalMessageId); // Чистим временное хранилище
+      temporaryReplies.delete(originalMessageId);
 
       await bot.editMessageText(
         `✅ Ответ успешно отправлен клиенту ${ticket.clientEmail} с почты <b>${fromEmail}</b>.`,
@@ -135,21 +147,18 @@ async function stageReplyToTicket(msg: TelegramBot.Message) {
   const { from, chat, text, reply_to_message, message_id } = msg;
   if (!from || !text || !reply_to_message || !reply_to_message.text) return;
 
-  const match = reply_to_message.text.match(/start=ticket_([a-zA-Z0-9]+)/);
-  if (!match || !match[1]) {
+  const idMatch = reply_to_message.text.match(/ID тикета: ([a-zA-Z0-9-]+)/);
+  if (!idMatch || !idMatch[1]) {
     return await bot.sendMessage(
       chat.id,
       '⚠️ Не удалось найти ID тикета. Отвечайте только на уведомления о тикетах.',
     );
   }
-  const ticketId = match[1];
+  const ticketId = idMatch[1];
 
-  // Сохраняем текст ответа во временное хранилище
   temporaryReplies.set(message_id, text);
-  // Устанавливаем таймер на удаление, чтобы не хранить вечно
-  setTimeout(() => temporaryReplies.delete(message_id), 15 * 60 * 1000); // 15 минут
+  setTimeout(() => temporaryReplies.delete(message_id), 15 * 60 * 1000);
 
-  // Получаем список всех наших email из базы
   const availableEmails = await prisma.supportRoute.findMany({
     select: { kyanchirEmail: true },
   });
@@ -160,12 +169,10 @@ async function stageReplyToTicket(msg: TelegramBot.Message) {
     );
   }
 
-  // Формируем кнопки с выбором почты
   const emailKeyboard: TelegramBot.InlineKeyboardButton[][] =
     availableEmails.map((route) => [
       {
         text: route.kyanchirEmail,
-        // Формат callback_data: reply_email-with-dash_ticketId_originalMessageId
         callback_data: `reply_${route.kyanchirEmail.replace(/@/g, '-')}_${ticketId}_${message_id}`,
       },
     ]);
@@ -183,8 +190,6 @@ async function handleStartCommand(msg: TelegramBot.Message) {
 }
 
 export async function POST(req: Request) {
-  // ... (проверка токена)
-
   try {
     const body = await req.json();
     const msg = body.message as TelegramBot.Message | undefined;
@@ -209,10 +214,8 @@ export async function POST(req: Request) {
     ) {
       await handleTicketsCommand(msg);
     } else if (msg.reply_to_message) {
-      // ТЕПЕРЬ ОТВЕТ ТОЛЬКО ГОТОВИТСЯ К ОТПРАВКЕ
       await stageReplyToTicket(msg);
     } else {
-      // TODO: Добавить логику написания первым по email
       await bot.sendMessage(
         chat.id,
         'Неизвестная команда. Используйте клавиатуру или команды /start, /tickets',
@@ -228,4 +231,3 @@ export async function POST(req: Request) {
     );
   }
 }
-// --- КОНЕЦ ГЛОБАЛЬНЫХ ИЗМЕНЕНИЙ ---

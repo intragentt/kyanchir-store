@@ -5,55 +5,65 @@ import bcrypt from 'bcrypt';
 
 export async function POST(req: Request) {
   try {
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // 1. Принимаем все три поля из запроса.
     const {
       name,
       email,
       password,
     }: { name?: string; email?: string; password?: string } = await req.json();
 
-    // 2. Обновляем валидацию.
     if (!name || !email || !password) {
       return NextResponse.json(
         { error: 'Имя, Email и пароль обязательны' },
         { status: 400 },
       );
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json(
         { error: 'Пользователь с таким email уже существует' },
-        { status: 409 }, // 409 Conflict - более правильный статус для этого случая
+        { status: 409 },
       );
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 3. Создаем пользователя с именем.
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: ПРИСВАИВАЕМ РОЛЬ ПРИ РЕГИСТРАЦИИ ---
+
+    // 1. Находим базовую роль 'CLIENT' в базе данных.
+    const clientRole = await prisma.userRole.findUnique({
+      where: { name: 'CLIENT' },
+    });
+
+    // 2. Если по какой-то причине роль 'CLIENT' не найдена,
+    // это критическая ошибка конфигурации, и мы не должны создавать пользователя.
+    if (!clientRole) {
+      console.error("CRITICAL: 'CLIENT' role not found in database.");
+      throw new Error('Default user role is not configured on the server.');
+    }
+
+    // 3. Создаем пользователя, СРАЗУ СВЯЗЫВАЯ его с найденной ролью.
     const user = await prisma.user.create({
       data: {
-        name, // Добавляем имя
+        name,
         email,
         passwordHash,
+        roleId: clientRole.id, // Вот недостающая, но обязательная связь!
       },
     });
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // 4. Убираем всю логику ручного создания сессии.
-    // Единственная задача этого роута - создать пользователя и сообщить об успехе.
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     return NextResponse.json(
       { success: true, userId: user.id },
-      { status: 201 }, // 201 Created - стандартный статус для успешного создания ресурса
+      { status: 201 },
     );
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   } catch (error) {
     console.error('Register API error:', error);
-    return NextResponse.json(
-      { error: 'Произошла внутренняя ошибка сервера' },
-      { status: 500 },
-    );
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Произошла внутренняя ошибка сервера';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

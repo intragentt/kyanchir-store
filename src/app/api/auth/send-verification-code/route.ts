@@ -2,7 +2,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createTransport } from 'nodemailer';
-import { randomBytes } from 'crypto';
 
 export async function POST(req: Request) {
   try {
@@ -16,22 +15,36 @@ export async function POST(req: Request) {
     const token = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 минут
 
-    // 2. Находим или создаем пользователя
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем роль при создании пользователя ---
+
+    // 2. Находим базовую роль 'CLIENT'.
+    const clientRole = await prisma.userRole.findUnique({
+      where: { name: 'CLIENT' },
+    });
+
+    if (!clientRole) {
+      console.error("CRITICAL: 'CLIENT' role not found in database.");
+      throw new Error('Default user role is not configured on the server.');
+    }
+
+    // 3. Находим или создаем пользователя, СРАЗУ указывая роль для случая `create`.
     const user = await prisma.user.upsert({
       where: { email },
       update: {},
-      create: { email },
+      create: {
+        email,
+        roleId: clientRole.id, // Вот недостающая, но обязательная связь!
+      },
     });
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // 3. ПРАВИЛО ГИГИЕНЫ: Перед созданием нового токена, удаляем все старые для этого email.
-    // Это гарантирует, что только самый последний код будет действителен.
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+    // 4. ПРАВИЛО ГИГИЕНЫ: Перед созданием нового токена, удаляем все старые для этого email.
     await prisma.verificationToken.deleteMany({
       where: { identifier: email },
     });
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    // 4. Создаем новый, единственно верный токен верификации
+    // 5. Создаем новый, единственно верный токен верификации
     await prisma.verificationToken.create({
       data: {
         identifier: email,
@@ -40,7 +53,7 @@ export async function POST(req: Request) {
       },
     });
 
-    // 5. Отправляем письмо
+    // 6. Отправляем письмо
     console.log('--- НАЧАЛО ОТПРАВКИ EMAIL (КАСТОМНЫЙ API) ---');
     console.log(`Цель: ${email}, Код: ${token}`);
 
@@ -70,9 +83,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('!!! КРИТИЧЕСКАЯ ОШИБКА В /send-verification-code:', error);
-    return NextResponse.json(
-      { error: 'Произошла внутренняя ошибка сервера' },
-      { status: 500 },
-    );
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Произошла внутренняя ошибка сервера';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

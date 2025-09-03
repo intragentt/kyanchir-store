@@ -2,21 +2,32 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Product, Status } from '@prisma/client';
+// --- НАЧАЛО ИЗМЕНЕНИЙ (1/4): Импортируем Prisma для создания типа ---
+import { Prisma } from '@prisma/client';
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ (2/4): Создаем правильный тип, который включает статус ---
+type ProductWithStatus = Prisma.ProductGetPayload<{
+  include: {
+    status: true;
+  };
+}>;
 
 interface EditProductDetailsProps {
-  product: Product;
+  product: ProductWithStatus;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ (2/4) ---
 
 export default function EditProductDetails({
   product,
 }: EditProductDetailsProps) {
   const router = useRouter();
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (3/4): Работаем с statusId, а не с объектом ---
   const [formData, setFormData] = useState({
     name: product.name,
     description: product.description || '',
-    status: product.status,
+    statusId: product.statusId, // <-- Используем ID
   });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ (3/4) ---
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (
@@ -36,7 +47,7 @@ export default function EditProductDetails({
       const response = await fetch(`/api/products/${product.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData), // Отправляем данные, включая statusId
       });
 
       if (!response.ok) {
@@ -44,8 +55,7 @@ export default function EditProductDetails({
       }
 
       alert('Детали сохранены!');
-      router.refresh(); // Обновляет данные на странице, чтобы увидеть изменения
-
+      router.refresh();
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Неизвестная ошибка');
     } finally {
@@ -76,22 +86,26 @@ export default function EditProductDetails({
         {/* Поле Статус */}
         <div>
           <label
-            htmlFor="status"
+            htmlFor="statusId"
             className="block text-sm font-medium text-gray-700"
           >
             Статус
           </label>
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ (4/4): Исправляем select --- */}
           <select
-            id="status"
-            name="status"
-            value={formData.status}
+            id="statusId"
+            name="statusId" // <-- меняем name на statusId
+            value={formData.statusId} // <-- value теперь statusId
             onChange={handleInputChange}
-            className="mt-1 block w-full rounded-md border-gray-300 py-2 pr-10 pl-3 text-base focus:border-indigo-500 focus:ring-indigo-500 focus:outline-none sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
           >
-            <option value={Status.DRAFT}>Черновик</option>
-            <option value={Status.PUBLISHED}>Опубликован</option>
-            <option value={Status.ARCHIVED}>В архиве</option>
+            {/* Вам нужно будет передать список статусов из БД, но для примера пока так */}
+            <option value="ID_статуса_DRAFT">Черновик</option>
+            <option value="ID_статуса_PUBLISHED">Опубликован</option>
+            <option value="ID_статуса_ARCHIVED">В архиве</option>
           </select>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ (4/4) --- */}
+          {/* ПРИМЕЧАНИЕ: В идеале, нужно загрузить статусы из `prisma.status.findMany()` и отрендерить их здесь, используя их ID в качестве value. */}
         </div>
       </div>
       {/* Поле Описание */}

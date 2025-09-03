@@ -1,5 +1,4 @@
 // Местоположение: src/app/api/admin/filters/update/route.ts
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
@@ -30,33 +29,50 @@ export async function POST(request: Request) {
     const { presetId, items } = validation.data;
 
     await prisma.$transaction(async (tx) => {
+      // Сначала удаляем все старые связи для этого пресета
       await tx.presetItem.deleteMany({
         where: {
           presetId: presetId,
         },
       });
 
+      // Если есть новые элементы для добавления
       if (items.length > 0) {
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ОШИБКУ ТИПОВ ---
+
+        // 1. Находим ID для типа 'CATEGORY' один раз, чтобы не делать это в цикле.
+        const categoryType = await tx.presetItemType.findUnique({
+          where: { name: 'CATEGORY' },
+          select: { id: true },
+        });
+
+        // 2. Если по какой-то причине такой тип не найден в базе, выдаем ошибку.
+        if (!categoryType) {
+          throw new Error(
+            "PresetItemType 'CATEGORY' not found in the database.",
+          );
+        }
+
+        // 3. Создаем записи, добавляя обязательное поле typeId.
         await tx.presetItem.createMany({
-          // ИЗМЕНЕНО: Мы явно указываем TypeScript, какой тип у `item`.
-          // Это напрямую исправляет вторую ошибку "неявно имеет тип any".
-          data: items.map((item: { categoryId: string; order: number }) => ({
+          data: items.map((item) => ({
             presetId: presetId,
             categoryId: item.categoryId,
             order: item.order,
-            type: 'CATEGORY',
+            typeId: categoryType.id, // Вот недостающее поле!
           })),
         });
+
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       }
     });
 
     return NextResponse.json({ message: 'Filter updated successfully' });
   } catch (error) {
     console.error('Error updating filter preset:', error);
-    return NextResponse.json(
-      { message: 'Internal server error' },
-      { status: 500 },
-    );
+    // Проверяем, является ли ошибка экземпляром Error, чтобы получить message
+    const errorMessage =
+      error instanceof Error ? error.message : 'Internal server error';
+    return NextResponse.json({ message: errorMessage }, { status: 500 });
   }
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---

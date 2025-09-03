@@ -10,38 +10,52 @@ const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'ONESIZE'];
 export default async function ProductPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  // --- НЕБОЛЬШОЕ УЛУЧШЕНИЕ: Убираем Promise, так как Next.js разрешает его автоматически ---
+  params: { id: string };
 }) {
-  const { id } = await params;
+  const { id } = params;
 
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
       variants: {
         include: {
-          images: true,
-          inventory: { include: { size: true } },
+          images: {
+            orderBy: {
+              order: 'asc',
+            },
+          },
+          // --- НАЧАЛО ИЗМЕНЕНИЙ (1/2): Используем правильное имя связи 'sizes' ---
+          sizes: {
+            include: {
+              size: true,
+            },
+          },
+          // --- КОНЕЦ ИЗМЕНЕНИЙ (1/2) ---
         },
       },
       attributes: true,
+      status: true, // Включаем статус, чтобы можно было его отобразить
     },
   });
 
-  if (!product) notFound();
+  if (!product) {
+    notFound();
+  }
 
+  // Сортируем размеры внутри каждого варианта
   const sortedProduct = {
     ...product,
     variants: product.variants.map((variant) => ({
       ...variant,
-      inventory: [...variant.inventory].sort((a, b) => {
-        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-        const sizeA = a.size.value.toUpperCase(); // Исправлено с .name на .value
-        const sizeB = b.size.value.toUpperCase(); // Исправлено с .name на .value
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+      // --- НАЧАЛО ИЗМЕНЕНИЙ (2/2): Используем правильное имя 'sizes' и для сортировки ---
+      sizes: [...variant.sizes].sort((a, b) => {
+        const sizeA = a.size.value.toUpperCase();
+        const sizeB = b.size.value.toUpperCase();
+        // --- КОНЕЦ ИЗМЕНЕНИЙ (2/2) ---
         const indexA = SIZE_ORDER.indexOf(sizeA);
         const indexB = SIZE_ORDER.indexOf(sizeB);
 
-        // Если размера нет в нашем списке, отправляем его в конец
         if (indexA === -1) return 1;
         if (indexB === -1) return -1;
 

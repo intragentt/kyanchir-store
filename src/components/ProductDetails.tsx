@@ -17,7 +17,7 @@ import ArrowStep1 from '@/components/illustrations/ArrowStep1';
 import Image from 'next/image';
 import ProductActions from './product-details/ProductActions';
 
-// ... (компонент CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
+// ... (компоненты CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
 const CountdownTimer = ({
   expiryDate,
 }: {
@@ -93,7 +93,7 @@ const MobileSizeGuideWithAccordion = () => {
       <div className="font-body text-base font-semibold text-gray-500">
         Таблица размеров
       </div>
-      <div className="font-body mt-4 text-sm text-gray-800">
+      <div className="mt-4 font-body text-sm text-gray-800">
         <div className="grid grid-cols-5 gap-x-2 pb-2 text-xs font-semibold text-gray-400">
           <div />
           <div className="text-center">ОГ</div>
@@ -117,7 +117,7 @@ const MobileSizeGuideWithAccordion = () => {
       <div className="mt-6 border-t border-gray-200 pt-4">
         <button
           onClick={() => setIsHowToOpen(!isHowToOpen)}
-          className="font-body flex w-full items-center justify-between text-base font-semibold text-gray-800"
+          className="flex w-full items-center justify-between font-body text-base font-semibold text-gray-800"
         >
           <span>Как определить размер?</span>
           <span
@@ -128,7 +128,7 @@ const MobileSizeGuideWithAccordion = () => {
         </button>
         {isHowToOpen && (
           <div className="animate-fade-in mt-4">
-            <p className="font-body text-base font-medium whitespace-pre-line text-[#272727]">
+            <p className="whitespace-pre-line font-body text-base font-medium text-[#272727]">
               {`Узнай, как правильно определить свой размер 
 нижнего белья — мы собрали простое и наглядное 
 руководство, чтобы каждый комплект идеально 
@@ -136,7 +136,7 @@ const MobileSizeGuideWithAccordion = () => {
 с первого дня`}
             </p>
             <div className="relative mt-4">
-              <ArrowStep1 className="absolute top-[-10px] left-[50px] h-auto w-[120px]" />
+              <ArrowStep1 className="absolute left-[50px] top-[-10px] h-auto w-[120px]" />
               <Image
                 src="/images/how-to-measure.png"
                 width={345}
@@ -152,12 +152,14 @@ const MobileSizeGuideWithAccordion = () => {
   );
 };
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ (1/4): Обновляем тип, чтобы он соответствовал данным из Prisma ---
 type ProductWithDetails = Prisma.ProductGetPayload<{
   include: {
     variants: {
       include: {
         images: true;
-        inventory: {
+        sizes: {
+          // <-- ИЗМЕНЕНО: inventory -> sizes
           include: {
             size: true;
           };
@@ -165,8 +167,10 @@ type ProductWithDetails = Prisma.ProductGetPayload<{
       };
     };
     attributes: true;
+    status: true;
   };
 }>;
+// --- КОНЕЦ ИЗМЕНЕНИЙ (1/4) ---
 
 interface ProductInfoBlockProps {
   product: ProductWithDetails;
@@ -219,14 +223,17 @@ const ProductInfoBlock = ({
       </div>
 
       <div className="mt-6">
-        <div className="font-body text-text-primary mb-4 text-base font-medium">
+        <div className="mb-4 font-body text-base font-medium text-text-primary">
           Размер
         </div>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ (2/4): Передаем правильные данные в SizeSelector --- */}
+        {/* Примечание: сам компонент SizeSelector тоже нужно будет обновить, чтобы он принимал prop 'sizes' вместо 'inventory' */}
         <SizeSelector
-          inventory={selectedVariant.inventory}
+          inventory={selectedVariant.sizes} // <-- ИЗМЕНЕНО: inventory -> sizes
           selectedSize={selectedSize}
           onSelectSize={handleSelectSize}
         />
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ (2/4) --- */}
       </div>
 
       <div className="mt-6">
@@ -287,9 +294,12 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     return () => clearInterval(interval);
   }, [selectedVariant.discountExpiresAt]);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (3/4): Вычисляем сток на основе правильного поля 'sizes' ---
   const availableStock =
-    selectedVariant.inventory.find((inv) => inv.size.value === selectedSize)
-      ?.stock ?? 0;
+    selectedVariant.sizes.find(
+      (sizeInfo) => sizeInfo.size.value === selectedSize,
+    )?.stock ?? 0;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ (3/4) ---
 
   useEffect(() => {
     if (quantity > availableStock) {
@@ -405,12 +415,14 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         title="Выберите размер"
       >
         <div className="flex h-full flex-col">
-          <div className="flex-shrink-0 border-b border-gray-200 bg-white px-4 pt-2 pb-4">
+          <div className="flex-shrink-0 border-b border-gray-200 bg-white px-4 pb-4 pt-2">
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ (4/4): Передаем правильные данные и здесь --- */}
             <SizeSelector
-              inventory={selectedVariant.inventory}
+              inventory={selectedVariant.sizes} // <-- ИЗМЕНЕНО: inventory -> sizes
               selectedSize={selectedSize}
               onSelectSize={handleSelectSize}
             />
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ (4/4) --- */}
           </div>
           <div className="flex-grow overflow-y-auto px-4 pb-4">
             <div className="mt-6">
@@ -420,9 +432,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
         </div>
       </BottomSheet>
 
-      <div className="mobile-sticky-footer fixed right-0 bottom-0 left-0 z-40 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:hidden">
+      <div className="mobile-sticky-footer fixed bottom-0 left-0 right-0 z-40 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] lg:hidden">
         {isDiscountActive && selectedVariant.discountExpiresAt && (
-          <div className="flex items-center gap-x-2 border-t border-gray-200 px-4 pt-3 pb-2">
+          <div className="flex items-center gap-x-2 border-t border-gray-200 px-4 pb-2 pt-3">
             <CountdownTimer expiryDate={selectedVariant.discountExpiresAt} />
             <span className="text-sm font-medium text-gray-600">
               до конца акции
@@ -430,7 +442,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
           </div>
         )}
         <div
-          className={`pb-safe-or-4 px-4 pt-4 pb-2 ${!isDiscountActive || !selectedVariant.discountExpiresAt ? 'border-t border-gray-200' : ''}`}
+          className={`pb-safe-or-4 px-4 pb-2 pt-4 ${!isDiscountActive || !selectedVariant.discountExpiresAt ? 'border-t border-gray-200' : ''}`}
         >
           <AddToCartButton
             quantity={quantity}

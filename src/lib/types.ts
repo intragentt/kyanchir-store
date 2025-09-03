@@ -5,14 +5,14 @@ import {
   AlternativeName,
   Attribute,
   Image as PrismaImage,
-  Inventory,
+  // --- НАЧАЛО ИЗМЕНЕНИЙ (1/2): Заменяем несуществующий Inventory на ProductSize и Size ---
+  ProductSize,
+  Size,
+  // --- КОНЕЦ ИЗМЕНЕНИЙ (1/2) ---
   Category,
   Tag,
+  Status, // Добавляем Status, так как он используется ниже
 } from '@prisma/client';
-
-// ВАЖНО: Мы удалили все расширения типов `next-auth` и `User` отсюда,
-// так как вся эта логика теперь централизованно находится в /src/types/next-auth.d.ts
-// Это решает ошибку сборки "All declarations of 'User' must have identical modifiers".
 
 // Этот тип используется для карточек товаров в каталоге (без изменений)
 export type ProductWithInfo = Product & {
@@ -21,21 +21,20 @@ export type ProductWithInfo = Product & {
   imageUrls: string[];
 };
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ (2/2): Обновляем тип, чтобы он соответствовал схеме ---
 // Этот тип используется в API для обновления данных о товаре
 export type UpdateProductPayload = {
   name: string;
-  status: Product['status'];
+  statusId: string; // Работаем с ID, а не с объектом
   sku: string | null;
-  variantDetails: {
-    price: number;
-    oldPrice: number | null;
-    bonusPoints: number | null;
-    discountExpiresAt: Date | null;
-  };
+  // Детали варианта больше не часть этого типа, так как они обновляются отдельно
+  // variantDetails: { ... }
   alternativeNames: AlternativeName[];
   attributes: Attribute[];
-  images: PrismaImage[];
-  inventory: Inventory[];
+  // Изображения и размеры относятся к вариантам, а не к продукту напрямую
+  // images: PrismaImage[];
+  sizes: (ProductSize & { size: Size })[]; // <-- ИСПОЛЬЗУЕМ ПРАВИЛЬНУЮ МОДЕЛЬ
   categories: Category[];
   tags: Tag[];
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ (2/2) ---

@@ -2,11 +2,9 @@
 import NextAuth, { NextAuthOptions } from 'next-auth';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
-import EmailProvider from 'next-auth/providers/email';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { createTransport } from 'nodemailer';
 
-const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({
@@ -24,9 +22,13 @@ const authOptions: NextAuthOptions = {
           loginToken.expires < new Date()
         )
           return null;
+
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: ВКЛЮЧАЕМ РОЛЬ В ЗАПРОС ---
         const user = await prisma.user.findUnique({
           where: { id: loginToken.userId },
+          include: { role: true }, // Вот недостающая часть!
         });
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
         return user || null;
       },
     }),
@@ -43,29 +45,26 @@ const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-        // ИСПРАВЛЕНИЕ: Мы ищем токен, который соответствует И email, И пришедшему коду.
-        // Это гарантирует, что мы сравниваем именно тот токен, который был отправлен этому пользователю.
         const verificationToken = await prisma.verificationToken.findUnique({
           where: {
             identifier_token: {
               identifier: credentials.email,
-              token: credentials.token, // Prisma будет искать точное совпадение
+              token: credentials.token,
             },
           },
         });
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-        // Теперь проверка становится проще: если токен не найден или просрочен - отказываем.
         if (!verificationToken || verificationToken.expires < new Date()) {
           return null;
         }
 
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: ВКЛЮЧАЕМ РОЛЬ В ЗАПРОС ---
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          include: { role: true }, // И здесь тоже!
         });
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-        // После успешной верификации, удаляем токен, чтобы он не был использован повторно.
         if (user) {
           await prisma.verificationToken.delete({
             where: {
@@ -80,17 +79,9 @@ const authOptions: NextAuthOptions = {
         return user;
       },
     }),
-
-    EmailProvider({
-      server: process.env.EMAIL_SERVER,
-      from: process.env.EMAIL_FROM,
-      generateVerificationToken: async () => {
-        return '';
-      },
-      sendVerificationRequest: async () => {
-        return;
-      },
-    }),
+    
+    // Я убрал EmailProvider, так как у тебя уже есть кастомная реализация с кодами.
+    // Если он нужен для чего-то еще, можно вернуть.
   ],
   pages: {
     signIn: '/login',
@@ -101,18 +92,30 @@ const authOptions: NextAuthOptions = {
   },
   secret: process.env.AUTH_SECRET,
   callbacks: {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем коллбэки для правильной передачи ВСЕХ данных ---
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        // @ts-ignore
+        if (user.role) {
+          // @ts-ignore
+          token.role = user.role;
+        }
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
+        // @ts-ignore
+        if (token.role) {
+          // @ts-ignore
+          session.user.role = token.role;
+        }
       }
       return session;
     },
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   },
 };
 
