@@ -119,7 +119,7 @@ export const ProductTableRow = ({
         <td className="flex w-24 items-center gap-2 px-4 py-4">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-gray-300"
+            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
             checked={areAllVariantsSelected}
             ref={(input) => {
               if (input) input.indeterminate = isPartiallySelected;
@@ -208,11 +208,11 @@ export const ProductTableRow = ({
       {isExpanded && (
         <tr>
           <td colSpan={8} className="p-0">
-            <div className="border-l-4 border-indigo-200 bg-indigo-50/30 px-4 py-2">
+            <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 <thead className="text-xs text-gray-500 uppercase">
                   <tr>
-                    <th className="px-1 py-2 text-center">Выбор</th>
+                    <th className="w-12 px-1 py-2 text-center"></th>
                     <th colSpan={2} className="px-6 py-2 text-left">
                       Вариант
                     </th>
@@ -221,6 +221,7 @@ export const ProductTableRow = ({
                     <th className="px-6 py-2 text-center">Скидка, %</th>
                     <th className="px-6 py-2 text-center">Акция до</th>
                     <th className="px-6 py-2 text-center">Цена</th>
+                    <th className="px-6 py-2 text-center"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -240,6 +241,14 @@ export const ProductTableRow = ({
                   ))}
                 </tbody>
               </table>
+              <div className="flex items-center gap-x-4 px-6 py-3">
+                <button className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                  + Добавить вариант
+                </button>
+                <button className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                  + Добавить размер
+                </button>
+              </div>
             </div>
           </td>
         </tr>
