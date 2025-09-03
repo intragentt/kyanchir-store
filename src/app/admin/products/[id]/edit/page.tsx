@@ -44,11 +44,13 @@ interface EditProductPageProps {
 }
 
 // 2. Используем этот тип в сигнатуре функции
-export default async function EditProductPage({ params }: EditProductPageProps) {
+export default async function EditProductPage({
+  params,
+}: EditProductPageProps) {
   // 3. Убираем `await`, так как `params` - это ОБЪЕКТ, а не Promise
   const { id } = params;
 
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const [product, allSizes, allCategories, allTags] = await Promise.all([
     getProductWithDetails(id),
