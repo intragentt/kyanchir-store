@@ -4,33 +4,49 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 
-// GET и DELETE остаются без изменений
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЕНИЕ ТИПИЗАЦИИ GET и DELETE ---
 export async function GET(
   _req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { id: string } }, // УБРАН Promise<>
 ) {
-  // ... (код без изменений)
-}
-export async function DELETE(
-  _req: NextRequest,
-  { params }: { params: { id: string } },
-) {
-  // ... (код без изменений)
+  const { id } = params; // Упрощено получение id
+  const product = await prisma.product.findUnique({
+    where: { id },
+    include: { variants: true }, // Оставляем простой include для GET, если не нужна вся вложенность
+  });
+  if (!product) {
+    return new NextResponse('Продукт не найден', { status: 404 });
+  }
+  return NextResponse.json(product);
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ПОЛНЫЙ РЕФАКТОРИНГ PUT-ЗАПРОСА ---
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }, // УБРАН Promise<>
+) {
+  try {
+    const { id } = params; // Упрощено получение id
+    await prisma.product.delete({ where: { id } });
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    console.error('Ошибка при удалении продукта:', error);
+    return new NextResponse('Ошибка на сервере', { status: 500 });
+  }
+}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+// PUT-запрос, который мы исправили в прошлый раз, остается без изменений
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: { id: string } }, // Здесь тип уже был правильный
 ) {
   try {
     const productId = params.id;
-    // Типизируем тело запроса в соответствии с новой структурой
     const body: {
       name: string;
       status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
       sku: string | null;
-      variants: any[]; // Принимаем массив вариантов
+      variants: any[];
       categories: { id: string }[];
       tags: { id: string }[];
       attributes: { key: string; value: string; isMain: boolean }[];
@@ -50,7 +66,7 @@ export async function PUT(
 
     const updatedProduct = await prisma.$transaction(
       async (tx) => {
-        // Шаг 1: Обновляем основные поля самого продукта
+        // Шаг 1: Обновляем основные поля продукта
         await tx.product.update({
           where: { id: productId },
           data: {
@@ -62,7 +78,7 @@ export async function PUT(
           },
         });
 
-        // Шаг 2: Полностью заменяем атрибуты и альтернативные имена (стратегия "удалить и создать")
+        // Шаг 2: Полностью заменяем атрибуты и альтернативные имена
         await tx.attribute.deleteMany({ where: { productId } });
         if (attributes && attributes.length > 0) {
           await tx.attribute.createMany({
@@ -74,7 +90,6 @@ export async function PUT(
             })),
           });
         }
-
         await tx.alternativeName.deleteMany({ where: { productId } });
         if (alternativeNames && alternativeNames.length > 0) {
           await tx.alternativeName.createMany({
@@ -83,7 +98,6 @@ export async function PUT(
         }
 
         // Шаг 3: Полностью заменяем варианты и их вложенные данные
-        // Сначала находим все старые варианты, чтобы удалить их "детей"
         const oldVariants = await tx.productVariant.findMany({
           where: { productId },
           select: { id: true },
@@ -91,18 +105,15 @@ export async function PUT(
         const oldVariantIds = oldVariants.map((v) => v.id);
 
         if (oldVariantIds.length > 0) {
-          // Удаляем сначала "внуков" (размеры) и "детей" (картинки)
           await tx.productSize.deleteMany({
             where: { productVariantId: { in: oldVariantIds } },
           });
           await tx.image.deleteMany({
             where: { variantId: { in: oldVariantIds } },
           });
-          // Затем удаляем сами старые варианты
           await tx.productVariant.deleteMany({ where: { productId } });
         }
 
-        // Теперь создаем все варианты заново из данных, пришедших с фронтенда
         for (const variantData of variants) {
           const newVariant = await tx.productVariant.create({
             data: {
@@ -115,7 +126,6 @@ export async function PUT(
             },
           });
 
-          // Создаем картинки для нового варианта
           if (variantData.images && variantData.images.length > 0) {
             await tx.image.createMany({
               data: variantData.images.map((img: any, index: number) => ({
@@ -126,7 +136,6 @@ export async function PUT(
             });
           }
 
-          // Создаем размеры для нового варианта
           if (variantData.sizes && variantData.sizes.length > 0) {
             await tx.productSize.createMany({
               data: variantData.sizes.map((s: any) => ({
@@ -139,7 +148,7 @@ export async function PUT(
           }
         }
 
-        // Шаг 4: Возвращаем полностью обновленный продукт с новыми данными
+        // Шаг 4: Возвращаем полностью обновленный продукт
         return tx.product.findUnique({
           where: { id: productId },
           include: {
@@ -164,4 +173,3 @@ export async function PUT(
     return new NextResponse(errorMessage, { status: 500 });
   }
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
