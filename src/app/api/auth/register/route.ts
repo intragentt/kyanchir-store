@@ -28,17 +28,17 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: ПРИСВАИВАЕМ РОЛЬ ПРИ РЕГИСТРАЦИИ ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Ищем правильную роль 'USER' ---
 
-    // 1. Находим базовую роль 'CLIENT' в базе данных.
-    const clientRole = await prisma.userRole.findUnique({
-      where: { name: 'CLIENT' },
+    // 1. Находим базовую роль 'USER' в базе данных.
+    const userRole = await prisma.userRole.findUnique({
+      where: { name: 'USER' }, // Было 'CLIENT', стало 'USER'
     });
 
-    // 2. Если по какой-то причине роль 'CLIENT' не найдена,
-    // это критическая ошибка конфигурации, и мы не должны создавать пользователя.
-    if (!clientRole) {
-      console.error("CRITICAL: 'CLIENT' role not found in database.");
+    // 2. Если по какой-то причине роль 'USER' не найдена,
+    // это критическая ошибка конфигурации.
+    if (!userRole) {
+      console.error("CRITICAL: 'USER' role not found in database.");
       throw new Error('Default user role is not configured on the server.');
     }
 
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
         name,
         email,
         passwordHash,
-        roleId: clientRole.id, // Вот недостающая, но обязательная связь!
+        roleId: userRole.id, // Присваиваем ID роли 'USER'
       },
     });
 
@@ -63,7 +63,8 @@ export async function POST(req: Request) {
     const errorMessage =
       error instanceof Error
         ? error.message
-        : 'Произошла внутренняя ошибка сервера';
+        : // --- ИЗМЕНЕНИЕ: Убираем дублирование 'Default user role...' ---
+          'Произошла внутренняя ошибка сервера';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
