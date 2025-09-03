@@ -231,11 +231,12 @@ export const ProductTableRow = ({
           <td colSpan={8} className="bg-gray-50/50 p-0">
             <div className="border-l-4 border-indigo-200 px-4 py-2">
               <table className="min-w-full">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ШАПКА ТАБЛИЦЫ ВАРИАНТОВ --- */}
                 <thead className="text-xs text-gray-500">
                   <tr>
                     <th className="w-24 px-4 py-2"></th>
-                    <th className="px-6 py-2 text-left">Вариант</th>
+                    {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИЗМЕНЕНИЕ ЗАГОЛОВКА --- */}
+                    <th className="px-6 py-2 text-left">Размер</th>
+                    {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                     <th className="px-6 py-2 text-center">Остаток</th>
                     <th className="px-6 py-2 text-center">Старая Цена</th>
                     <th className="px-6 py-2 text-center">Скидка, %</th>
@@ -243,7 +244,6 @@ export const ProductTableRow = ({
                     <th className="px-6 py-2 text-center">Действия</th>
                   </tr>
                 </thead>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {productState.variants.map((variant) => (
                     <VariantRow
@@ -340,7 +340,6 @@ const VariantRow = ({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: ПЕРЕСТРОЙКА СТРОКИ ВАРИАНТА ---
     <tr className="text-sm hover:bg-gray-100/50">
       <td className="w-24 px-4 py-3">
         <input
@@ -350,27 +349,18 @@ const VariantRow = ({
           onChange={(e) => onSelectOne(variant.id, e.target.checked)}
         />
       </td>
-      <td className="px-6 py-3">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ОТОБРАЖЕНИЕ НАЗВАНИЯ/РАЗМЕРА ВАРИАНТА --- */}
+      <td className="px-6 py-3 text-left">
         <div className="flex items-center gap-2">
-          <Image
-            src={variant.images[0]?.url || '/placeholder.png'}
-            alt="Фото 1"
-            width={36}
-            height={48}
-            className="h-12 w-9 rounded-sm object-cover"
-          />
-          <Image
-            src={variant.images[1]?.url || '/placeholder.png'}
-            alt="Фото 2"
-            width={36}
-            height={48}
-            className="h-12 w-9 rounded-sm object-cover"
-          />
+          <div className="flex h-12 w-9 items-center justify-center rounded-sm bg-gray-200">
+            <ShortLogo className="h-4 w-4 text-gray-400" />
+          </div>
           <span className="font-medium">
             {variant.inventory.map((inv) => inv.size.value).join(', ')}
           </span>
         </div>
       </td>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <td className="px-6 py-3 text-center">
         {variant.inventory.map((inv) => (
           <div key={inv.id}>
@@ -400,6 +390,5 @@ const VariantRow = ({
         </button>
       </td>
     </tr>
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 };
