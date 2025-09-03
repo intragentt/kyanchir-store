@@ -6,15 +6,7 @@ import prisma from '@/lib/prisma';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditProductForm from '@/components/admin/EditProductForm';
-
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
-// Четко и явно определяем тип для props этой страницы
-interface EditProductPageProps {
-  params: {
-    id: string;
-  };
-}
+import type { PageProps } from 'next'; // Теперь мы можем использовать наш глобальный тип
 
 async function getProductWithDetails(id: string) {
   const product = await prisma.product.findUnique({
@@ -45,13 +37,14 @@ export type ProductWithDetails = NonNullable<
   Awaited<ReturnType<typeof getProductWithDetails>>
 >;
 
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+export default async function EditProductPage({ params }: PageProps) {
+  // Мы больше не описываем props здесь, так как они берутся из нашего глобального типа
+  const id = params?.id;
 
-// Применяем наш новый, понятный для TypeScript интерфейс
-export default async function EditProductPage({
-  params,
-}: EditProductPageProps) {
-  const { id } = params;
+  if (!id) {
+    // Добавляем проверку на случай, если id не придет
+    notFound();
+  }
 
   const [product, allSizes, allCategories, allTags] = await Promise.all([
     getProductWithDetails(id),
