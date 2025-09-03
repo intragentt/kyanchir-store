@@ -3,17 +3,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: САМАЯ СТРОГАЯ И ПРАВИЛЬНАЯ ТИПИЗАЦИЯ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: САМЫЙ НАДЕЖНЫЙ СПОСОБ ТИПИЗАЦИИ ---
+// Мы принимаем весь объект context и извлекаем params внутри функции.
 
-// Мы явно определяем тип для второго аргумента, как этого требует Next.js
-type RouteContext = {
-  params: {
-    id: string;
-  };
-};
-
-export async function GET(req: NextRequest, { params }: RouteContext) {
-  const { id } = params;
+export async function GET(
+  req: NextRequest,
+  context: { params: { id: string } },
+) {
+  const { id } = context.params;
   const product = await prisma.product.findUnique({
     where: { id },
     include: { variants: true },
@@ -24,9 +21,12 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   return NextResponse.json(product);
 }
 
-export async function DELETE(req: NextRequest, { params }: RouteContext) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: { id: string } },
+) {
   try {
-    const { id } = params;
+    const { id } = context.params;
     await prisma.product.delete({ where: { id } });
     return new NextResponse(null, { status: 204 });
   } catch (error) {
@@ -35,9 +35,12 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function PUT(req: NextRequest, { params }: RouteContext) {
+export async function PUT(
+  req: NextRequest,
+  context: { params: { id: string } },
+) {
   try {
-    const productId = params.id;
+    const productId = context.params.id;
     const body: {
       name: string;
       status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
