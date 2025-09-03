@@ -1,10 +1,11 @@
 // Местоположение: src/app/api/auth/send-verification-link/route.ts
-
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { createTransport } from 'nodemailer';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем "переводчика" для SendGrid ---
+import sgMail from '@sendgrid/mail';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import { randomBytes } from 'crypto';
 
 export async function POST(req: Request) {
@@ -33,24 +34,17 @@ export async function POST(req: Request) {
       },
     });
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Генерируем "умную" ссылку с email и токеном ---
+    // Генерируем "умную" ссылку с email и токеном
     const verificationLink = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${token}&email=${encodeURIComponent(
       email,
     )}`;
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    const transport = createTransport({
-      host: process.env.EMAIL_SERVER_HOST,
-      port: Number(process.env.EMAIL_SERVER_PORT),
-      auth: {
-        user: process.env.EMAIL_SERVER_USER,
-        pass: process.env.EMAIL_SERVER_PASSWORD,
-      },
-    });
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Переходим на "родной язык" SendGrid ---
+    sgMail.setApiKey(process.env.EMAIL_SERVER_PASSWORD!);
 
-    await transport.sendMail({
+    const msg = {
       to: email,
-      from: process.env.EMAIL_FROM,
+      from: process.env.EMAIL_FROM!,
       subject: 'Подтвердите ваш email для Kyanchir',
       html: `<div style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">
                <h2 style="color: #333;">Подтверждение Email</h2>
@@ -60,7 +54,17 @@ export async function POST(req: Request) {
                </a>
                <p style="font-size: 12px; color: #888;">Если вы не запрашивали это письмо, просто проигнорируйте его.</p>
              </div>`,
-    });
+      // "Волшебная" настройка, которая отключает отслеживание кликов
+      trackingSettings: {
+        clickTracking: {
+          enable: false,
+          enableText: false,
+        },
+      },
+    };
+
+    await sgMail.send(msg);
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json({ success: true });
   } catch (error) {
