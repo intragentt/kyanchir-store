@@ -30,6 +30,17 @@ const ChevronRightIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
+// --- НАЧАЛО ИЗМЕНЕНИЙ: НОВАЯ ИКОНКА ---
+const TrashIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
+    <path
+      fillRule="evenodd"
+      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type ProductStatus = ProductForTable['status'];
 const statusConfig: Record<
@@ -147,7 +158,7 @@ export const ProductTableRow = ({
             }}
             onChange={handleSelectAllVariants}
           />
-          {productState.variants.length > 1 && (
+          {productState.variants.length > 0 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
               className="rounded-md p-1 hover:bg-gray-100"
@@ -222,6 +233,7 @@ export const ProductTableRow = ({
           <td colSpan={8} className="bg-gray-50/50 p-0">
             <div className="border-l-4 border-indigo-200 px-4 py-2">
               <table className="min-w-full">
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: КНОПКА ДОБАВЛЕНИЯ ВАРИАНТА --- */}
                 <tbody className="divide-y divide-gray-200">
                   {productState.variants.map((variant) => (
                     <VariantRow
@@ -237,7 +249,15 @@ export const ProductTableRow = ({
                       onProductUpdate={handleProductUpdate}
                     />
                   ))}
+                  <tr>
+                    <td colSpan={8} className="py-2 pl-16 text-left">
+                      <button className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 ring-inset hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                        + Добавить вариант
+                      </button>
+                    </td>
+                  </tr>
                 </tbody>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </table>
             </div>
           </td>
@@ -320,9 +340,28 @@ const VariantRow = ({
           onChange={(e) => onSelectOne(variant.id, e.target.checked)}
         />
       </td>
-      <td className="px-6 py-3"> {/* Пусто */} </td>
-      <td className="px-6 py-3">(категории)</td>
-      <td className="px-6 py-3">(статус)</td>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ПРЕВЬЮ ФОТО --- */}
+      <td className="px-6 py-3">
+        <div className="flex items-center gap-2">
+          <Image
+            src={variant.images[0]?.url || '/placeholder.png'}
+            alt="Фото 1"
+            width={36}
+            height={48}
+            className="h-12 w-9 rounded-sm object-cover"
+          />
+          <Image
+            src={variant.images[1]?.url || '/placeholder.png'}
+            alt="Фото 2"
+            width={36}
+            height={48}
+            className="h-12 w-9 rounded-sm object-cover"
+          />
+        </div>
+      </td>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+      <td className="px-6 py-3 text-xs text-gray-500">(категории)</td>
+      <td className="px-6 py-3 text-xs text-gray-500">(статус)</td>
       <td className="px-6 py-3 text-center">
         {variant.inventory.map((inv) => (
           <div key={inv.id}>
@@ -335,8 +374,6 @@ const VariantRow = ({
           </div>
         ))}
       </td>
-
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: УМНОЕ ОТОБРАЖЕНИЕ ЦЕНЫ --- */}
       <td className="px-6 py-3 text-center text-sm">
         {variant.oldPrice && variant.oldPrice > variant.price ? (
           <div className="flex flex-col items-center justify-center">
@@ -353,9 +390,16 @@ const VariantRow = ({
           </span>
         )}
       </td>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: КНОПКА УДАЛЕНИЯ --- */}
+      <td className="px-6 py-3 text-center">
+        <button
+          disabled
+          className="text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <TrashIcon className="h-5 w-5" />
+        </button>
+      </td>
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-
-      <td className="px-6 py-3"></td>
     </tr>
   );
 };
