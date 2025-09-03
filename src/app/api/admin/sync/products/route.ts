@@ -61,15 +61,21 @@ async function runSync() {
     };
   }
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: ЛОГИКА СУММИРОВАНИЯ ОСТАТКОВ ---
+  // Теперь мы не просто записываем остаток, а накапливаем сумму
+  // для каждого товара со всех его складов.
   const stockMap = new Map<string, number>();
   stockData.forEach((item) => {
     const assortmentId = getUUIDFromHref(item.meta.href);
     if (assortmentId && typeof item.stock === 'number') {
-      stockMap.set(assortmentId, item.stock);
+      const currentStock = stockMap.get(assortmentId) || 0;
+      stockMap.set(assortmentId, currentStock + item.stock);
     }
   });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   console.log(
-    `2/4: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockMap.size}.`,
+    `2/4: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockData.length} (уникальных: ${stockMap.size}).`,
   );
 
   const groupedProducts = new Map<string, GroupedProductVariant[]>();
@@ -120,9 +126,6 @@ async function runSync() {
     }
 
     for (const variantData of variants) {
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-
-      // ИСПРАВЛЕНИЕ #1: Убираем деление на 100, чтобы вернуть корректные цены
       let currentPrice = 0,
         oldPrice = null;
       const salePriceObj = (variantData.rawSalePrices || []).find(
@@ -132,9 +135,9 @@ async function runSync() {
         (p) => p.priceType.name === 'Цена продажи',
       );
       const regularPriceValue = regularPriceObj
-        ? Math.round(regularPriceObj.value) // Возвращаем как было
+        ? Math.round(regularPriceObj.value)
         : 0;
-      const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0; // Возвращаем как было
+      const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
 
       if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
         currentPrice = salePriceValue;
@@ -166,11 +169,6 @@ async function runSync() {
         create: { value: sizeValue },
       });
 
-      // ИСПРАВЛЕНИЕ #2: Добавляем лог для диагностики остатков
-      console.log(
-        `[SYNC DEBUG] Продукт: "${baseName}", Размер: ${sizeValue}, Остаток: ${variantData.stock}`,
-      );
-
       await prisma.inventory.upsert({
         where: {
           variantId_sizeId: { variantId: variant.id, sizeId: sizeRecord.id },
@@ -182,7 +180,6 @@ async function runSync() {
           stock: variantData.stock,
         },
       });
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     }
   }
 
