@@ -7,7 +7,7 @@ import { UserRole } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 
-// --- ИНТЕРФЕЙСЫ И ХЕЛПЕРЫ (без изменений) ---
+// --- ИНТЕРФЕЙСЫ И ХЕЛПЕРЫ ---
 interface MoySkladPrice {
   value: number;
   priceType: { name: string };
@@ -19,9 +19,16 @@ interface MoySkladProduct {
   productFolder?: { meta: { href: string } };
   salePrices?: MoySkladPrice[];
 }
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ---
+// Эта функция теперь правильно "очищает" ID от параметров запроса (типа ?expand=...)
 function getUUIDFromHref(href: string): string {
-  return href.split('/').pop() || '';
+  const pathPart = href.split('/').pop() || '';
+  const uuid = pathPart.split('?')[0]; // Отсекаем всё после знака вопроса
+  return uuid;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 interface ParsedProductInfo {
   baseName: string;
   size: string | null;
@@ -63,20 +70,13 @@ async function runSync() {
 
   const stockMap = new Map<string, number>();
   stockData.forEach((item) => {
+    // Теперь эта функция вернёт чистый ID, и карта остатков будет правильной
     const assortmentId = getUUIDFromHref(item.meta.href);
     if (assortmentId && typeof item.stock === 'number') {
       const currentStock = stockMap.get(assortmentId) || 0;
       stockMap.set(assortmentId, currentStock + item.stock);
     }
   });
-
-  // --- НАЧАЛО ДИАГНОСТИКИ ---
-  console.log('--- [DIAGNOSTIC START] ---');
-  console.log('--- Карта остатков (stockMap): ---');
-  // Преобразуем Map в объект для более чистого вывода в лог
-  console.log(Object.fromEntries(stockMap));
-  console.log('--- Начало обработки продуктов: ---');
-  // --- КОНЕЦ ДИАГНОСТИКИ ---
 
   console.log(
     `2/4: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockData.length} (уникальных: ${stockMap.size}).`,
@@ -85,13 +85,6 @@ async function runSync() {
   const groupedProducts = new Map<string, GroupedProductVariant[]>();
   for (const product of moySkladProducts) {
     const stockValue = stockMap.get(product.id) || 0;
-
-    // --- НАЧАЛО ДИАГНОСТИКИ ---
-    console.log(
-      `[LOOKUP] Товар: "${product.name}", ID для поиска: "${product.id}", Найденный остаток: ${stockValue}`,
-    );
-    // --- КОНЕЦ ДИАГНОСТИКИ ---
-
     const { baseName, size } = parseProductName(product.name);
     if (!groupedProducts.has(baseName)) groupedProducts.set(baseName, []);
     groupedProducts.get(baseName)!.push({
@@ -100,11 +93,9 @@ async function runSync() {
       description: product.description,
       productFolder: product.productFolder,
       rawSalePrices: product.salePrices,
-      stock: stockValue, // Используем найденное значение
+      stock: stockValue,
     });
   }
-
-  console.log('--- [DIAGNOSTIC END] ---');
 
   console.log(
     `3/4: Товары сгруппированы. Уникальных продуктов: ${groupedProducts.size}. Начинаем запись в БД...`,
