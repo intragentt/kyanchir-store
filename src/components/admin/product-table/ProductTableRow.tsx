@@ -209,22 +209,37 @@ export const ProductTableRow = ({
         <tr>
           <td colSpan={8} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30 px-4 py-2">
-              <div className="divide-y divide-gray-200">
-                {productState.variants.map((variant) => (
-                  <VariantRow
-                    key={variant.id}
-                    product={productState}
-                    variant={variant}
-                    isSelected={selectedVariantIds.has(variant.id)}
-                    isEdited={false}
-                    onSelectOne={handleSelectVariant}
-                    onVariantUpdate={handleVariantUpdate}
-                    onProductUpdate={handleProductUpdate}
-                    allCategories={allCategories}
-                    allTags={allTags}
-                  />
-                ))}
-              </div>
+              <table className="min-w-full">
+                <thead className="text-xs text-gray-500 uppercase">
+                  <tr>
+                    <th className="px-1 py-2 text-center">Выбор</th>
+                    <th colSpan={2} className="px-6 py-2 text-left">
+                      Вариант
+                    </th>
+                    <th className="px-6 py-2 text-center">Бонусы</th>
+                    <th className="px-6 py-2 text-center">Старая цена</th>
+                    <th className="px-6 py-2 text-center">Скидка, %</th>
+                    <th className="px-6 py-2 text-center">Акция до</th>
+                    <th className="px-6 py-2 text-center">Цена</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {productState.variants.map((variant) => (
+                    <VariantRow
+                      key={variant.id}
+                      product={productState}
+                      variant={variant}
+                      isSelected={selectedVariantIds.has(variant.id)}
+                      isEdited={false}
+                      onSelectOne={handleSelectVariant}
+                      onVariantUpdate={handleVariantUpdate}
+                      onProductUpdate={handleProductUpdate}
+                      allCategories={allCategories}
+                      allTags={allTags}
+                    />
+                  ))}
+                </tbody>
+              </table>
             </div>
           </td>
         </tr>
