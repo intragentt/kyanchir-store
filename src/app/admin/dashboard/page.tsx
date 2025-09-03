@@ -6,57 +6,42 @@ import { Prisma } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: НОВЫЙ, ПРАВИЛЬНЫЙ СПОСОБ ПОЛУЧЕНИЯ ТИПОВ ---
 
-// 1. Обновляем тип, чтобы он соответствовал новой схеме
-export type ProductForTable = Prisma.ProductGetPayload<{
+// 1. Определяем структуру данных, которую мы хотим получать, с помощью Prisma.validator
+const productWithDetails = Prisma.validator<Prisma.ProductDefaultArgs>()({
   include: {
-    categories: true;
-    tags: true;
-    attributes: true;
+    categories: true,
+    tags: true,
+    attributes: true,
     variants: {
-      // Теперь это ProductVariant (например, по цвету)
+      orderBy: { createdAt: 'asc' },
       include: {
-        images: true;
+        images: { orderBy: { order: 'asc' } },
         sizes: {
-          // Внутри варианта теперь лежат размеры (ProductSize)
           include: {
-            size: true; // А внутри размера - сама модель Size (S, M, L)
-          };
-        };
-      };
-    };
-  };
-}>;
-
-// 2. Старая функция сортировки больше не нужна, так как 'variants' - это цвета, а не размеры.
-// const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-// const sortVariantsBySize = (variants: any[]) => { ... };
-
-export default async function DashboardPage() {
-  const [allProducts, allCategories, allTags, filterPresets] =
-    await Promise.all([
-      // 3. Обновляем главный запрос к базе данных
-      prisma.product.findMany({
-        orderBy: { createdAt: 'desc' },
-        include: {
-          categories: true,
-          tags: true,
-          attributes: true,
-          variants: {
-            // Загружаем варианты (цвета)
-            orderBy: { createdAt: 'asc' },
-            include: {
-              images: { orderBy: { order: 'asc' } },
-              sizes: {
-                // Для каждого варианта загружаем его размеры
-                include: {
-                  size: true, // И информацию о самом размере (S, M, L)
-                },
-              },
-            },
+            size: true,
           },
         },
+      },
+    },
+  },
+});
+
+// 2. Создаем и экспортируем наш тип на основе этой структуры
+export type ProductForTable = Prisma.ProductGetPayload<
+  typeof productWithDetails
+>;
+
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+export default async function DashboardPage() {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ СОЗДАННУЮ СТРУКТУРУ В ЗАПРОСЕ ---
+  const [allProducts, allCategories, allTags, filterPresets] =
+    await Promise.all([
+      prisma.product.findMany({
+        orderBy: { createdAt: 'desc' },
+        ...productWithDetails, // Используем наш валидатор здесь
       }),
       prisma.category.findMany({ orderBy: { name: 'asc' } }),
       prisma.tag.findMany({ orderBy: { name: 'asc' } }),
@@ -70,11 +55,6 @@ export default async function DashboardPage() {
         orderBy: { createdAt: 'asc' },
       }),
     ]);
-
-  // 4. Удаляем вызов старой сортировки
-  // allProducts.forEach((product) => {
-  //   sortVariantsBySize(product.variants);
-  // });
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
