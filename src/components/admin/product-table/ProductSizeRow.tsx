@@ -13,11 +13,14 @@ interface ProductSizeRowProps {
 
 export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем ячейки в соответствии с новой шапкой ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем "Размер:" и выравниваем колонки ---
     <tr className="bg-gray-50/50 hover:bg-gray-100">
-      {/* 1-я и 2-я колонки: Чекбокс и название размера */}
-      <td className="whitespace-nowrap px-6 py-1" colSpan={2}>
-        <div className="flex items-center justify-start pl-12">
+      {/* 1-я колонка: Пустая ячейка для выравнивания */}
+      <td className="w-24 px-4 py-1"></td>
+
+      {/* 2-я колонка: Название размера */}
+      <td className="whitespace-nowrap px-6 py-1">
+        <div className="flex items-center">
           <input
             type="checkbox"
             className="mr-4 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"

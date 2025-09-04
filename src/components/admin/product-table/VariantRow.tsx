@@ -108,8 +108,20 @@ export function VariantRow({ variant }: VariantRowProps) {
         <tr>
           {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
           <td colSpan={9} className="p-0">
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем "мини-шапку" --- */}
+              <thead>
+                <tr className="text-xs uppercase text-gray-500">
+                  <th className="w-24 px-4 py-2 text-left"></th>
+                  <th className="px-6 py-2 text-left">Размер</th>
+                  <th className="w-40 px-6 py-2 text-center">Склад</th>
+                  <th className="w-40 px-6 py-2 text-center">Бронь</th>
+                  <th className="w-40 px-6 py-2 text-center">Цена</th>
+                  <th className="w-24 px-6 py-2 text-center"></th>
+                </tr>
+              </thead>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-100">
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow key={sizeInfo.id} sizeInfo={sizeInfo} />
