@@ -18,21 +18,17 @@ const statusConfig: Record<string, { dotClassName: string; label: string }> = {
   ARCHIVED: { dotClassName: 'bg-gray-400', label: 'В архиве' },
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем функцию форматирования для явного указания "RUB" ---
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
   const priceInRubles = priceInCents / 100;
 
-  // Форматируем только число, без символа валюты
   const formattedNumber = new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(priceInRubles);
 
-  // Явно добавляем " RUB" в конце
   return `${formattedNumber} RUB`;
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface ProductTableRowProps {
   product: ProductForTable;
@@ -97,6 +93,7 @@ export const ProductTableRow = ({
 
   return (
     <Fragment>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем ячейки для новых колонок --- */}
       <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
         <td className="flex w-24 items-center gap-2 px-4 py-4">
           <input
@@ -167,6 +164,8 @@ export const ProductTableRow = ({
           </span>
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
+        <td className="px-6 py-4 text-center text-sm">0 шт.</td>
+        <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="px-6 py-4 text-center text-sm">{priceRange()}</td>
         <td className="px-6 py-4 text-right">
           <Link
@@ -177,10 +176,13 @@ export const ProductTableRow = ({
           </Link>
         </td>
       </tr>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       {isExpanded && (
         <tr>
-          <td colSpan={7} className="p-0">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan, чтобы он соответствовал новому количеству колонок --- */}
+          <td colSpan={9} className="p-0">
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 <thead className="text-xs uppercase text-gray-500">

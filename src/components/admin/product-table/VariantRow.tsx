@@ -20,21 +20,17 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   };
 }>;
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем функцию форматирования для явного указания "RUB" ---
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
   const priceInRubles = priceInCents / 100;
 
-  // Форматируем только число, без символа валюты
   const formattedNumber = new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(priceInRubles);
 
-  // Явно добавляем " RUB" в конце
   return `${formattedNumber} RUB`;
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface VariantRowProps {
   variant: VariantWithDetails;
@@ -47,6 +43,7 @@ export function VariantRow({ variant }: VariantRowProps) {
 
   return (
     <Fragment>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем ячейки для новых колонок --- */}
       <tr className="bg-white hover:bg-gray-50">
         <td className="flex w-24 items-center gap-2 px-4 py-2">
           <input
@@ -88,9 +85,12 @@ export function VariantRow({ variant }: VariantRowProps) {
           </div>
         </td>
         <td></td>
+        <td></td>
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
           {totalStock} шт.
         </td>
+        <td className="px-6 py-4 text-center text-sm">0 шт.</td>
+        <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm">
           <div className="flex flex-col items-center">
             <span className="font-medium text-gray-800">
@@ -109,10 +109,13 @@ export function VariantRow({ variant }: VariantRowProps) {
           </a>
         </td>
       </tr>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       {isExpanded && (
         <tr>
-          <td colSpan={6} className="p-0">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
+          <td colSpan={9} className="p-0">
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
               <tbody className="divide-y divide-gray-100">
                 {variant.sizes.map((sizeInfo) => (

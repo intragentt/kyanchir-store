@@ -118,6 +118,7 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новые колонки в "шапку" --- */}
                 <tr>
                   <th
                     scope="col"
@@ -136,12 +137,19 @@ export default function ProductTable({
                     Остатки
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Бронь (24ч)
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Бронь (1ч)
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                     Цена
                   </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Редактировать</span>
                   </th>
                 </tr>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {products.map((product) => (
