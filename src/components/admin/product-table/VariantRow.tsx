@@ -102,6 +102,9 @@ export function VariantRow({ variant }: VariantRowProps) {
             )}
           </div>
         </td>
+        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500 line-through">
+          {variant.oldPrice && formatPrice(variant.oldPrice)}
+        </td>
         <td className="w-24 whitespace-nowrap px-6 py-2 text-right text-sm font-medium">
           <a href="#" className="text-indigo-600 hover:text-indigo-900">
             Ред.
@@ -113,7 +116,7 @@ export function VariantRow({ variant }: VariantRowProps) {
       {isExpanded && (
         <tr>
           {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
-          <td colSpan={8} className="p-0">
+          <td colSpan={9} className="p-0">
             {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
               <tbody className="divide-y divide-gray-100">

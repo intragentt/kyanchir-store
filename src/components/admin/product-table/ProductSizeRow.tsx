@@ -34,6 +34,8 @@ export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
       {/* Пустая ячейка-заглушка для колонки БРОНИ */}
       <td></td>
       <td className="w-40 px-6 py-1"></td>
+      {/* Пустая ячейка-заглушка для колонки СТАРАЯ ЦЕНА */}
+      <td className="w-40 px-6 py-1"></td>
       <td className="w-24 whitespace-nowrap px-6 py-1 text-right text-sm font-medium">
         <a href="#" className="text-indigo-600 hover:text-indigo-900">
           Ред.
