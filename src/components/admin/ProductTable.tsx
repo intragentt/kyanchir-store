@@ -118,7 +118,7 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки колонок --- */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новую колонку "Старая Цена" --- */}
                 <tr>
                   <th
                     scope="col"
@@ -141,6 +141,9 @@ export default function ProductTable({
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                     Цена
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Старая Цена
                   </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Редактировать</span>
