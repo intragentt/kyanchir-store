@@ -191,7 +191,6 @@ export const ProductTableRow = ({
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Старая Цена</th>
                     <th className="w-40 px-6 py-2 text-center">Цена</th>
-                    <th className="w-24 px-6 py-2 text-center"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
