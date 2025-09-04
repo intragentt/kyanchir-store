@@ -95,25 +95,11 @@ export const ProductTableRow = ({
     <Fragment>
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем ячейки в соответствии с новой шапкой --- */}
       <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
-        <td className="flex w-24 items-center gap-2 px-4 py-4">
+        <td className="w-24 px-4 py-4">
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
-          {product.variants.length > 0 && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className={`rounded-md p-1 hover:bg-gray-200 ${
-                isExpanded ? 'bg-indigo-100 text-indigo-700' : ''
-              }`}
-            >
-              {isExpanded ? (
-                <ChevronDownIcon className="h-5 w-5" />
-              ) : (
-                <ChevronRightIcon className="h-5 w-5" />
-              )}
-            </button>
-          )}
         </td>
         <td className="px-6 py-4">
           <div className="flex items-center">
@@ -137,9 +123,21 @@ export const ProductTableRow = ({
               <div className="text-sm font-medium text-gray-900">
                 {product.name}
               </div>
-              <div className="text-xs text-gray-500">
-                {product.variants.length} вариант(а)
-              </div>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Превращаем текст в кнопку --- */}
+              {product.variants.length > 0 && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  <span>{product.variants.length} вариант(а)</span>
+                  {isExpanded ? (
+                    <ChevronDownIcon className="h-4 w-4" />
+                  ) : (
+                    <ChevronRightIcon className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <button
                 onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
                 className="mt-1 flex items-center gap-1 text-xs text-indigo-600 hover:underline"
@@ -179,8 +177,9 @@ export const ProductTableRow = ({
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan и "мини-шапку" --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
           <td colSpan={8} className="p-0">
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 <thead className="text-xs uppercase text-gray-500">
@@ -195,7 +194,6 @@ export const ProductTableRow = ({
                     <th className="w-24 px-6 py-2 text-center"></th>
                   </tr>
                 </thead>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {product.variants.map((variant) => (
                     <VariantRow key={variant.id} variant={variant} />
