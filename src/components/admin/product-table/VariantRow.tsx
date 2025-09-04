@@ -45,25 +45,11 @@ export function VariantRow({ variant }: VariantRowProps) {
     <Fragment>
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем ячейки в соответствии с новой шапкой --- */}
       <tr className="bg-white hover:bg-gray-50">
-        <td className="flex w-24 items-center gap-2 px-4 py-2">
+        <td className="w-24 px-4 py-2">
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
-          {variant.sizes.length > 0 && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className={`rounded-md p-1 hover:bg-gray-200 ${
-                isExpanded ? 'bg-gray-200' : ''
-              }`}
-            >
-              {isExpanded ? (
-                <ChevronDownIcon className="h-5 w-5" />
-              ) : (
-                <ChevronRightIcon className="h-5 w-5" />
-              )}
-            </button>
-          )}
         </td>
         <td className="whitespace-nowrap px-6 py-2">
           <div className="flex items-center">
@@ -78,9 +64,21 @@ export function VariantRow({ variant }: VariantRowProps) {
               <div className="text-sm font-medium text-gray-800">
                 {variant.color || 'Основной'}
               </div>
-              <div className="text-xs text-gray-500">
-                {variant.sizes.length} размер(а)
-              </div>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Превращаем текст в кнопку --- */}
+              {variant.sizes.length > 0 && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  <span>{variant.sizes.length} размер(а)</span>
+                  {isExpanded ? (
+                    <ChevronDownIcon className="h-4 w-4" />
+                  ) : (
+                    <ChevronRightIcon className="h-4 w-4" />
+                  )}
+                </button>
+              )}
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           </div>
         </td>

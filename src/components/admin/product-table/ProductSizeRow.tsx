@@ -39,7 +39,7 @@ export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
         0 шт.
       </td>
 
-      {/* 6-я колонка: Цена (пустая) */}
+      {/* 6-я колонка: Пустая ячейка для Цены */}
       <td></td>
 
       {/* 7-я колонка: Редактировать */}
