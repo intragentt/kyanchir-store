@@ -13,28 +13,38 @@ interface ProductSizeRowProps {
 
 export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем ячейки в соответствии с новой шапкой ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем "Размер:", выравниваем колонки ---
     <tr className="bg-gray-50/50 hover:bg-gray-100">
-      <td className="flex w-24 items-center justify-end px-4 py-1">
-        <div className="pr-1">
+      {/* 1-я и 2-я колонки: Чекбокс и название размера */}
+      <td className="whitespace-nowrap px-6 py-1" colSpan={2}>
+        <div className="flex items-center justify-start pl-12">
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            className="mr-4 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
+          <span className="text-sm text-gray-700">{sizeInfo.size.value}</span>
         </div>
       </td>
-      <td className="whitespace-nowrap px-6 py-1">
-        <div className="pl-12 text-sm text-gray-700">{sizeInfo.size.value}</div>
-      </td>
+
+      {/* 3-я колонка: Пустой спейсер */}
       <td></td>
-      <td></td>
+
+      {/* 4-я колонка: Склад */}
       <td className="whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {sizeInfo.stock} шт.
       </td>
-      {/* Пустая ячейка-заглушка для колонки БРОНИ */}
+
+      {/* 5-я колонка: Бронь (заглушка) */}
+      <td className="whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+        0 шт.
+      </td>
+
+      {/* 6-я и 7-я колонки: Пустые ячейки для Старой Цены и Цены */}
       <td></td>
-      <td className="w-40 px-6 py-1"></td>
-      <td className="w-24 whitespace-nowrap px-6 py-1 text-right text-sm font-medium">
+      <td></td>
+
+      {/* 8-я колонка: Редактировать */}
+      <td className="whitespace-nowrap px-6 py-1 text-right text-sm font-medium">
         <a href="#" className="text-indigo-600 hover:text-indigo-900">
           Ред.
         </a>

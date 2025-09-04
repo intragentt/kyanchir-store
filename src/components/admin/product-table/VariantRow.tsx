@@ -95,11 +95,6 @@ export function VariantRow({ variant }: VariantRowProps) {
             <span className="font-medium text-gray-800">
               {formatPrice(variant.price)}
             </span>
-            {variant.oldPrice && variant.oldPrice > variant.price && (
-              <span className="text-xs text-gray-500 line-through">
-                {formatPrice(variant.oldPrice)}
-              </span>
-            )}
           </div>
         </td>
         <td className="w-24 whitespace-nowrap px-6 py-2 text-right text-sm font-medium">
