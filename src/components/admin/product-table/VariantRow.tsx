@@ -87,7 +87,7 @@ export function VariantRow({ variant }: VariantRowProps) {
         </td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500 line-through">
-          {variant.oldPrice && formatPrice(variant.oldPrice)}
+          {formatPrice(variant.oldPrice || variant.price)}
         </td>
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm">
           <div className="flex flex-col items-center">
@@ -106,17 +106,16 @@ export function VariantRow({ variant }: VariantRowProps) {
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan и "мини-шапку" --- */}
           <td colSpan={9} className="p-0">
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем "мини-шапку" --- */}
               <thead>
                 <tr className="text-xs uppercase text-gray-500">
                   <th className="w-24 px-4 py-2 text-left"></th>
                   <th className="px-6 py-2 text-left">Размер</th>
                   <th className="w-40 px-6 py-2 text-center">Склад</th>
                   <th className="w-40 px-6 py-2 text-center">Бронь</th>
+                  <th className="w-40 px-6 py-2 text-center">Старая Цена</th>
                   <th className="w-40 px-6 py-2 text-center">Цена</th>
                   <th className="w-24 px-6 py-2 text-center"></th>
                 </tr>
