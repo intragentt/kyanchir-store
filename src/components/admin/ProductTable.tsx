@@ -8,10 +8,7 @@ import toast, { Toaster } from 'react-hot-toast';
 
 import type { ProductForTable } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Исправляем путь импорта, чтобы он соответствовал новой структуре, которую мы создадим.
 import { ProductTableRow } from './product-table/ProductTableRow';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type FilterPresetWithItems = Prisma.FilterPresetGetPayload<{
   include: { items: { include: { category: true; tag: true } } };
@@ -110,7 +107,7 @@ export default function ProductTable({
         </div>
         <Link
           href="/admin/products/new"
-          className="hover:bg-opacity-80 rounded-md bg-[#272727] px-4 py-2 text-sm font-medium text-white shadow-sm"
+          className="rounded-md bg-[#272727] px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-opacity-80"
         >
           + Создать товар
         </Link>
@@ -126,19 +123,19 @@ export default function ProductTable({
                     scope="col"
                     className="relative w-24 px-1 py-3 text-center"
                   ></th>
-                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Товар
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Категории
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Статус
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                     Остатки
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                     Цена
                   </th>
                   <th scope="col" className="relative px-6 py-3">
