@@ -20,12 +20,19 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   };
 }>;
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Копируем нашу "умную" функцию форматирования сюда ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем функцию форматирования для явного указания "RUB" ---
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
   const priceInRubles = priceInCents / 100;
-  // Используем toLocaleString для добавления пробелов и заменяем запятую на точку, если нужно
-  return `${priceInRubles.toLocaleString('ru-RU')} RUB`;
+
+  // Форматируем только число, без символа валюты
+  const formattedNumber = new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(priceInRubles);
+
+  // Явно добавляем " RUB" в конце
+  return `${formattedNumber} RUB`;
 };
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
@@ -84,7 +91,6 @@ export function VariantRow({ variant }: VariantRowProps) {
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
           {totalStock} шт.
         </td>
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем новую логику отображения цены и скидки --- */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm">
           <div className="flex flex-col items-center">
             <span className="font-medium text-gray-800">
@@ -97,7 +103,6 @@ export function VariantRow({ variant }: VariantRowProps) {
             )}
           </div>
         </td>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <td className="w-24 whitespace-nowrap px-6 py-2 text-right text-sm font-medium">
           <a href="#" className="text-indigo-600 hover:text-indigo-900">
             Ред.
