@@ -165,16 +165,6 @@ export const ProductTableRow = ({
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
-        <td className="px-6 py-4 text-center text-sm text-gray-500 line-through">
-          {product.variants.some((v) => v.oldPrice) &&
-            formatPrice(
-              Math.min(
-                ...(product.variants
-                  .map((v) => v.oldPrice)
-                  .filter((p) => p !== null) as number[]),
-              ),
-            )}
-        </td>
         <td className="px-6 py-4 text-center text-sm">{priceRange()}</td>
         <td className="px-6 py-4 text-right">
           <Link
@@ -190,7 +180,7 @@ export const ProductTableRow = ({
       {isExpanded && (
         <tr>
           {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
-          <td colSpan={9} className="p-0">
+          <td colSpan={8} className="p-0">
             {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">

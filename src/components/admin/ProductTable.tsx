@@ -140,9 +140,6 @@ export default function ProductTable({
                     Бронь
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Старая Цена
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                     Цена
                   </th>
                   <th scope="col" className="relative px-6 py-3">
