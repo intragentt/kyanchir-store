@@ -39,10 +39,11 @@ export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
         0 шт.
       </td>
 
-      {/* 6-я колонка: Пустая ячейка для Цены */}
+      {/* 6-я и 7-я колонки: Пустые ячейки для Старой Цены и Цены */}
+      <td></td>
       <td></td>
 
-      {/* 7-я колонка: Редактировать */}
+      {/* 8-я колонка: Редактировать */}
       <td className="whitespace-nowrap px-6 py-1 text-right text-sm font-medium">
         <a href="#" className="text-indigo-600 hover:text-indigo-900">
           Ред.
