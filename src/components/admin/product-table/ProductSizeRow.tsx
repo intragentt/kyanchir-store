@@ -13,7 +13,7 @@ interface ProductSizeRowProps {
 
 export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем "Размер:", выравниваем колонки ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем ячейки в соответствии с новой шапкой ---
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       {/* 1-я и 2-я колонки: Чекбокс и название размера */}
       <td className="whitespace-nowrap px-6 py-1" colSpan={2}>
@@ -39,11 +39,10 @@ export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
         0 шт.
       </td>
 
-      {/* 6-я и 7-я колонки: Пустые ячейки для Старой Цены и Цены */}
-      <td></td>
+      {/* 6-я колонка: Пустая ячейка для Цены */}
       <td></td>
 
-      {/* 8-я колонка: Редактировать */}
+      {/* 7-я колонка: Редактировать */}
       <td className="whitespace-nowrap px-6 py-1 text-right text-sm font-medium">
         <a href="#" className="text-indigo-600 hover:text-indigo-900">
           Ред.

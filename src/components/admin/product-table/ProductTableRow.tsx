@@ -179,9 +179,8 @@ export const ProductTableRow = ({
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan и "мини-шапку" --- */}
           <td colSpan={8} className="p-0">
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 <thead className="text-xs uppercase text-gray-500">
@@ -196,6 +195,7 @@ export const ProductTableRow = ({
                     <th className="w-24 px-6 py-2 text-center"></th>
                   </tr>
                 </thead>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {product.variants.map((variant) => (
                     <VariantRow key={variant.id} variant={variant} />
