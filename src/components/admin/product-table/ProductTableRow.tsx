@@ -165,9 +165,7 @@ export const ProductTableRow = ({
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
-        <td className="px-6 py-4 text-center text-sm">{priceRange()}</td>
         <td className="px-6 py-4 text-center text-sm text-gray-500 line-through">
-          {/* Условное отображение старой цены */}
           {product.variants.some((v) => v.oldPrice) &&
             formatPrice(
               Math.min(
@@ -177,6 +175,7 @@ export const ProductTableRow = ({
               ),
             )}
         </td>
+        <td className="px-6 py-4 text-center text-sm">{priceRange()}</td>
         <td className="px-6 py-4 text-right">
           <Link
             href={`/admin/products/${product.id}/edit`}
@@ -201,9 +200,9 @@ export const ProductTableRow = ({
                     <th className="px-6 py-2 text-left">Вариант</th>
                     <th className="px-6 py-2 text-left"></th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
-                    <th className="w-40 px-6 py-2 text-center">Бронь (1ч)</th>
-                    <th className="w-40 px-6 py-2 text-center">Цена</th>
+                    <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Старая Цена</th>
+                    <th className="w-40 px-6 py-2 text-center">Цена</th>
                     <th className="w-24 px-6 py-2 text-center"></th>
                   </tr>
                 </thead>
