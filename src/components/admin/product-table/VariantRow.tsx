@@ -43,7 +43,6 @@ export function VariantRow({ variant }: VariantRowProps) {
 
   return (
     <Fragment>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем ячейки для новых колонок --- */}
       <tr className="bg-white hover:bg-gray-50">
         <td className="flex w-24 items-center gap-2 px-4 py-2">
           <input
@@ -89,8 +88,10 @@ export function VariantRow({ variant }: VariantRowProps) {
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
           {totalStock} шт.
         </td>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем ячейки-заглушки --- */}
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm">
           <div className="flex flex-col items-center">
             <span className="font-medium text-gray-800">
@@ -109,7 +110,6 @@ export function VariantRow({ variant }: VariantRowProps) {
           </a>
         </td>
       </tr>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       {isExpanded && (
         <tr>

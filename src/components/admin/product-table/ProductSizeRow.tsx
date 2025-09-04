@@ -13,7 +13,7 @@ interface ProductSizeRowProps {
 
 export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем ячейки для новых колонок ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем "Размер:" и добавляем ячейки ---
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="flex w-24 items-center justify-end px-4 py-1">
         <div className="pr-1">
@@ -24,9 +24,7 @@ export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
         </div>
       </td>
       <td className="whitespace-nowrap px-6 py-1">
-        <div className="pl-12 text-sm text-gray-700">
-          Размер: {sizeInfo.size.value}
-        </div>
+        <div className="pl-12 text-sm text-gray-700">{sizeInfo.size.value}</div>
       </td>
       <td></td>
       <td></td>
