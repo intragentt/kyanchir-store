@@ -12,14 +12,22 @@ import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { PencilIcon } from '@/components/icons/PencilIcon';
 import { VariantRow } from './VariantRow';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: АДАПТИРУЕМ statusConfig под новую модель ---
-
-// 1. Мы больше не можем использовать `ProductStatus` как Record, так как это объект.
-// Вместо этого мы используем `string` и будем обращаться по имени статуса.
 const statusConfig: Record<string, { dotClassName: string; label: string }> = {
   DRAFT: { dotClassName: 'bg-yellow-400', label: 'Черновик' },
   PUBLISHED: { dotClassName: 'bg-green-400', label: 'Опубликован' },
   ARCHIVED: { dotClassName: 'bg-gray-400', label: 'В архиве' },
+};
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" функция для форматирования цен ---
+const formatPrice = (priceInCents: number | null | undefined) => {
+  if (priceInCents === null || priceInCents === undefined) return '0 RUB';
+  const priceInRubles = priceInCents / 100;
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(priceInRubles);
 };
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
@@ -43,14 +51,46 @@ export const ProductTableRow = ({
     0,
   );
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновленная логика для отображения диапазона цен и скидок ---
   const priceRange = () => {
-    const prices = product.variants.map((v) => v.price).filter((p) => p > 0);
-    if (prices.length === 0) return '0 RUB';
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    if (minPrice === maxPrice) return `${minPrice} RUB`;
-    return `${minPrice} - ${maxPrice} RUB`;
+    const prices = product.variants.map((v) => ({
+      price: v.price,
+      oldPrice: v.oldPrice,
+    }));
+    if (prices.length === 0) return <span>{formatPrice(0)}</span>;
+
+    const minPrice = Math.min(...prices.map((p) => p.price));
+    const maxPrice = Math.max(...prices.map((p) => p.price));
+
+    // Проверяем, есть ли хотя бы одна скидка
+    const hasDiscount = prices.some((p) => p.oldPrice && p.oldPrice > p.price);
+
+    if (minPrice === maxPrice) {
+      const singlePrice = prices[0];
+      return (
+        <div className="flex flex-col items-center">
+          <span className="font-bold">{formatPrice(singlePrice.price)}</span>
+          {singlePrice.oldPrice && singlePrice.oldPrice > singlePrice.price && (
+            <span className="text-xs text-gray-500 line-through">
+              {formatPrice(singlePrice.oldPrice)}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex flex-col items-center">
+        <span className="font-bold">
+          {formatPrice(minPrice)} - {formatPrice(maxPrice)}
+        </span>
+        {hasDiscount && (
+          <span className="text-xs text-gray-400">(есть скидки)</span>
+        )}
+      </div>
+    );
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const rowClassName =
     isExpanded || isDetailsExpanded ? 'bg-indigo-50/50' : 'bg-white';
@@ -115,19 +155,15 @@ export const ProductTableRow = ({
           {product.categories.map((c) => c.name).join(' / ')}
         </td>
         <td className="px-6 py-4">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПОЛЬЗУЕМ `product.status.name` --- */}
           <span className="inline-flex items-center gap-x-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
             <span
               className={`h-1.5 w-1.5 rounded-full ${statusConfig[product.status.name]?.dotClassName}`}
             />
             {statusConfig[product.status.name]?.label || product.status.name}
           </span>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
-        <td className="px-6 py-4 text-center text-sm font-bold">
-          {priceRange()}
-        </td>
+        <td className="px-6 py-4 text-center text-sm">{priceRange()}</td>
         <td className="px-6 py-4 text-right">
           <Link
             href={`/admin/products/${product.id}/edit`}
@@ -138,14 +174,12 @@ export const ProductTableRow = ({
         </td>
       </tr>
 
-      {/* {isDetailsExpanded && <ProductDetailsPanel product={product} />} */}
-
       {isExpanded && (
         <tr>
           <td colSpan={7} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
-                <thead className="text-xs text-gray-500 uppercase">
+                <thead className="text-xs uppercase text-gray-500">
                   <tr>
                     <th className="w-24 px-4 py-2 text-left"></th>
                     <th className="px-6 py-2 text-left">Вариант</th>
