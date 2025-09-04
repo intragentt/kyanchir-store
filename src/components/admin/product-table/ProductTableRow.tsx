@@ -93,7 +93,7 @@ export const ProductTableRow = ({
 
   return (
     <Fragment>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем ячейки для новых колонок --- */}
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем ячейки в соответствии с новой шапкой --- */}
       <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
         <td className="flex w-24 items-center gap-2 px-4 py-4">
           <input
@@ -165,7 +165,6 @@ export const ProductTableRow = ({
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
-        <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="px-6 py-4 text-center text-sm">{priceRange()}</td>
         <td className="px-6 py-4 text-right">
           <Link
@@ -180,8 +179,8 @@ export const ProductTableRow = ({
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan, чтобы он соответствовал новому количеству колонок --- */}
-          <td colSpan={9} className="p-0">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
+          <td colSpan={8} className="p-0">
             {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
@@ -190,7 +189,8 @@ export const ProductTableRow = ({
                     <th className="w-24 px-4 py-2 text-left"></th>
                     <th className="px-6 py-2 text-left">Вариант</th>
                     <th className="px-6 py-2 text-left"></th>
-                    <th className="w-40 px-6 py-2 text-center">Остатки</th>
+                    <th className="w-40 px-6 py-2 text-center">Склад</th>
+                    <th className="w-40 px-6 py-2 text-center">Бронь (1ч)</th>
                     <th className="w-40 px-6 py-2 text-center">Цена</th>
                     <th className="w-24 px-6 py-2 text-center"></th>
                   </tr>

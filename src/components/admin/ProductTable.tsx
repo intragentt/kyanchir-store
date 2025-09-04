@@ -118,7 +118,7 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новые колонки в "шапку" --- */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки колонок --- */}
                 <tr>
                   <th
                     scope="col"
@@ -134,10 +134,7 @@ export default function ProductTable({
                     Статус
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Остатки
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Бронь (24ч)
+                    Склад
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                     Бронь (1ч)
