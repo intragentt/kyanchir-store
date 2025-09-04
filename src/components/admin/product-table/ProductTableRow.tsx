@@ -18,16 +18,19 @@ const statusConfig: Record<string, { dotClassName: string; label: string }> = {
   ARCHIVED: { dotClassName: 'bg-gray-400', label: 'В архиве' },
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" функция для форматирования цен ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем функцию форматирования для явного указания "RUB" ---
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
   const priceInRubles = priceInCents / 100;
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
+
+  // Форматируем только число, без символа валюты
+  const formattedNumber = new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(priceInRubles);
+
+  // Явно добавляем " RUB" в конце
+  return `${formattedNumber} RUB`;
 };
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
@@ -51,7 +54,6 @@ export const ProductTableRow = ({
     0,
   );
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновленная логика для отображения диапазона цен и скидок ---
   const priceRange = () => {
     const prices = product.variants.map((v) => ({
       price: v.price,
@@ -62,7 +64,6 @@ export const ProductTableRow = ({
     const minPrice = Math.min(...prices.map((p) => p.price));
     const maxPrice = Math.max(...prices.map((p) => p.price));
 
-    // Проверяем, есть ли хотя бы одна скидка
     const hasDiscount = prices.some((p) => p.oldPrice && p.oldPrice > p.price);
 
     if (minPrice === maxPrice) {
@@ -90,7 +91,6 @@ export const ProductTableRow = ({
       </div>
     );
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const rowClassName =
     isExpanded || isDetailsExpanded ? 'bg-indigo-50/50' : 'bg-white';
@@ -106,7 +106,9 @@ export const ProductTableRow = ({
           {product.variants.length > 0 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className={`rounded-md p-1 hover:bg-gray-200 ${isExpanded ? 'bg-indigo-100 text-indigo-700' : ''}`}
+              className={`rounded-md p-1 hover:bg-gray-200 ${
+                isExpanded ? 'bg-indigo-100 text-indigo-700' : ''
+              }`}
             >
               {isExpanded ? (
                 <ChevronDownIcon className="h-5 w-5" />
@@ -157,7 +159,9 @@ export const ProductTableRow = ({
         <td className="px-6 py-4">
           <span className="inline-flex items-center gap-x-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
             <span
-              className={`h-1.5 w-1.5 rounded-full ${statusConfig[product.status.name]?.dotClassName}`}
+              className={`h-1.5 w-1.5 rounded-full ${
+                statusConfig[product.status.name]?.dotClassName
+              }`}
             />
             {statusConfig[product.status.name]?.label || product.status.name}
           </span>
