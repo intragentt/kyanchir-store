@@ -118,7 +118,7 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовок "Цена" на "Сумма" --- */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки колонок --- */}
                 <tr>
                   <th
                     scope="col"

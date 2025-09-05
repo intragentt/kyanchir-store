@@ -41,7 +41,6 @@ export function VariantRow({ variant }: VariantRowProps) {
 
   const totalStock = variant.sizes.reduce((sum, size) => sum + size.stock, 0);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Калькулятор" для суммы варианта ---
   const calculateVariantValue = () => {
     const totalValue = variant.sizes.reduce(
       (sum, size) => sum + variant.price * size.stock,
@@ -49,7 +48,6 @@ export function VariantRow({ variant }: VariantRowProps) {
     );
     return formatPrice(totalValue);
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <Fragment>

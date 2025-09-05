@@ -50,7 +50,6 @@ export const ProductTableRow = ({
     0,
   );
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Калькулятор" для общей суммы ---
   const calculateTotalValue = () => {
     const totalValue = product.variants.reduce((sum, variant) => {
       const variantStock = variant.sizes.reduce((s, size) => s + size.stock, 0);
@@ -58,7 +57,6 @@ export const ProductTableRow = ({
     }, 0);
     return formatPrice(totalValue);
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const rowClassName =
     isExpanded || isDetailsExpanded ? 'bg-indigo-50/50' : 'bg-white';
@@ -149,9 +147,8 @@ export const ProductTableRow = ({
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan и "мини-шапку" --- */}
           <td colSpan={8} className="p-0">
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 <thead className="text-xs uppercase text-gray-500">
