@@ -41,6 +41,16 @@ export function VariantRow({ variant }: VariantRowProps) {
 
   const totalStock = variant.sizes.reduce((sum, size) => sum + size.stock, 0);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Калькулятор" для суммы варианта ---
+  const calculateVariantValue = () => {
+    const totalValue = variant.sizes.reduce(
+      (sum, size) => sum + variant.price * size.stock,
+      0,
+    );
+    return formatPrice(totalValue);
+  };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
     <Fragment>
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем ячейки в соответствии с новой шапкой --- */}
@@ -86,15 +96,8 @@ export function VariantRow({ variant }: VariantRowProps) {
           {totalStock} шт.
         </td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
-        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500 line-through">
-          {formatPrice(variant.oldPrice || variant.price)}
-        </td>
-        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm">
-          <div className="flex flex-col items-center">
-            <span className="font-medium text-gray-800">
-              {formatPrice(variant.price)}
-            </span>
-          </div>
+        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold">
+          {calculateVariantValue()}
         </td>
         <td className="w-24 whitespace-nowrap px-6 py-2 text-right text-sm font-medium">
           <a href="#" className="text-indigo-600 hover:text-indigo-900">
@@ -107,7 +110,7 @@ export function VariantRow({ variant }: VariantRowProps) {
       {isExpanded && (
         <tr>
           {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan и "мини-шапку" --- */}
-          <td colSpan={9} className="p-0">
+          <td colSpan={8} className="p-0">
             <table className="min-w-full">
               <thead>
                 <tr className="text-xs uppercase text-gray-500">
@@ -115,7 +118,6 @@ export function VariantRow({ variant }: VariantRowProps) {
                   <th className="px-6 py-2 text-left">Размер</th>
                   <th className="w-40 px-6 py-2 text-center">Склад</th>
                   <th className="w-40 px-6 py-2 text-center">Бронь</th>
-                  <th className="w-40 px-6 py-2 text-center">Старая Цена</th>
                   <th className="w-40 px-6 py-2 text-center">Цена</th>
                   <th className="w-24 px-6 py-2 text-center"></th>
                 </tr>

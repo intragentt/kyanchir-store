@@ -50,43 +50,15 @@ export const ProductTableRow = ({
     0,
   );
 
-  const priceRange = () => {
-    const prices = product.variants.map((v) => ({
-      price: v.price,
-      oldPrice: v.oldPrice,
-    }));
-    if (prices.length === 0) return <span>{formatPrice(0)}</span>;
-
-    const minPrice = Math.min(...prices.map((p) => p.price));
-    const maxPrice = Math.max(...prices.map((p) => p.price));
-
-    const hasDiscount = prices.some((p) => p.oldPrice && p.oldPrice > p.price);
-
-    if (minPrice === maxPrice) {
-      const singlePrice = prices[0];
-      return (
-        <div className="flex flex-col items-center">
-          <span className="font-bold">{formatPrice(singlePrice.price)}</span>
-          {singlePrice.oldPrice && singlePrice.oldPrice > singlePrice.price && (
-            <span className="text-xs text-gray-500 line-through">
-              {formatPrice(singlePrice.oldPrice)}
-            </span>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex flex-col items-center">
-        <span className="font-bold">
-          {formatPrice(minPrice)} - {formatPrice(maxPrice)}
-        </span>
-        {hasDiscount && (
-          <span className="text-xs text-gray-400">(есть скидки)</span>
-        )}
-      </div>
-    );
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Калькулятор" для общей суммы ---
+  const calculateTotalValue = () => {
+    const totalValue = product.variants.reduce((sum, variant) => {
+      const variantStock = variant.sizes.reduce((s, size) => s + size.stock, 0);
+      return sum + variant.price * variantStock;
+    }, 0);
+    return formatPrice(totalValue);
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const rowClassName =
     isExpanded || isDetailsExpanded ? 'bg-indigo-50/50' : 'bg-white';
@@ -161,7 +133,9 @@ export const ProductTableRow = ({
         </td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
-        <td className="px-6 py-4 text-center text-sm">{priceRange()}</td>
+        <td className="px-6 py-4 text-center text-sm font-bold">
+          {calculateTotalValue()}
+        </td>
         <td className="px-6 py-4 text-right">
           <Link
             href={`/admin/products/${product.id}/edit`}
@@ -175,8 +149,9 @@ export const ProductTableRow = ({
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan и "мини-шапку" --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
           <td colSpan={8} className="p-0">
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 <thead className="text-xs uppercase text-gray-500">
@@ -186,12 +161,10 @@ export const ProductTableRow = ({
                     <th className="px-6 py-2 text-left"></th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
-                    <th className="w-40 px-6 py-2 text-center">Старая Цена</th>
                     <th className="w-40 px-6 py-2 text-center">Цена</th>
                     <th className="w-24 px-6 py-2 text-center"></th>
                   </tr>
                 </thead>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {product.variants.map((variant) => (
                     <VariantRow key={variant.id} variant={variant} />

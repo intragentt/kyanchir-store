@@ -105,14 +105,12 @@ export default function ProductTable({
             <TagIcon className="h-4 w-4" /> Управление категориями
           </Link>
         </div>
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Рестайлинг" кнопки --- */}
         <Link
           href="/admin/products/new"
           className="rounded-lg bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-opacity-90"
         >
           + Создать товар
         </Link>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
 
       <div className="overflow-x-auto">
@@ -120,6 +118,7 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовок "Цена" на "Сумма" --- */}
                 <tr>
                   <th
                     scope="col"
@@ -141,12 +140,13 @@ export default function ProductTable({
                     Бронь
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Цена
+                    Сумма
                   </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Редактировать</span>
                   </th>
                 </tr>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {products.map((product) => (
