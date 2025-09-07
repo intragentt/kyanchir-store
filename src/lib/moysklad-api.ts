@@ -45,30 +45,36 @@ export const getMoySkladStock = async () => {
   return data;
 };
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписываем функцию на создание документа "Ввод остатков" ---
 export const updateMoySkladVariantStock = async (
   variantMoySkladId: string,
   newStock: number,
 ) => {
-  const body = [
-    {
-      stock: newStock,
-      assortment: {
-        meta: {
-          href: `${MOYSKLAD_API_URL}/entity/variant/${variantMoySkladId}`,
-          metadataHref: `${MOYSKLAD_API_URL}/entity/variant/metadata`,
-          type: 'variant',
+  // Формируем тело для создания документа "Ввод остатков"
+  const body = {
+    // Внутри документа есть массив позиций
+    positions: [
+      {
+        // Количество для установки
+        quantity: newStock,
+        // Ссылка на товар/модификацию
+        assortment: {
+          meta: {
+            href: `${MOYSKLAD_API_URL}/entity/variant/${variantMoySkladId}`,
+            metadataHref: `${MOYSKLAD_API_URL}/entity/variant/metadata`,
+            type: 'variant',
+          },
         },
       },
-    },
-  ];
+    ],
+  };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем эндпоинт на единственно верный ---
-  const data = await moySkladFetch('entity/assortment/stock', {
+  // Отправляем POST запрос на создание документа "Ввод остатков"
+  const data = await moySkladFetch('entity/enter', {
     method: 'POST',
     body: JSON.stringify(body),
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return data;
 };
-
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
