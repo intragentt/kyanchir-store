@@ -118,7 +118,6 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки колонок --- */}
                 <tr>
                   <th
                     scope="col"
@@ -142,11 +141,10 @@ export default function ProductTable({
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                     Сумма
                   </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Редактировать</span>
-                  </th>
+                  {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем заголовок для колонки "Ред." --- */}
+                  {/* Заголовок удалён */}
+                  {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 </tr>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {products.map((product) => (

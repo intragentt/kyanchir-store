@@ -108,20 +108,17 @@ export function VariantRow({ variant }: VariantRowProps) {
           {formatPrice(totalSalePrice)}
         </td>
 
-        <td className="w-24 whitespace-nowrap px-6 py-2 text-right text-sm font-medium">
-          <a href="#" className="text-indigo-600 hover:text-indigo-900">
-            Ред.
-          </a>
-        </td>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем ячейку с кнопкой "Ред." --- */}
+        {/* Ячейка удалена */}
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </tr>
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: colSpan теперь равен 8, т.к. колонок стало больше --- */}
-          <td colSpan={8} className="p-0">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: colSpan теперь равен 6, т.к. колонок в строке стало меньше --- */}
+          <td colSpan={6} className="p-0">
             {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлённая "мини-шапка" с колонкой "Сумма" --- */}
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
                   <th className="w-24 px-4 py-2"></th> {/* Спейсер */}
@@ -134,7 +131,6 @@ export function VariantRow({ variant }: VariantRowProps) {
                   <th className="w-24 px-6 py-2"></th> {/* Спейсер */}
                 </tr>
               </thead>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-100">
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow

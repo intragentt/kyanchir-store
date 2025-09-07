@@ -52,7 +52,6 @@ export const ProductTableRow = ({
 
   const calculateTotalValue = () => {
     const totalValue = product.variants.reduce((sum, variant) => {
-      // Суммируем стоимость каждого варианта (цена * кол-во)
       const variantValue = variant.sizes.reduce(
         (value, size) => value + (variant.price || 0) * size.stock,
         0,
@@ -137,20 +136,15 @@ export const ProductTableRow = ({
         <td className="px-6 py-4 text-center text-sm font-bold">
           {calculateTotalValue()}
         </td>
-        <td className="px-6 py-4 text-right">
-          <Link
-            href={`/admin/products/${product.id}/edit`}
-            className="text-sm text-indigo-600"
-          >
-            Ред.
-          </Link>
-        </td>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем ячейку с кнопкой "Ред." --- */}
+        {/* Ячейка удалена */}
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </tr>
 
       {isExpanded && (
         <tr>
           {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan и "мини-шапку" --- */}
-          <td colSpan={8} className="p-0">
+          <td colSpan={7} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 {/* Вот обновлённая "мини-шапка" */}
@@ -162,7 +156,6 @@ export const ProductTableRow = ({
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Старая цена</th>
                     <th className="w-40 px-6 py-2 text-center">Цена</th>
-                    <th className="w-24 px-6 py-2"></th> {/* Спейсер */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
