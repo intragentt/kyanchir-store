@@ -10,6 +10,7 @@ import { CheckIcon } from '@/components/icons/CheckIcon';
 import { XMarkIcon } from '@/components/icons/XMarkIcon';
 import { SpinnerIcon } from '@/components/icons/SpinnerIcon';
 
+// ... (formatPrice и типы остаются без изменений) ...
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '—';
   const priceInRubles = priceInCents / 100;
@@ -59,10 +60,18 @@ export function ProductSizeRow({
 
     setIsLoading(true);
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем credentials: 'include' ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем console.log для диагностики ---
+    console.log('[DEBUG] Отправка данных на API:');
+    console.log({
+      variantMoySkladId: variantMoySkladId,
+      newStock: newStock,
+      productSizeId: sizeInfo.id,
+    });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     const promise = fetch('/api/admin/products/update-stock', {
       method: 'POST',
-      credentials: 'include', // Эта строка решает проблему авторизации
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         variantMoySkladId: variantMoySkladId,
@@ -70,7 +79,6 @@ export function ProductSizeRow({
         productSizeId: sizeInfo.id,
       }),
     });
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     toast.promise(promise, {
       loading: 'Обновляем остатки...',
@@ -98,6 +106,7 @@ export function ProductSizeRow({
   };
 
   return (
+    // ... JSX остается без изменений ...
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="w-24 px-4 py-1"></td>
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
