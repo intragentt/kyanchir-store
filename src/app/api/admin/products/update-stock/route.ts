@@ -2,44 +2,53 @@
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { headers } from 'next/headers'; // <--- Импортируем headers
 
 import { authOptions } from '@/lib/auth';
-// Временно не используем prisma и moysklad-api для чистоты диагностики
-// import prisma from '@/lib/prisma';
-// import { updateMoySkladVariantStock } from '@/lib/moysklad-api';
+import prisma from '@/lib/prisma';
+import { updateMoySkladVariantStock } from '@/lib/moysklad-api';
+
+interface RequestBody {
+  variantMoySkladId: string;
+  newStock: number;
+  productSizeId: string;
+}
 
 export async function POST(req: Request) {
-  console.log('--- [DIAGNOSTIC LOG] API Route Started ---');
-
-  // --- Шаг 1: Логируем заголовки ---
-  const requestHeaders = headers();
-  const cookieHeader = requestHeaders.get('cookie');
-  console.log('Cookie Header:', cookieHeader || 'No cookie header found!');
-
-  // --- Шаг 2: Пытаемся получить сессию и логируем результат ---
   const session = await getServerSession(authOptions);
-  console.log('getServerSession result:', session);
 
-  // --- Шаг 3: Временно отключаем проверку безопасности ---
-  // Вместо ошибки 401, возвращаем диагностическую информацию
-  const isAdmin = session?.user?.role?.name === 'admin';
-  console.log('Is Admin:', isAdmin);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем проверку роли на правильный регистр 'ADMIN' ---
+  if (!session || session.user.role.name !== 'ADMIN') {
+    return new NextResponse('Неавторизован', { status: 401 });
+  }
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // Временно не выполняем никаких действий, только логируем
-  // try {
-  //   const body = await req.json();
-  //   console.log('Request Body:', body);
-  // } catch (e) {
-  //   console.error('Failed to parse request body:', e);
-  // }
+  try {
+    const body = (await req.json()) as RequestBody;
+    const { variantMoySkladId, newStock, productSizeId } = body;
 
-  console.log('--- [DIAGNOSTIC LOG] API Route Finished ---');
+    if (!variantMoySkladId || newStock === undefined || !productSizeId) {
+      return new NextResponse('Отсутствуют необходимые данные', {
+        status: 400,
+      });
+    }
 
-  // Возвращаем успешный ответ, чтобы увидеть логи в Vercel
-  return NextResponse.json({
-    message: 'Diagnostic check complete.',
-    sessionResult: session,
-    hasCookieHeader: !!cookieHeader,
-  });
+    if (typeof newStock !== 'number' || newStock < 0) {
+      return new NextResponse('Некорректное значение остатка', {
+        status: 400,
+      });
+    }
+
+    // Возвращаем рабочую логику
+    await updateMoySkladVariantStock(variantMoySkladId, newStock);
+
+    await prisma.productSize.update({
+      where: { id: productSizeId },
+      data: { stock: newStock },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[API] Ошибка при обновлении остатков:', error);
+    return new NextResponse('Внутренняя ошибка сервера', { status: 500 });
+  }
 }
