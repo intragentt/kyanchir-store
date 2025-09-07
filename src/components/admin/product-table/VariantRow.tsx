@@ -56,9 +56,7 @@ export function VariantRow({ variant }: VariantRowProps) {
 
   return (
     <Fragment>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлённая строка Уровня 2 с двумя колонками для цен --- */}
       <tr className="bg-white hover:bg-gray-50">
-        {/* 1. Чекбокс */}
         <td className="w-24 px-4 py-2">
           <input
             type="checkbox"
@@ -66,7 +64,6 @@ export function VariantRow({ variant }: VariantRowProps) {
           />
         </td>
 
-        {/* 2. Вариант (Фото, Название, Кнопка раскрытия) */}
         <td className="whitespace-nowrap px-6 py-2">
           <div className="flex items-center">
             <Image
@@ -97,50 +94,47 @@ export function VariantRow({ variant }: VariantRowProps) {
           </div>
         </td>
 
-        {/* 3. Склад */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
           {totalStock} шт.
         </td>
 
-        {/* 4. Бронь */}
         <td className="w-40 px-6 py-2 text-center text-sm">0 шт.</td>
 
-        {/* 5. Старая цена (ОБЩАЯ) */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500">
           {totalOldPrice > totalSalePrice ? formatPrice(totalOldPrice) : '—'}
         </td>
 
-        {/* 6. Цена (ОБЩАЯ) */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold text-gray-800">
           {formatPrice(totalSalePrice)}
         </td>
 
-        {/* 7. Действия */}
         <td className="w-24 whitespace-nowrap px-6 py-2 text-right text-sm font-medium">
           <a href="#" className="text-indigo-600 hover:text-indigo-900">
             Ред.
           </a>
         </td>
       </tr>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: colSpan теперь равен 7 --- */}
-          <td colSpan={7} className="p-0">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: colSpan теперь равен 8, т.к. колонок стало больше --- */}
+          <td colSpan={8} className="p-0">
             {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлённая "мини-шапка" с колонкой "Сумма" --- */}
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
-                  <th className="w-24 px-4 py-2"></th>
+                  <th className="w-24 px-4 py-2"></th> {/* Спейсер */}
                   <th className="px-6 py-2 text-left">Размер</th>
                   <th className="w-40 px-6 py-2 text-center">Склад</th>
                   <th className="w-40 px-6 py-2 text-center">Бронь</th>
                   <th className="w-40 px-6 py-2 text-center">Старая цена</th>
                   <th className="w-40 px-6 py-2 text-center">Цена</th>
-                  <th className="w-24 px-6 py-2"></th>
+                  <th className="w-40 px-6 py-2 text-center">Сумма</th>
+                  <th className="w-24 px-6 py-2"></th> {/* Спейсер */}
                 </tr>
               </thead>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-100">
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
