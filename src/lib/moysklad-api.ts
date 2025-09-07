@@ -62,8 +62,8 @@ export const updateMoySkladVariantStock = async (
     },
   ];
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем эндпоинт на правильный ---
-  const data = await moySkladFetch('entity/enter/stock', {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем эндпоинт на единственно верный ---
+  const data = await moySkladFetch('entity/assortment/stock', {
     method: 'POST',
     body: JSON.stringify(body),
   });
@@ -71,3 +71,4 @@ export const updateMoySkladVariantStock = async (
 
   return data;
 };
+
