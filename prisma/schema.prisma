@@ -8,7 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// === МОДЕЛИ E-COMMERCE (ФИНАЛЬНАЯ ВЕРСИЯ С МОДЕЛЯМИ ВМЕСТО ENUM) ===
+// === МОДЕЛИ E-COMMERCE ===
 model Product {
   id               String            @id @default(cuid())
   sku              String?           @unique
@@ -41,11 +41,7 @@ model ProductVariant {
   isFeatured         Boolean       @default(false)
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем поле для ID из МойСклад ---
   moySkladId         String?       @unique
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
   @@unique([productId, color])
 }
 
@@ -59,7 +55,9 @@ model Image {
 
 model ProductSize {
   id               String         @id @default(cuid())
-  moyskladId       String?        @unique
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем ID на полный Href ---
+  moySkladHref     String?        @unique // Полный URL до сущности в МойСклад
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
   sizeId           String
@@ -74,6 +72,7 @@ model Size {
   productSizes ProductSize[]
 }
 
+// ... остальная часть файла без изменений ...
 model Attribute {
   id        String  @id @default(cuid())
   productId String

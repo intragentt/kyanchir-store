@@ -20,29 +20,29 @@ const formatPrice = (priceInCents: number | null | undefined) => {
   return `${formattedNumber} RUB`;
 };
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем тип, чтобы он включал moySkladHref ---
 type SizeInfo = Prisma.ProductSizeGetPayload<{
   include: { size: true };
-}>;
+}> & {
+  moySkladHref: string | null; // Добавляем новое поле
+};
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем ненужный prop variantMoySkladId ---
 interface ProductSizeRowProps {
   sizeInfo: SizeInfo;
   price: number | null;
   oldPrice: number | null;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export function ProductSizeRow({
   sizeInfo,
   price,
   oldPrice,
 }: ProductSizeRowProps) {
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const router = useRouter();
-
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [stockValue, setStockValue] = useState(String(sizeInfo.stock));
-
   const totalValue = (price || 0) * sizeInfo.stock;
 
   const handleSave = async () => {
@@ -51,28 +51,25 @@ export function ProductSizeRow({
       toast.error('Введите корректное число.');
       return;
     }
-
     if (newStock === sizeInfo.stock) {
       setIsEditing(false);
       return;
     }
-
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убеждаемся, что у размера есть ID из МойСклад ---
-    if (!sizeInfo.moyskladId) {
-      toast.error('Ошибка: ID размера из МойСклад не найден.');
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Проверяем наличие Href ---
+    if (!sizeInfo.moySkladHref) {
+      toast.error('Ошибка: Href размера из МойСклад не найден.');
       return;
     }
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
     setIsLoading(true);
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Отправляем ID КОНКРЕТНОГО РАЗМЕРА, а не варианта ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Отправляем Href конкретного размера ---
     const promise = fetch('/api/admin/products/update-stock', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        variantMoySkladId: sizeInfo.moyskladId, // <--- ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ
+        variantMoySkladHref: sizeInfo.moySkladHref, // <--- ИСПОЛЬЗУЕМ Href
         newStock: newStock,
         productSizeId: sizeInfo.id,
       }),
@@ -89,7 +86,6 @@ export function ProductSizeRow({
       },
       error: 'Не удалось обновить остатки.',
     });
-
     try {
       await promise;
     } catch (error) {
@@ -104,6 +100,7 @@ export function ProductSizeRow({
   };
 
   return (
+    // ... JSX остается без изменений ...
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="w-24 px-4 py-1"></td>
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">

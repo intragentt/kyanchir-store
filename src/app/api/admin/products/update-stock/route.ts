@@ -7,11 +7,13 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { updateMoySkladVariantStock } from '@/lib/moysklad-api';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем интерфейс ---
 interface RequestBody {
-  variantMoySkladId: string;
+  variantMoySkladHref: string; // Принимаем Href
   newStock: number;
   productSizeId: string;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -22,23 +24,15 @@ export async function POST(req: Request) {
 
   try {
     const body = (await req.json()) as RequestBody;
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Работаем с Href ---
+    const { variantMoySkladHref, newStock, productSizeId } = body;
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Логируем тело запроса для диагностики ---
-    console.log('[API] Получено тело запроса:', body);
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
-    const { variantMoySkladId, newStock, productSizeId } = body;
-
-    if (!variantMoySkladId || newStock === undefined || !productSizeId) {
-      console.error('[API] Валидация не пройдена. Отсутствуют данные.', {
-        variantMoySkladId,
-        newStock,
-        productSizeId,
-      });
+    if (!variantMoySkladHref || newStock === undefined || !productSizeId) {
       return new NextResponse('Отсутствуют необходимые данные', {
         status: 400,
       });
     }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     if (typeof newStock !== 'number' || newStock < 0) {
       return new NextResponse('Некорректное значение остатка', {
@@ -46,7 +40,9 @@ export async function POST(req: Request) {
       });
     }
 
-    await updateMoySkladVariantStock(variantMoySkladId, newStock);
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем Href в API-мост ---
+    await updateMoySkladVariantStock(variantMoySkladHref, newStock);
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     await prisma.productSize.update({
       where: { id: productSizeId },

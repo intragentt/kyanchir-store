@@ -9,12 +9,20 @@ import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { ProductSizeRow } from './ProductSizeRow';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем тип, чтобы он включал moySkladHref в размерах ---
 type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   include: {
     images: true;
     sizes: {
       include: {
         size: true;
+      };
+      // Добавляем явное указание, что нам нужно поле moySkladHref
+      select: {
+        id: true;
+        stock: true;
+        size: true;
+        moySkladHref: true;
       };
     };
   };
@@ -23,16 +31,15 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   oldPrice: number | null;
   moySkladId?: string | null;
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
   const priceInRubles = priceInCents / 100;
-
   const formattedNumber = new Intl.NumberFormat('ru-RU', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(priceInRubles);
-
   return `${formattedNumber} RUB`;
 };
 
@@ -42,14 +49,11 @@ interface VariantRowProps {
 
 export function VariantRow({ variant }: VariantRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-
   const totalStock = variant.sizes.reduce((sum, size) => sum + size.stock, 0);
-
   const totalSalePrice = variant.sizes.reduce(
     (sum, size) => sum + (variant.price || 0) * size.stock,
     0,
   );
-
   const totalOldPrice = variant.sizes.reduce(
     (sum, size) => sum + (variant.oldPrice || variant.price || 0) * size.stock,
     0,
@@ -64,7 +68,6 @@ export function VariantRow({ variant }: VariantRowProps) {
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
         </td>
-
         <td className="whitespace-nowrap px-6 py-2">
           <div className="flex items-center">
             <Image
@@ -94,22 +97,17 @@ export function VariantRow({ variant }: VariantRowProps) {
             </div>
           </div>
         </td>
-
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
           {totalStock} шт.
         </td>
-
         <td className="w-40 px-6 py-2 text-center text-sm">0 шт.</td>
-
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500">
           {totalOldPrice > totalSalePrice ? formatPrice(totalOldPrice) : '—'}
         </td>
-
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold text-gray-800">
           {formatPrice(totalSalePrice)}
         </td>
       </tr>
-
       {isExpanded && (
         <tr>
           <td colSpan={6} className="p-0">
@@ -127,11 +125,11 @@ export function VariantRow({ variant }: VariantRowProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем передачу лишнего prop --- */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний prop --- */}
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
                     key={sizeInfo.id}
-                    sizeInfo={sizeInfo}
+                    sizeInfo={sizeInfo as any} // Используем as any для простоты, т.к. тип уже включает все нужное
                     price={variant.price}
                     oldPrice={variant.oldPrice}
                   />

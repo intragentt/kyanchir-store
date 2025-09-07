@@ -7,18 +7,18 @@ import prisma from '@/lib/prisma';
 import type { Status } from '@prisma/client';
 import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 
-// ... (интерфейсы и хелперы parseMoySkladName, getUUIDFromHref остаются без изменений) ...
-interface MoySkladPrice {
-  value: number;
-  priceType: { name: string };
-}
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем поле meta в интерфейс ---
 interface MoySkladProduct {
   id: string;
   name: string;
   description?: string;
   productFolder?: { meta: { href: string } };
-  salePrices?: MoySkladPrice[];
+  salePrices?: { value: number; priceType: { name: string } }[];
+  meta: {
+    href: string; // Полный URL сущности
+  };
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 function getUUIDFromHref(href: string): string {
   const pathPart = href.split('/').pop() || '';
@@ -38,7 +38,6 @@ function parseMoySkladName(name: string): ParsedProductInfo {
   if (sizeMatch) {
     nameWithoutSize = name.replace(sizeMatch[0], '').trim();
   }
-
   const colors = [
     'черный',
     'белый',
@@ -55,7 +54,6 @@ function parseMoySkladName(name: string): ParsedProductInfo {
   ];
   let productName = nameWithoutSize;
   let variantName = 'Основной';
-
   for (const color of colors) {
     const regex = new RegExp(`\\s+${color}$`, 'i');
     if (regex.test(nameWithoutSize)) {
@@ -64,18 +62,19 @@ function parseMoySkladName(name: string): ParsedProductInfo {
       break;
     }
   }
-
   return { productName, variantName, size };
 }
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем интерфейс для хранения Href ---
 interface ProductSizeData {
-  moyskladId: string;
+  moySkladHref: string; // Меняем moyskladId на moySkladHref
   size: string | null;
   description?: string;
   productFolder?: { meta: { href: string } };
-  rawSalePrices?: MoySkladPrice[];
+  rawSalePrices?: { value: number; priceType: { name: string } }[];
   stock: number;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 async function runSync() {
   console.log('1/5: Получение товаров и остатков из МойСклад...');
@@ -84,24 +83,18 @@ async function runSync() {
     getMoySkladStock(),
     prisma.status.findMany(),
   ]);
-
   const defaultStatus = statuses.find((s: Status) => s.name === 'DRAFT');
   if (!defaultStatus) {
-    throw new Error(
-      'Статус "DRAFT" не найден в базе данных. Запустите seed-скрипт.',
-    );
+    throw new Error('Статус "DRAFT" не найден. Запустите seed-скрипт.');
   }
-
   const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];
   const stockData: any[] = stockResponse.rows || [];
-
   if (moySkladProducts.length === 0) {
     return {
       message: 'Товары в МойСклад не найдены.',
       synchronizedProducts: 0,
     };
   }
-
   const stockMap = new Map<string, number>();
   stockData.forEach((item) => {
     const assortmentId = getUUIDFromHref(item.meta.href);
@@ -110,11 +103,9 @@ async function runSync() {
       stockMap.set(assortmentId, currentStock + item.stock);
     }
   });
-
   console.log(
     `2/5: Данные получены. Товаров: ${moySkladProducts.length}, Остатков: ${stockData.length}.`,
   );
-
   const groupedProducts = new Map<string, Map<string, ProductSizeData[]>>();
   for (const product of moySkladProducts) {
     const { productName, variantName, size } = parseMoySkladName(product.name);
@@ -126,21 +117,21 @@ async function runSync() {
       productVariants.set(variantName, []);
     }
     const variantSizes = productVariants.get(variantName)!;
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Сохраняем полный Href ---
     variantSizes.push({
-      moyskladId: product.id,
+      moySkladHref: product.meta.href, // Сохраняем полный URL
       size,
       description: product.description,
       productFolder: product.productFolder,
       rawSalePrices: product.salePrices,
       stock: stockMap.get(product.id) || 0,
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   }
-
   console.log(
     `3/5: Товары сгруппированы. Уникальных продуктов: ${groupedProducts.size}.`,
   );
   console.log('4/5: Начинаем запись в БД...');
-
   const categoryMap = new Map<string, string>();
   const allOurCategories = await prisma.category.findMany({
     select: { id: true, moyskladId: true },
@@ -148,9 +139,7 @@ async function runSync() {
   allOurCategories.forEach(
     (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
   );
-
   let totalProductsSynced = 0;
-
   for (const [productName, variantsMap] of groupedProducts.entries()) {
     const firstVariantData = Array.from(variantsMap.values())[0][0];
     const categoryMoySkladId = firstVariantData.productFolder
@@ -159,7 +148,6 @@ async function runSync() {
     const ourCategoryId = categoryMoySkladId
       ? categoryMap.get(categoryMoySkladId)
       : undefined;
-
     const product = await prisma.product.upsert({
       where: { name: productName },
       update: {
@@ -177,15 +165,11 @@ async function runSync() {
           : undefined,
       },
     });
-
     for (const [variantName, sizesArray] of variantsMap.entries()) {
       const representativeSize = sizesArray[0];
-      // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем ID варианта из МойСклад ---
-      // В нашей логике, каждый "размер" в МойСклад - это отдельная модификация.
-      // Для варианта мы можем использовать ID первой модификации в группе.
-      const variantMoySkladId = representativeSize.moyskladId;
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
+      const variantMoySkladId = getUUIDFromHref(
+        representativeSize.moySkladHref,
+      ); // Получаем ID из Href
       let currentPrice = 0;
       let oldPrice: number | null = null;
       const regularPriceObj = (representativeSize.rawSalePrices || []).find(
@@ -198,7 +182,6 @@ async function runSync() {
         ? Math.round(regularPriceObj.value)
         : 0;
       const salePriceValue = salePriceObj ? Math.round(salePriceObj.value) : 0;
-
       if (salePriceValue > 0 && salePriceValue < regularPriceValue) {
         currentPrice = salePriceValue;
         oldPrice = regularPriceValue;
@@ -207,8 +190,6 @@ async function runSync() {
           regularPriceValue > 0 ? regularPriceValue : salePriceValue;
         oldPrice = null;
       }
-
-      // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем moySkladId при создании/обновлении варианта ---
       const productVariant = await prisma.productVariant.upsert({
         where: {
           productId_color: { productId: product.id, color: variantName },
@@ -216,18 +197,16 @@ async function runSync() {
         update: {
           price: currentPrice,
           oldPrice: oldPrice,
-          moySkladId: variantMoySkladId, // Добавляем сюда
+          moySkladId: variantMoySkladId,
         },
         create: {
           product: { connect: { id: product.id } },
           color: variantName,
           price: currentPrice,
           oldPrice: oldPrice,
-          moySkladId: variantMoySkladId, // И сюда
+          moySkladId: variantMoySkladId,
         },
       });
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
       for (const sizeData of sizesArray) {
         const sizeValue = sizeData.size || 'ONE_SIZE';
         const sizeRecord = await prisma.size.upsert({
@@ -235,26 +214,26 @@ async function runSync() {
           update: {},
           create: { value: sizeValue },
         });
-
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Записываем в новое поле moySkladHref ---
         await prisma.productSize.upsert({
-          where: { moyskladId: sizeData.moyskladId },
+          where: { moySkladHref: sizeData.moySkladHref }, // Ищем по Href
           update: {
             stock: sizeData.stock,
             productVariantId: productVariant.id,
             sizeId: sizeRecord.id,
           },
           create: {
-            moyskladId: sizeData.moyskladId,
+            moySkladHref: sizeData.moySkladHref, // Записываем Href
             stock: sizeData.stock,
             productVariant: { connect: { id: productVariant.id } },
             size: { connect: { id: sizeRecord.id } },
           },
         });
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       }
     }
     totalProductsSynced++;
   }
-
   console.log('5/5: Синхронизация завершена успешно.');
   return {
     message: `Синхронизация успешно завершена.`,
@@ -286,7 +265,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -296,7 +274,6 @@ export async function POST(req: NextRequest) {
         status: 403,
       });
     }
-
     const userEmail = session.user.email || 'unknown';
     console.log(
       `[MANUAL SYNC] Запуск ручной синхронизации от пользователя ${userEmail}...`,

@@ -31,7 +31,9 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
 };
 
 export const getMoySkladProducts = async () => {
-  const data = await moySkladFetch('entity/assortment?expand=productFolder');
+  const data = await moySkladFetch(
+    'entity/assortment?expand=productFolder,images',
+  );
   return data;
 };
 
@@ -45,31 +47,25 @@ export const getMoySkladStock = async () => {
   return data;
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписываем функцию на создание документа "Ввод остатков" ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем функцию для работы с Href ---
 export const updateMoySkladVariantStock = async (
-  variantMoySkladId: string,
+  variantMoySkladHref: string, // Принимаем полный Href
   newStock: number,
 ) => {
-  // Формируем тело для создания документа "Ввод остатков"
   const body = {
-    // Внутри документа есть массив позиций
     positions: [
       {
-        // Количество для установки
         quantity: newStock,
-        // Ссылка на товар/модификацию
         assortment: {
           meta: {
-            href: `${MOYSKLAD_API_URL}/entity/variant/${variantMoySkladId}`,
-            metadataHref: `${MOYSKLAD_API_URL}/entity/variant/metadata`,
-            type: 'variant',
+            href: variantMoySkladHref, // Используем Href напрямую
+            type: 'variant', // Тип по-прежнему variant (модификация)
           },
         },
       },
     ],
   };
 
-  // Отправляем POST запрос на создание документа "Ввод остатков"
   const data = await moySkladFetch('entity/enter', {
     method: 'POST',
     body: JSON.stringify(body),

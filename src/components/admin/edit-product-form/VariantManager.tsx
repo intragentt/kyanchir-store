@@ -39,14 +39,20 @@ export function VariantManager({
   };
 
   if (!activeVariant) {
-    return <div>Нет вариантов для отображения. <button className="text-indigo-600 text-sm py-3">+ Добавить вариант</button></div>;
+    return (
+      <div>
+        Нет вариантов для отображения.{' '}
+        <button className="py-3 text-sm text-indigo-600">
+          + Добавить вариант
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="rounded-lg border bg-white p-6">
       <h2 className="mb-4 text-xl font-bold">Варианты товара</h2>
 
-      {/* Вкладки для переключения между вариантами */}
       <div className="mb-6 border-b border-gray-200">
         <nav className="-mb-px flex space-x-6">
           {variants.map((variant) => (
@@ -57,7 +63,7 @@ export function VariantManager({
                 activeVariantId === variant.id
                   ? 'border-indigo-500 text-indigo-600'
                   : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              } border-b-2 px-1 py-3 text-sm font-medium whitespace-nowrap`}
+              } whitespace-nowrap border-b-2 px-1 py-3 text-sm font-medium`}
             >
               {variant.color || 'Основной'}
             </button>
@@ -68,23 +74,18 @@ export function VariantManager({
         </nav>
       </div>
 
-      {/* Форма редактирования для активного варианта */}
       <div className="grid grid-cols-1 gap-x-8 gap-y-10 lg:grid-cols-3">
         <div className="space-y-8 lg:col-span-2">
-
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЕНИЕ ВЫЗОВА PriceManager --- */}
           <PriceManager
             price={activeVariant.price}
             oldPrice={activeVariant.oldPrice}
             bonusPoints={activeVariant.bonusPoints}
             discountExpiresAt={activeVariant.discountExpiresAt || null}
             onUpdate={(field, value) =>
-              handleVariantUpdate(activeVariant.id, { [field]: value as any }) // 'as any' для упрощения, т.к. value может быть Date
+              handleVariantUpdate(activeVariant.id, { [field]: value as any })
             }
           />
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-          
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЕНИЕ ВЫЗОВА SizeManager --- */}
+
           <SizeManager
             allSizes={allSizes}
             sizes={activeVariant.sizes}
@@ -92,34 +93,33 @@ export function VariantManager({
               const sizeExists = activeVariant.sizes.some(
                 (s) => s.sizeId === sizeId,
               );
-              
+
               let newSizes;
               if (sizeExists) {
-                // Если размер уже существует, обновляем его сток
                 newSizes = activeVariant.sizes.map((s) =>
                   s.sizeId === sizeId ? { ...s, stock } : s,
                 );
               } else {
-                // Если размера нет, добавляем его в массив
-                const sizeData = allSizes.find(s => s.id === sizeId);
-                if (!sizeData) return; // Не нашли такой размер в allSizes, ничего не делаем
-                
+                const sizeData = allSizes.find((s) => s.id === sizeId);
+                if (!sizeData) return;
+
+                // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем moyskladId на moySkladHref ---
                 newSizes = [
-                  ...activeVariant.sizes, 
-                  { 
-                    id: `new_${sizeId}_${Date.now()}`, // Временный ID для нового размера
+                  ...activeVariant.sizes,
+                  {
+                    id: `new_${sizeId}_${Date.now()}`,
                     stock: stock,
                     sizeId: sizeId,
                     size: sizeData,
                     productVariantId: activeVariant.id,
-                    moyskladId: null,
-                  }
+                    moySkladHref: null, // Используем новое поле
+                  },
                 ];
+                // --- КОНЕЦ ИЗМЕНЕНИЙ ---
               }
-              handleVariantUpdate(activeVariant.id, { sizes: newSizes });
+              handleVariantUpdate(activeVariant.id, { sizes: newSizes as any }); // 'as any' для упрощения, т.к. TS ругается на тип
             }}
           />
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </div>
         <div className="lg:col-span-1">
           <ImageManager
@@ -127,7 +127,7 @@ export function VariantManager({
             onImageOrderChange={(reorderedImages) =>
               handleVariantUpdate(activeVariant.id, { images: reorderedImages })
             }
-            onImageAdd={() => {}} // Логика добавления картинок
+            onImageAdd={() => {}}
             onImageRemove={(imageId) => {
               const newImages = activeVariant.images.filter(
                 (img) => img.id !== imageId,
