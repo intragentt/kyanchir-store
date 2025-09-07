@@ -9,6 +9,7 @@ import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { ProductSizeRow } from './ProductSizeRow';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем moySkladId в тип ---
 type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   include: {
     images: true;
@@ -21,7 +22,9 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
 }> & {
   price: number | null;
   oldPrice: number | null;
+  moySkladId?: string | null; // ID из МойСклад
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
@@ -111,33 +114,32 @@ export function VariantRow({ variant }: VariantRowProps) {
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: colSpan теперь равен 6, чтобы соответствовать родительской строке --- */}
           <td colSpan={6} className="p-0">
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки цен --- */}
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
-                  <th className="w-24 px-4 py-2"></th> {/* Спейсер */}
+                  <th className="w-24 px-4 py-2"></th>
                   <th className="px-6 py-2 text-left">Размер</th>
                   <th className="w-40 px-6 py-2 text-center">Склад</th>
                   <th className="w-40 px-6 py-2 text-center">Бронь</th>
                   <th className="w-40 px-6 py-2 text-center">Старая цена/шт</th>
                   <th className="w-40 px-6 py-2 text-center">Цена/шт</th>
                   <th className="w-40 px-6 py-2 text-right">Сумма</th>
-                  <th className="w-24 px-6 py-2"></th> {/* Спейсер */}
+                  <th className="w-24 px-6 py-2"></th>
                 </tr>
               </thead>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-100">
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Передаём ID варианта в дочерний компонент --- */}
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
                     key={sizeInfo.id}
                     sizeInfo={sizeInfo}
                     price={variant.price}
                     oldPrice={variant.oldPrice}
+                    variantMoySkladId={variant.moySkladId || ''}
                   />
                 ))}
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </tbody>
             </table>
           </td>

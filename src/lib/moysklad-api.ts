@@ -30,25 +30,53 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   }
 };
 
-// --- API МЕТОДЫ ---
+// --- API МЕТОДЫ (GET) ---
 export const getMoySkladProducts = async () => {
-  // Добавляем expand=productFolder, чтобы всегда получать инфо о родительской папке
   const data = await moySkladFetch('entity/assortment?expand=productFolder');
   return data;
 };
 
 export const getMoySkladCategories = async () => {
-  // Добавляем expand=productFolder для получения иерархии
   const data = await moySkladFetch('entity/productfolder?expand=productFolder');
   return data;
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// 1. Новая функция для получения остатков
 export const getMoySkladStock = async () => {
-  // `report/stock/all` - специальный эндпоинт для отчета по остаткам.
-  // `stockMode=all` - учитывает все операции (резервы, ожидания)
   const data = await moySkladFetch('report/stock/all?stockMode=all');
+  return data;
+};
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Новая функция для обновления остатков (POST) ---
+
+/**
+ * Обновляет остаток для конкретного варианта (модификации) в МойСклад.
+ * @param variantMoySkladId - ID модификации из МойСклад.
+ * @param newStock - Новое значение остатка.
+ */
+export const updateMoySkladVariantStock = async (
+  variantMoySkladId: string,
+  newStock: number,
+) => {
+  // Формируем тело запроса в соответствии с документацией МойСклад
+  const body = [
+    {
+      stock: newStock,
+      assortment: {
+        meta: {
+          href: `${MOYSKLAD_API_URL}/entity/variant/${variantMoySkladId}`,
+          metadataHref: `${MOYSKLAD_API_URL}/entity/variant/metadata`,
+          type: 'variant',
+        },
+      },
+    },
+  ];
+
+  // Отправляем POST запрос на специальный эндпоинт для обновления остатков
+  const data = await moySkladFetch('entity/assortment/stock', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+
   return data;
 };
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---

@@ -1,5 +1,5 @@
-// Местоположение: /src/components/icons/CheckIcon.tsx
-export const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
+// Местоположение: /src/components/icons/XMarkIcon.tsx
+export const XMarkIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
@@ -11,7 +11,7 @@ export const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path
       strokeLinecap="round"
       strokeLinejoin="round"
-      d="M4.5 12.75l6 6 9-13.5"
+      d="M6 18L18 6M6 6l12 12"
     />
   </svg>
 );
