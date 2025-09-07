@@ -2,55 +2,73 @@
 'use client';
 import type { Prisma } from '@prisma/client';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем утилитарную функцию для цен ---
+const formatPrice = (priceInCents: number | null | undefined) => {
+  // Если цены нет, возвращаем прочерк для наглядности
+  if (priceInCents === null || priceInCents === undefined) return '—';
+  const priceInRubles = priceInCents / 100;
+
+  const formattedNumber = new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(priceInRubles);
+
+  return `${formattedNumber} RUB`;
+};
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 // Определяем тип для данных о размере, которые приходят в props
 type SizeInfo = Prisma.ProductSizeGetPayload<{
   include: { size: true };
 }>;
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем props компонента ---
 interface ProductSizeRowProps {
   sizeInfo: SizeInfo;
+  price: number | null;
+  oldPrice: number | null;
 }
 
-export function ProductSizeRow({ sizeInfo }: ProductSizeRowProps) {
+export function ProductSizeRow({
+  sizeInfo,
+  price,
+  oldPrice,
+}: ProductSizeRowProps) {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем ячейки в соответствии с новой шапкой ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписываем структуру ячеек ---
     <tr className="bg-gray-50/50 hover:bg-gray-100">
-      {/* 1-я колонка: Пустая ячейка для выравнивания */}
+      {/* 1. Пустая ячейка-спейсер для выравнивания */}
       <td className="w-24 px-4 py-1"></td>
 
-      {/* 2-я колонка: Название размера */}
-      <td className="whitespace-nowrap px-6 py-1">
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            className="mr-4 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-          />
-          <span className="text-sm text-gray-700">{sizeInfo.size.value}</span>
-        </div>
+      {/* 2. Название размера */}
+      <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
+        {sizeInfo.size.value}
       </td>
 
-      {/* 3-я колонка: Пустой спейсер */}
-      <td></td>
-
-      {/* 4-я колонка: Склад */}
-      <td className="whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+      {/* 3. Склад (фактический остаток) */}
+      <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {sizeInfo.stock} шт.
       </td>
 
-      {/* 5-я колонка: Бронь (заглушка) */}
-      <td className="whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+      {/* 4. Бронь (заглушка) */}
+      <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         0 шт.
       </td>
 
-      {/* 6-я колонка: Пустая ячейка для Цены */}
-      <td></td>
-
-      {/* 7-я колонка: Редактировать */}
-      <td className="whitespace-nowrap px-6 py-1 text-right text-sm font-medium">
-        <a href="#" className="text-indigo-600 hover:text-indigo-900">
-          Ред.
-        </a>
+      {/* 5. Старая цена (за 1 шт.) */}
+      <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+        {/* Показываем старую цену, только если она отличается от новой */}
+        {oldPrice && oldPrice > (price || 0) ? formatPrice(oldPrice) : '—'}
       </td>
+
+      {/* 6. Цена (за 1 шт.) */}
+      <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm font-medium text-gray-800">
+        {formatPrice(price)}
+      </td>
+
+      {/* 7. Пустая ячейка-спейсер для выравнивания */}
+      <td className="w-24 px-6 py-1"></td>
     </tr>
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );

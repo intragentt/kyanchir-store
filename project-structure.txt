@@ -5,7 +5,7 @@
 │   └── products.csv
 ├── eslint.config.mjs
 ├── next-env.d.ts
-├── next.config.ts
+├── next.config.mjs
 ├── package-lock.json
 ├── package.json
 ├── postcss.config.mjs
@@ -56,6 +56,12 @@
 │   │   │   └── migration.sql
 │   │   ├── 20250902084543_make_category_name_not_unique
 │   │   │   └── migration.sql
+│   │   ├── 20250903111212_refactor_product_hierarchy
+│   │   │   └── migration.sql
+│   │   ├── 20250903111813_finalize_product_schema
+│   │   │   └── migration.sql
+│   │   ├── 20250903130816_init
+│   │   │   └── migration.sql
 │   │   └── migration_lock.toml
 │   ├── schema.prisma
 │   └── seed.ts
@@ -104,24 +110,108 @@
 │   ├── app
 │   │   ├── admin
 │   │   │   ├── categories
+│   │   │   │   ├── ClassificationClient.tsx
+│   │   │   │   ├── actions.ts
+│   │   │   │   └── page.tsx
 │   │   │   ├── dashboard
+│   │   │   │   └── page.tsx
 │   │   │   ├── filters
+│   │   │   │   ├── FilterManagerClient.tsx
+│   │   │   │   ├── SortableCategoryItem.tsx
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── update
 │   │   │   ├── mail
+│   │   │   │   ├── MailClient.tsx
+│   │   │   │   └── page.tsx
 │   │   │   ├── page.tsx
 │   │   │   └── products
+│   │   │       ├── [id]
+│   │   │       │   └── edit
+│   │   │       │       └── page.tsx
+│   │   │       └── new
+│   │   │           └── page.tsx
 │   │   ├── api
 │   │   │   ├── admin
+│   │   │   │   ├── filters
+│   │   │   │   │   └── update
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── sync
+│   │   │   │   │   ├── categories
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── products
+│   │   │   │   │       └── route.ts
+│   │   │   │   └── tickets
+│   │   │   │       ├── [id]
+│   │   │   │       │   └── route.ts
+│   │   │   │       └── route.ts
 │   │   │   ├── auth
+│   │   │   │   ├── [...nextauth]
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── check-login-token
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── check-user
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── create-login-token
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── login
+│   │   │   │   ├── logout
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── register
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── send-verification-code
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── send-verification-link
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── telegram
+│   │   │   │   │   ├── check
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── finalize
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── start
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── validate-credentials
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── verify
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── verify-code
+│   │   │   │   ├── verify-email
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── verify-token
+│   │   │   │       └── route.ts
 │   │   │   ├── bot
+│   │   │   │   ├── create-login-link
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
 │   │   │   ├── mail-webhook
+│   │   │   │   └── route.ts
 │   │   │   ├── moysklad-webhook
+│   │   │   │   └── route.ts
 │   │   │   ├── products
+│   │   │   │   ├── [id]
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── bulk-update-status
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
 │   │   │   ├── support-form
+│   │   │   │   └── route.ts
 │   │   │   ├── telegram-support-webhook
+│   │   │   │   └── route.ts
 │   │   │   ├── telegram-webhook
+│   │   │   │   └── route.ts
 │   │   │   ├── upload
+│   │   │   │   └── route.ts
 │   │   │   ├── user
+│   │   │   │   └── profile
+│   │   │   │       └── route.ts
 │   │   │   └── variants
+│   │   │       ├── [id]
+│   │   │       │   └── route.ts
+│   │   │       ├── batch-update
+│   │   │       │   └── route.ts
+│   │   │       └── route.ts
+│   │   ├── auth
+│   │   │   └── verify-email
+│   │   │       └── page.tsx
 │   │   ├── catalog
 │   │   │   └── page.tsx
 │   │   ├── favicon.ico
@@ -133,10 +223,13 @@
 │   │   ├── login
 │   │   │   ├── page.tsx
 │   │   │   ├── verify-code
+│   │   │   │   └── page.tsx
 │   │   │   └── verify-request
+│   │   │       └── page.tsx
 │   │   ├── page.tsx
 │   │   ├── product
 │   │   │   └── [id]
+│   │   │       └── page.tsx
 │   │   ├── profile
 │   │   │   ├── ProfileClient.tsx
 │   │   │   ├── SignOutButton.tsx
@@ -145,6 +238,7 @@
 │   │   │   └── page.tsx
 │   │   ├── styleguide
 │   │   │   └── typography
+│   │   │       └── page.tsx
 │   │   ├── support
 │   │   │   └── page.tsx
 │   │   └── verify-email
@@ -179,8 +273,23 @@
 │   │   │   ├── ProductTable.tsx
 │   │   │   ├── VariantManager.tsx
 │   │   │   ├── edit-product-form
+│   │   │   │   ├── AboutProductManager.tsx
+│   │   │   │   ├── AttributeManager.tsx
+│   │   │   │   ├── CategoryManager.tsx
+│   │   │   │   ├── DescriptionManager.tsx
+│   │   │   │   ├── DetailManager.tsx
+│   │   │   │   ├── ImageManager.tsx
+│   │   │   │   ├── PriceManager.tsx
+│   │   │   │   ├── SizeManager.tsx
+│   │   │   │   ├── SkuManager.tsx
+│   │   │   │   └── VariantManager.tsx
 │   │   │   ├── layout.tsx
 │   │   │   └── product-table
+│   │   │       ├── EditableCountdownTimer.tsx
+│   │   │       ├── ProductDetailsPanel.tsx
+│   │   │       ├── ProductSizeRow.tsx
+│   │   │       ├── ProductTableRow.tsx
+│   │   │       └── VariantRow.tsx
 │   │   ├── header
 │   │   │   ├── DesktopNav.tsx
 │   │   │   └── MobileNav.tsx
@@ -194,19 +303,24 @@
 │   │   │   ├── BurgerIcon.tsx
 │   │   │   ├── CartIcon.tsx
 │   │   │   ├── CheckIcon.tsx
+│   │   │   ├── ChevronDownIcon.tsx
 │   │   │   ├── ChevronIcon.tsx
+│   │   │   ├── ChevronRightIcon.tsx
 │   │   │   ├── ClearIcon.tsx
+│   │   │   ├── ClockIcon.tsx
 │   │   │   ├── CloseIcon.tsx
 │   │   │   ├── CopyIcon.tsx
 │   │   │   ├── DiscountBadgeIcon.tsx
 │   │   │   ├── EmailIcon.tsx
 │   │   │   ├── HeartIcon.tsx
 │   │   │   ├── Logo.tsx
+│   │   │   ├── PencilIcon.tsx
 │   │   │   ├── SearchIcon.tsx
 │   │   │   ├── ShareIcon.tsx
 │   │   │   ├── ShortLogo.tsx
 │   │   │   ├── SortIcon.tsx
 │   │   │   ├── TelegramOfficialIcon.tsx
+│   │   │   ├── TrashIcon.tsx
 │   │   │   └── UserIcon.tsx
 │   │   ├── illustrations
 │   │   │   └── ArrowStep1.tsx
@@ -266,4 +380,4 @@
 ├── tsconfig.seed.json
 └── vercel.json
 
-81 directories, 186 files
+121 directories, 260 files
