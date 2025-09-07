@@ -9,7 +9,6 @@ import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { ProductSizeRow } from './ProductSizeRow';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем moySkladId в тип ---
 type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   include: {
     images: true;
@@ -22,9 +21,8 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
 }> & {
   price: number | null;
   oldPrice: number | null;
-  moySkladId?: string | null; // ID из МойСклад
+  moySkladId?: string | null;
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
@@ -129,14 +127,13 @@ export function VariantRow({ variant }: VariantRowProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Передаём ID варианта в дочерний компонент --- */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем передачу лишнего prop --- */}
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
                     key={sizeInfo.id}
                     sizeInfo={sizeInfo}
                     price={variant.price}
                     oldPrice={variant.oldPrice}
-                    variantMoySkladId={variant.moySkladId || ''}
                   />
                 ))}
                 {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}

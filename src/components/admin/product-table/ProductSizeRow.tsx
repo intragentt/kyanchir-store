@@ -10,7 +10,6 @@ import { CheckIcon } from '@/components/icons/CheckIcon';
 import { XMarkIcon } from '@/components/icons/XMarkIcon';
 import { SpinnerIcon } from '@/components/icons/SpinnerIcon';
 
-// ... (formatPrice и типы остаются без изменений) ...
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '—';
   const priceInRubles = priceInCents / 100;
@@ -25,19 +24,19 @@ type SizeInfo = Prisma.ProductSizeGetPayload<{
   include: { size: true };
 }>;
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем ненужный prop variantMoySkladId ---
 interface ProductSizeRowProps {
   sizeInfo: SizeInfo;
   price: number | null;
   oldPrice: number | null;
-  variantMoySkladId: string;
 }
 
 export function ProductSizeRow({
   sizeInfo,
   price,
   oldPrice,
-  variantMoySkladId,
 }: ProductSizeRowProps) {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -58,27 +57,27 @@ export function ProductSizeRow({
       return;
     }
 
-    setIsLoading(true);
-
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем console.log для диагностики ---
-    console.log('[DEBUG] Отправка данных на API:');
-    console.log({
-      variantMoySkladId: variantMoySkladId,
-      newStock: newStock,
-      productSizeId: sizeInfo.id,
-    });
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убеждаемся, что у размера есть ID из МойСклад ---
+    if (!sizeInfo.moyskladId) {
+      toast.error('Ошибка: ID размера из МойСклад не найден.');
+      return;
+    }
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
+    setIsLoading(true);
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Отправляем ID КОНКРЕТНОГО РАЗМЕРА, а не варианта ---
     const promise = fetch('/api/admin/products/update-stock', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        variantMoySkladId: variantMoySkladId,
+        variantMoySkladId: sizeInfo.moyskladId, // <--- ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ
         newStock: newStock,
         productSizeId: sizeInfo.id,
       }),
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     toast.promise(promise, {
       loading: 'Обновляем остатки...',
@@ -94,7 +93,6 @@ export function ProductSizeRow({
     try {
       await promise;
     } catch (error) {
-      // Ошибка уже обработана toast.promise
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +104,6 @@ export function ProductSizeRow({
   };
 
   return (
-    // ... JSX остается без изменений ...
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="w-24 px-4 py-1"></td>
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
