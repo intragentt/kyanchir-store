@@ -19,7 +19,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем универсальное имя переменной AUTH_SECRET ---
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const isAuthenticated = !!token;
   const userRole = (token?.role as { name: string } | undefined)?.name;
 
@@ -40,17 +43,13 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL('/login', req.url));
     }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: "Прячем" админку от неавторизованных пользователей ---
     if (pathname.startsWith('/admin') && !ADMIN_ROLES.includes(userRole!)) {
       console.log(
         `ACCESS DENIED for role "${userRole}" to path "${pathname}". Rewriting to 404.`,
       );
-      // Создаем URL для страницы 404, сохраняя исходный хост
       const url = new URL('/404', req.url);
-      // "Подменяем" страницу на 404, не меняя адрес в браузере
       return NextResponse.rewrite(url);
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   }
 
   return NextResponse.next();
