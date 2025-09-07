@@ -55,8 +55,9 @@ model Image {
 
 model ProductSize {
   id               String         @id @default(cuid())
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем ID на полный Href ---
-  moySkladHref     String?        @unique // Полный URL до сущности в МойСклад
+  moySkladHref     String?        @unique
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем поле для типа сущности ---
+  moySkladType     String         @default("variant") // Тип сущности в МойСклад ('product' или 'variant')
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)

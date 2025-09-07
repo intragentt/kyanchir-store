@@ -1,5 +1,4 @@
 // /src/app/api/admin/sync/products/route.ts
-
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
@@ -7,30 +6,23 @@ import prisma from '@/lib/prisma';
 import type { Status } from '@prisma/client';
 import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем поле meta в интерфейс ---
 interface MoySkladProduct {
   id: string;
   name: string;
   description?: string;
   productFolder?: { meta: { href: string } };
   salePrices?: { value: number; priceType: { name: string } }[];
-  meta: {
-    href: string; // Полный URL сущности
-  };
+  meta: { href: string; type: string }; // Добавляем type
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
 function getUUIDFromHref(href: string): string {
   const pathPart = href.split('/').pop() || '';
   return pathPart.split('?')[0];
 }
-
 interface ParsedProductInfo {
   productName: string;
   variantName: string;
   size: string | null;
 }
-
 function parseMoySkladName(name: string): ParsedProductInfo {
   const sizeMatch = name.match(/\s+\((S|M|L|XS|XL|XXL|ONE_SIZE)\)$/i);
   let nameWithoutSize = name.trim();
@@ -65,17 +57,15 @@ function parseMoySkladName(name: string): ParsedProductInfo {
   return { productName, variantName, size };
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем интерфейс для хранения Href ---
 interface ProductSizeData {
-  moySkladHref: string; // Меняем moyskladId на moySkladHref
+  moySkladHref: string;
+  moySkladType: string; // Добавляем type
   size: string | null;
   description?: string;
   productFolder?: { meta: { href: string } };
   rawSalePrices?: { value: number; priceType: { name: string } }[];
   stock: number;
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
 async function runSync() {
   console.log('1/5: Получение товаров и остатков из МойСклад...');
   const [moySkladResponse, stockResponse, statuses] = await Promise.all([
@@ -85,7 +75,7 @@ async function runSync() {
   ]);
   const defaultStatus = statuses.find((s: Status) => s.name === 'DRAFT');
   if (!defaultStatus) {
-    throw new Error('Статус "DRAFT" не найден. Запустите seed-скрипт.');
+    throw new Error('Статус "DRAFT" не найден.');
   }
   const moySkladProducts: MoySkladProduct[] = moySkladResponse.rows || [];
   const stockData: any[] = stockResponse.rows || [];
@@ -99,8 +89,10 @@ async function runSync() {
   stockData.forEach((item) => {
     const assortmentId = getUUIDFromHref(item.meta.href);
     if (assortmentId && typeof item.stock === 'number') {
-      const currentStock = stockMap.get(assortmentId) || 0;
-      stockMap.set(assortmentId, currentStock + item.stock);
+      stockMap.set(
+        assortmentId,
+        (stockMap.get(assortmentId) || 0) + item.stock,
+      );
     }
   });
   console.log(
@@ -117,16 +109,15 @@ async function runSync() {
       productVariants.set(variantName, []);
     }
     const variantSizes = productVariants.get(variantName)!;
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Сохраняем полный Href ---
     variantSizes.push({
-      moySkladHref: product.meta.href, // Сохраняем полный URL
+      moySkladHref: product.meta.href,
+      moySkladType: product.meta.type, // Сохраняем type
       size,
       description: product.description,
       productFolder: product.productFolder,
       rawSalePrices: product.salePrices,
       stock: stockMap.get(product.id) || 0,
     });
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   }
   console.log(
     `3/5: Товары сгруппированы. Уникальных продуктов: ${groupedProducts.size}.`,
@@ -169,7 +160,7 @@ async function runSync() {
       const representativeSize = sizesArray[0];
       const variantMoySkladId = getUUIDFromHref(
         representativeSize.moySkladHref,
-      ); // Получаем ID из Href
+      );
       let currentPrice = 0;
       let oldPrice: number | null = null;
       const regularPriceObj = (representativeSize.rawSalePrices || []).find(
@@ -214,22 +205,22 @@ async function runSync() {
           update: {},
           create: { value: sizeValue },
         });
-        // --- НАЧАЛО ИЗМЕНЕНИЙ: Записываем в новое поле moySkladHref ---
         await prisma.productSize.upsert({
-          where: { moySkladHref: sizeData.moySkladHref }, // Ищем по Href
+          where: { moySkladHref: sizeData.moySkladHref },
           update: {
             stock: sizeData.stock,
             productVariantId: productVariant.id,
             sizeId: sizeRecord.id,
-          },
+            moySkladType: sizeData.moySkladType,
+          }, // Обновляем type
           create: {
-            moySkladHref: sizeData.moySkladHref, // Записываем Href
+            moySkladHref: sizeData.moySkladHref,
+            moySkladType: sizeData.moySkladType, // Записываем type
             stock: sizeData.stock,
             productVariant: { connect: { id: productVariant.id } },
             size: { connect: { id: sizeRecord.id } },
           },
         });
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       }
     }
     totalProductsSynced++;
@@ -239,31 +230,6 @@ async function runSync() {
     message: `Синхронизация успешно завершена.`,
     synchronizedProducts: totalProductsSynced,
   };
-}
-
-// ... (GET и POST обработчики остаются без изменений) ...
-export async function GET(req: NextRequest) {
-  try {
-    const cronSecret = req.nextUrl.searchParams.get('cron_secret');
-    if (process.env.CRON_SECRET !== cronSecret) {
-      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
-        status: 401,
-      });
-    }
-    console.log('[CRON SYNC] Запуск синхронизации продуктов по расписанию...');
-    const result = await runSync();
-    console.log(
-      `[CRON SYNC] Синхронизация завершена. Обработано: ${result.synchronizedProducts} продуктов.`,
-    );
-    return NextResponse.json(result);
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[CRON SYNC ERROR]:', errorMessage);
-    return new NextResponse(
-      JSON.stringify({ error: 'Внутренняя ошибка сервера.' }),
-      { status: 500 },
-    );
-  }
 }
 export async function POST(req: NextRequest) {
   try {

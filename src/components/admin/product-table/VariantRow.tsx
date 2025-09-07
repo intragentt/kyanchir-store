@@ -1,15 +1,12 @@
-// Местоположение: /src/components/admin/product-table/VariantRow.tsx
+// /src/components/admin/product-table/VariantRow.tsx
 'use client';
-
 import { useState, Fragment } from 'react';
 import Image from 'next/image';
 import type { Prisma } from '@prisma/client';
-
 import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { ProductSizeRow } from './ProductSizeRow';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем тип, чтобы он включал moySkladHref в размерах ---
 type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   include: {
     images: true;
@@ -17,12 +14,13 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
       include: {
         size: true;
       };
-      // Добавляем явное указание, что нам нужно поле moySkladHref
+      // Явно запрашиваем новые поля
       select: {
         id: true;
         stock: true;
         size: true;
         moySkladHref: true;
+        moySkladType: true;
       };
     };
   };
@@ -31,16 +29,11 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   oldPrice: number | null;
   moySkladId?: string | null;
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
   const priceInRubles = priceInCents / 100;
-  const formattedNumber = new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(priceInRubles);
-  return `${formattedNumber} RUB`;
+  return `${new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(priceInRubles)} RUB`;
 };
 
 interface VariantRowProps {
@@ -58,7 +51,6 @@ export function VariantRow({ variant }: VariantRowProps) {
     (sum, size) => sum + (variant.oldPrice || variant.price || 0) * size.stock,
     0,
   );
-
   return (
     <Fragment>
       <tr className="bg-white hover:bg-gray-50">
@@ -125,16 +117,14 @@ export function VariantRow({ variant }: VariantRowProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний prop --- */}
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
                     key={sizeInfo.id}
-                    sizeInfo={sizeInfo as any} // Используем as any для простоты, т.к. тип уже включает все нужное
+                    sizeInfo={sizeInfo as any} // 'as any' чтобы TS не ругался на временное несоответствие типов
                     price={variant.price}
                     oldPrice={variant.oldPrice}
                   />
                 ))}
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </tbody>
             </table>
           </td>

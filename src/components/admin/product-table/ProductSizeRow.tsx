@@ -1,10 +1,9 @@
-// Местоположение: /src/components/admin/product-table/ProductSizeRow.tsx
+// /src/components/admin/product-table/ProductSizeRow.tsx
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Prisma } from '@prisma/client';
 import toast from 'react-hot-toast';
-
 import { PencilIcon } from '@/components/icons/PencilIcon';
 import { CheckIcon } from '@/components/icons/CheckIcon';
 import { XMarkIcon } from '@/components/icons/XMarkIcon';
@@ -13,27 +12,19 @@ import { SpinnerIcon } from '@/components/icons/SpinnerIcon';
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '—';
   const priceInRubles = priceInCents / 100;
-  const formattedNumber = new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(priceInRubles);
-  return `${formattedNumber} RUB`;
+  return `${new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(priceInRubles)} RUB`;
 };
-
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем тип, чтобы он включал moySkladHref ---
 type SizeInfo = Prisma.ProductSizeGetPayload<{
   include: { size: true };
 }> & {
-  moySkladHref: string | null; // Добавляем новое поле
+  moySkladHref: string | null;
+  moySkladType: string;
 };
-
 interface ProductSizeRowProps {
   sizeInfo: SizeInfo;
   price: number | null;
   oldPrice: number | null;
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
 export function ProductSizeRow({
   sizeInfo,
   price,
@@ -55,27 +46,22 @@ export function ProductSizeRow({
       setIsEditing(false);
       return;
     }
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Проверяем наличие Href ---
     if (!sizeInfo.moySkladHref) {
       toast.error('Ошибка: Href размера из МойСклад не найден.');
       return;
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     setIsLoading(true);
-
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Отправляем Href конкретного размера ---
     const promise = fetch('/api/admin/products/update-stock', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        variantMoySkladHref: sizeInfo.moySkladHref, // <--- ИСПОЛЬЗУЕМ Href
+        moySkladHref: sizeInfo.moySkladHref,
+        moySkladType: sizeInfo.moySkladType,
         newStock: newStock,
         productSizeId: sizeInfo.id,
       }),
     });
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
     toast.promise(promise, {
       loading: 'Обновляем остатки...',
       success: (res) => {
@@ -93,14 +79,11 @@ export function ProductSizeRow({
       setIsLoading(false);
     }
   };
-
   const handleCancel = () => {
     setStockValue(String(sizeInfo.stock));
     setIsEditing(false);
   };
-
   return (
-    // ... JSX остается без изменений ...
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="w-24 px-4 py-1"></td>
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
