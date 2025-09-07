@@ -1,10 +1,12 @@
 // Местоположение: src/components/product-details/ProductAttributes.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react'; // Добавляем useEffect
-import CopyIcon from '../icons/CopyIcon';
+import { useState, useRef, useEffect } from 'react';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем импорт CopyIcon ---
+import CopyIcon from '@/components/icons/CopyIcon'; // Импорт по умолчанию
 import { useAppStore } from '@/store/useAppStore';
-import CheckIcon from '../icons/CheckIcon';
+import { CheckIcon } from '@/components/icons/CheckIcon'; // Именованный импорт
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   <svg
@@ -38,7 +40,6 @@ const DescriptionChevronIcon = ({ isOpen }: { isOpen: boolean }) => (
   </svg>
 );
 
-// ... (Компонент CompositionDisplay остается без изменений) ...
 interface CompositionItem {
   material: string;
   percentage: string;
@@ -76,7 +77,7 @@ const CompositionDisplay = ({ jsonValue }: { jsonValue: string }) => {
     );
   } catch (e) {
     return (
-      <span className="font-body text-base font-medium whitespace-pre-line text-[#272727]">
+      <span className="whitespace-pre-line font-body text-base font-medium text-[#272727]">
         {jsonValue}
       </span>
     );
@@ -101,20 +102,16 @@ export default function ProductAttributes({
   const showNotification = useAppStore((state) => state.showNotification);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Новое состояние для управления высотой ---
-  const [maxHeight, setMaxHeight] = useState('100px'); // 100px = max-h-25
+  const [maxHeight, setMaxHeight] = useState('100px');
   const TEASER_HEIGHT = '100px';
 
   useEffect(() => {
     if (isOpen) {
-      // Если открываем, измеряем ТОЧНУЮ высоту контента и устанавливаем ее
       setMaxHeight(`${contentRef.current?.scrollHeight}px`);
     } else {
-      // Если закрываем, возвращаем высоту "тизера"
       setMaxHeight(TEASER_HEIGHT);
     }
   }, [isOpen]);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const TRUNCATE_LENGTH = 150;
 
@@ -149,18 +146,16 @@ export default function ProductAttributes({
         <div className="relative border-b border-gray-200">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="font-body text-text-primary flex w-full items-center justify-between py-4 text-left text-base font-medium"
+            className="flex w-full items-center justify-between py-4 text-left font-body text-base font-medium text-text-primary"
           >
             <span>О товаре</span>
           </button>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Используем 'умную' высоту из state --- */}
           <div
             className="overflow-hidden transition-all duration-700 ease-in-out"
             style={{ maxHeight }}
           >
             <div ref={contentRef} className="space-y-4 pb-4">
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               {sortedAttributes.map((attr) => (
                 <div key={attr.id}>
                   <p className="font-body text-base font-medium text-gray-500">
@@ -169,17 +164,16 @@ export default function ProductAttributes({
                   {attr.key === 'Состав, %' ? (
                     <CompositionDisplay jsonValue={attr.value} />
                   ) : (
-                    <p className="font-body text-base font-medium whitespace-pre-line text-[#272727]">
+                    <p className="whitespace-pre-line font-body text-base font-medium text-[#272727]">
                       {attr.value}
                     </p>
                   )}
                 </div>
               ))}
-              {/* Кнопка "Свернуть" теперь всегда будет внутри измеряемого блока */}
               <div className="flex w-full justify-center pt-4">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="font-body text-text-primary relative left-2 flex items-center gap-x-2 text-base font-medium"
+                  className="relative left-2 flex items-center gap-x-2 font-body text-base font-medium text-text-primary"
                 >
                   <span>Свернуть</span>
                   <ChevronIcon isOpen={true} />
@@ -191,7 +185,7 @@ export default function ProductAttributes({
           {!isOpen && (
             <button
               onClick={() => setIsOpen(true)}
-              className="absolute bottom-0 left-0 flex w-full flex-col items-center gap-y-1 pt-8 pb-2"
+              className="absolute bottom-0 left-0 flex w-full flex-col items-center gap-y-1 pb-2 pt-8"
               style={{
                 background:
                   'linear-gradient(to top, white 20%, transparent 100%)',
