@@ -16,17 +16,25 @@ interface RequestBody {
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем проверку роли на правильный регистр 'ADMIN' ---
   if (!session || session.user.role.name !== 'ADMIN') {
     return new NextResponse('Неавторизован', { status: 401 });
   }
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   try {
     const body = (await req.json()) as RequestBody;
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Логируем тело запроса для диагностики ---
+    console.log('[API] Получено тело запроса:', body);
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     const { variantMoySkladId, newStock, productSizeId } = body;
 
     if (!variantMoySkladId || newStock === undefined || !productSizeId) {
+      console.error('[API] Валидация не пройдена. Отсутствуют данные.', {
+        variantMoySkladId,
+        newStock,
+        productSizeId,
+      });
       return new NextResponse('Отсутствуют необходимые данные', {
         status: 400,
       });
@@ -38,7 +46,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Возвращаем рабочую логику
     await updateMoySkladVariantStock(variantMoySkladId, newStock);
 
     await prisma.productSize.update({
