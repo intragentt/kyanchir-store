@@ -107,30 +107,28 @@ export function VariantRow({ variant }: VariantRowProps) {
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold text-gray-800">
           {formatPrice(totalSalePrice)}
         </td>
-
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем ячейку с кнопкой "Ред." --- */}
-        {/* Ячейка удалена */}
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </tr>
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: colSpan теперь равен 6, т.к. колонок в строке стало меньше --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: colSpan теперь равен 6, чтобы соответствовать родительской строке --- */}
           <td colSpan={6} className="p-0">
             {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки цен --- */}
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
                   <th className="w-24 px-4 py-2"></th> {/* Спейсер */}
                   <th className="px-6 py-2 text-left">Размер</th>
                   <th className="w-40 px-6 py-2 text-center">Склад</th>
                   <th className="w-40 px-6 py-2 text-center">Бронь</th>
-                  <th className="w-40 px-6 py-2 text-center">Старая цена</th>
-                  <th className="w-40 px-6 py-2 text-center">Цена</th>
-                  <th className="w-40 px-6 py-2 text-center">Сумма</th>
+                  <th className="w-40 px-6 py-2 text-center">Старая цена/шт</th>
+                  <th className="w-40 px-6 py-2 text-center">Цена/шт</th>
+                  <th className="w-40 px-6 py-2 text-right">Сумма</th>
                   <th className="w-24 px-6 py-2"></th> {/* Спейсер */}
                 </tr>
               </thead>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-100">
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow

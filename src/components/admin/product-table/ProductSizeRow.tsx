@@ -29,9 +29,7 @@ export function ProductSizeRow({
   price,
   oldPrice,
 }: ProductSizeRowProps) {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика расчёта общей суммы для размера ---
   const totalValue = (price || 0) * sizeInfo.stock;
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <tr className="bg-gray-50/50 hover:bg-gray-100">
@@ -63,8 +61,8 @@ export function ProductSizeRow({
         {formatPrice(price)}
       </td>
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Новая ячейка "Сумма" --- */}
-      <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm font-bold text-gray-900">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Выравниваем ячейку "Сумма" по правому краю --- */}
+      <td className="w-40 whitespace-nowrap px-6 py-1 text-right text-sm font-bold text-gray-900">
         {formatPrice(totalValue)}
       </td>
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
