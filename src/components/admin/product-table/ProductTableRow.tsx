@@ -136,28 +136,25 @@ export const ProductTableRow = ({
         <td className="px-6 py-4 text-center text-sm font-bold">
           {calculateTotalValue()}
         </td>
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем ячейку с кнопкой "Ред." --- */}
-        {/* Ячейка удалена */}
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </tr>
 
       {isExpanded && (
         <tr>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan и "мини-шапку" --- */}
           <td colSpan={7} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
-                {/* Вот обновлённая "мини-шапка" */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки --- */}
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
                     <th className="w-24 px-4 py-2"></th> {/* Спейсер */}
                     <th className="px-6 py-2 text-left">Вариант</th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
-                    <th className="w-40 px-6 py-2 text-center">Старая цена</th>
-                    <th className="w-40 px-6 py-2 text-center">Цена</th>
+                    <th className="w-40 px-6 py-2 text-center">Старая сумма</th>
+                    <th className="w-40 px-6 py-2 text-center">Сумма</th>
                   </tr>
                 </thead>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {product.variants.map((variant) => (
                     <VariantRow key={variant.id} variant={variant} />
@@ -166,7 +163,6 @@ export const ProductTableRow = ({
               </table>
             </div>
           </td>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </tr>
       )}
     </Fragment>
