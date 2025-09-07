@@ -47,9 +47,6 @@ export const getMoySkladStock = async () => {
   return data;
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Новая функция для получения организации и склада ---
-
-// Используем простой кэш в памяти, чтобы не запрашивать эти данные каждый раз
 let cachedRefs: { organization: any; store: any } | null = null;
 
 const getMoySkladDefaultRefs = async () => {
@@ -74,25 +71,20 @@ const getMoySkladDefaultRefs = async () => {
     store: storeResponse.rows[0].meta,
   };
 
-  cachedRefs = refs; // Кэшируем результат
+  cachedRefs = refs;
   return refs;
 };
-
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export const updateMoySkladVariantStock = async (
   variantMoySkladHref: string,
   newStock: number,
 ) => {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем получение организации и склада ---
   const { organization, store } = await getMoySkladDefaultRefs();
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем правильную вложенность { meta: ... } ---
   const body = {
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем обязательные поля в документ ---
-    organization,
-    store,
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    organization: { meta: organization },
+    store: { meta: store },
     positions: [
       {
         quantity: newStock,
@@ -105,6 +97,7 @@ export const updateMoySkladVariantStock = async (
       },
     ],
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const data = await moySkladFetch('entity/enter', {
     method: 'POST',
