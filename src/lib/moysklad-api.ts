@@ -47,19 +47,59 @@ export const getMoySkladStock = async () => {
   return data;
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем функцию для работы с Href ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Новая функция для получения организации и склада ---
+
+// Используем простой кэш в памяти, чтобы не запрашивать эти данные каждый раз
+let cachedRefs: { organization: any; store: any } | null = null;
+
+const getMoySkladDefaultRefs = async () => {
+  if (cachedRefs) {
+    return cachedRefs;
+  }
+
+  console.log('[API МойСклад] Получение организации и склада по умолчанию...');
+  const [orgResponse, storeResponse] = await Promise.all([
+    moySkladFetch('entity/organization'),
+    moySkladFetch('entity/store'),
+  ]);
+
+  if (!orgResponse?.rows?.[0] || !storeResponse?.rows?.[0]) {
+    throw new Error(
+      'Не удалось получить организацию или склад по умолчанию из МойСклад.',
+    );
+  }
+
+  const refs = {
+    organization: orgResponse.rows[0].meta,
+    store: storeResponse.rows[0].meta,
+  };
+
+  cachedRefs = refs; // Кэшируем результат
+  return refs;
+};
+
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 export const updateMoySkladVariantStock = async (
-  variantMoySkladHref: string, // Принимаем полный Href
+  variantMoySkladHref: string,
   newStock: number,
 ) => {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем получение организации и склада ---
+  const { organization, store } = await getMoySkladDefaultRefs();
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const body = {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем обязательные поля в документ ---
+    organization,
+    store,
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     positions: [
       {
         quantity: newStock,
         assortment: {
           meta: {
-            href: variantMoySkladHref, // Используем Href напрямую
-            type: 'variant', // Тип по-прежнему variant (модификация)
+            href: variantMoySkladHref,
+            type: 'variant',
           },
         },
       },
@@ -73,4 +113,3 @@ export const updateMoySkladVariantStock = async (
 
   return data;
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
