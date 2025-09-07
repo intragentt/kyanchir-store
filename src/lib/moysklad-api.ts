@@ -30,7 +30,6 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   }
 };
 
-// --- API МЕТОДЫ (GET) ---
 export const getMoySkladProducts = async () => {
   const data = await moySkladFetch('entity/assortment?expand=productFolder');
   return data;
@@ -46,18 +45,10 @@ export const getMoySkladStock = async () => {
   return data;
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Новая функция для обновления остатков (POST) ---
-
-/**
- * Обновляет остаток для конкретного варианта (модификации) в МойСклад.
- * @param variantMoySkladId - ID модификации из МойСклад.
- * @param newStock - Новое значение остатка.
- */
 export const updateMoySkladVariantStock = async (
   variantMoySkladId: string,
   newStock: number,
 ) => {
-  // Формируем тело запроса в соответствии с документацией МойСклад
   const body = [
     {
       stock: newStock,
@@ -71,12 +62,12 @@ export const updateMoySkladVariantStock = async (
     },
   ];
 
-  // Отправляем POST запрос на специальный эндпоинт для обновления остатков
-  const data = await moySkladFetch('entity/assortment/stock', {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем эндпоинт на правильный ---
+  const data = await moySkladFetch('entity/enter/stock', {
     method: 'POST',
     body: JSON.stringify(body),
   });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return data;
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
