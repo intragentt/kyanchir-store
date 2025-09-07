@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import type { Prisma } from '@prisma/client';
 import toast from 'react-hot-toast';
 
-// --- Иконки для управления редактированием ---
 import { PencilIcon } from '@/components/icons/PencilIcon';
 import { CheckIcon } from '@/components/icons/CheckIcon';
 import { XMarkIcon } from '@/components/icons/XMarkIcon';
@@ -25,12 +24,11 @@ type SizeInfo = Prisma.ProductSizeGetPayload<{
   include: { size: true };
 }>;
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем props, добавляем ID варианта из МойСклад ---
 interface ProductSizeRowProps {
   sizeInfo: SizeInfo;
   price: number | null;
   oldPrice: number | null;
-  variantMoySkladId: string; // ID родительского варианта (модификации)
+  variantMoySkladId: string;
 }
 
 export function ProductSizeRow({
@@ -41,7 +39,6 @@ export function ProductSizeRow({
 }: ProductSizeRowProps) {
   const router = useRouter();
 
-  // Состояния для управления редактированием
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [stockValue, setStockValue] = useState(String(sizeInfo.stock));
@@ -62,21 +59,24 @@ export function ProductSizeRow({
 
     setIsLoading(true);
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем credentials: 'include' ---
     const promise = fetch('/api/admin/products/update-stock', {
       method: 'POST',
+      credentials: 'include', // Эта строка решает проблему авторизации
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         variantMoySkladId: variantMoySkladId,
         newStock: newStock,
-        productSizeId: sizeInfo.id, // ID нашей записи в БД
+        productSizeId: sizeInfo.id,
       }),
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     toast.promise(promise, {
       loading: 'Обновляем остатки...',
       success: (res) => {
         if (!res.ok) throw new Error('Ошибка ответа сервера.');
-        router.refresh(); // Обновляем данные на всей странице
+        router.refresh();
         setIsEditing(false);
         return 'Остатки успешно обновлены!';
       },
@@ -97,15 +97,12 @@ export function ProductSizeRow({
     setIsEditing(false);
   };
 
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
   return (
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="w-24 px-4 py-1"></td>
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
         {sizeInfo.size.value}
       </td>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" ячейка Склада --- */}
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isEditing ? (
           <div className="flex items-center justify-center gap-2">
@@ -146,7 +143,6 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         0 шт.
       </td>
