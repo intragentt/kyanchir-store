@@ -3,12 +3,11 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ ИМПОРТ ---
 import prisma from '@/lib/prisma';
-import type { Status } from '@prisma/client'; // Импортируем Status напрямую как тип
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import type { Status } from '@prisma/client';
 import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 
+// ... (интерфейсы и хелперы parseMoySkladName, getUUIDFromHref остаются без изменений) ...
 interface MoySkladPrice {
   value: number;
   priceType: { name: string };
@@ -147,8 +146,7 @@ async function runSync() {
     select: { id: true, moyskladId: true },
   });
   allOurCategories.forEach(
-    (cat: { id: string; moyskladId: string | null }) =>
-      cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
+    (cat) => cat.moyskladId && categoryMap.set(cat.moyskladId, cat.id),
   );
 
   let totalProductsSynced = 0;
@@ -182,6 +180,11 @@ async function runSync() {
 
     for (const [variantName, sizesArray] of variantsMap.entries()) {
       const representativeSize = sizesArray[0];
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем ID варианта из МойСклад ---
+      // В нашей логике, каждый "размер" в МойСклад - это отдельная модификация.
+      // Для варианта мы можем использовать ID первой модификации в группе.
+      const variantMoySkladId = representativeSize.moyskladId;
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
       let currentPrice = 0;
       let oldPrice: number | null = null;
@@ -205,18 +208,25 @@ async function runSync() {
         oldPrice = null;
       }
 
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем moySkladId при создании/обновлении варианта ---
       const productVariant = await prisma.productVariant.upsert({
         where: {
           productId_color: { productId: product.id, color: variantName },
         },
-        update: { price: currentPrice, oldPrice: oldPrice },
+        update: {
+          price: currentPrice,
+          oldPrice: oldPrice,
+          moySkladId: variantMoySkladId, // Добавляем сюда
+        },
         create: {
           product: { connect: { id: product.id } },
           color: variantName,
           price: currentPrice,
           oldPrice: oldPrice,
+          moySkladId: variantMoySkladId, // И сюда
         },
       });
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
       for (const sizeData of sizesArray) {
         const sizeValue = sizeData.size || 'ONE_SIZE';
@@ -252,6 +262,7 @@ async function runSync() {
   };
 }
 
+// ... (GET и POST обработчики остаются без изменений) ...
 export async function GET(req: NextRequest) {
   try {
     const cronSecret = req.nextUrl.searchParams.get('cron_secret');
@@ -279,7 +290,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    // @ts-ignore - Временно игнорируем ошибку типа для `role`, так как next-auth мог не обновить тип сессии
+    // @ts-ignore
     if (!session?.user || session.user.role?.name !== 'ADMIN') {
       return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
         status: 403,

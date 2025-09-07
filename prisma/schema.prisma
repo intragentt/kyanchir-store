@@ -18,7 +18,7 @@ model Product {
   variants         ProductVariant[]
   attributes       Attribute[]
   categories       Category[]        @relation("ProductToCategory")
-  statusId         String // ИЗМЕНЕНИЕ: Заменяем enum на связь
+  statusId         String
   status           Status            @relation(fields: [statusId], references: [id])
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -27,20 +27,25 @@ model Product {
 }
 
 model ProductVariant {
-  id                String        @id @default(cuid())
-  productId         String
-  product           Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
-  color             String?
-  images            Image[]
-  price             Int
-  oldPrice          Int?
+  id                 String        @id @default(cuid())
+  productId          String
+  product            Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color              String?
+  images             Image[]
+  price              Int
+  oldPrice           Int?
   discountPercentage Int?
-  discountExpiresAt DateTime?
-  bonusPoints       Int?
-  sizes             ProductSize[]
-  isFeatured        Boolean       @default(false)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  discountExpiresAt  DateTime?
+  bonusPoints        Int?
+  sizes              ProductSize[]
+  isFeatured         Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем поле для ID из МойСклад ---
+  moySkladId         String?       @unique
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   @@unique([productId, color])
 }
 
@@ -107,8 +112,6 @@ model AlternativeName {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: МОДЕЛИ-СПРАВОЧНИКИ ВМЕСТО ENUM ---
-
 model Status {
   id       String    @id @default(cuid())
   name     String    @unique // DRAFT, PUBLISHED, ARCHIVED
@@ -144,8 +147,6 @@ model PresetItemType {
   name  String       @unique // CATEGORY, TAG
   items PresetItem[]
 }
-
-// === МОДЕЛИ АУТЕНТИФИКАЦИИ И ПОЛЬЗОВАТЕЛЕЙ ===
 
 model UserRole {
   id    String @id @default(cuid())
@@ -212,8 +213,6 @@ model LoginToken {
   createdAt DateTime @default(now())
 }
 
-// === МОДЕЛИ СИСТЕМЫ ПОДДЕРЖКИ (SUPPORT DESK) ===
-
 model AgentRole {
   id     String         @id @default(cuid())
   name   String         @unique // SUPPORT, MANAGEMENT, ADMIN
@@ -257,14 +256,14 @@ model SupportRoute {
 }
 
 model SupportTicket {
-  id            String       @id @default(cuid())
+  id            String           @id @default(cuid())
   clientEmail   String
   clientName    String?
   subject       String
   statusId      String
-  status        TicketStatus @relation(fields: [statusId], references: [id])
+  status        TicketStatus     @relation(fields: [statusId], references: [id])
   sourceId      String
-  source        TicketSource @relation(fields: [sourceId], references: [id])
+  source        TicketSource     @relation(fields: [sourceId], references: [id])
   messages      SupportMessage[]
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -272,14 +271,13 @@ model SupportTicket {
 }
 
 model SupportMessage {
-  id           String     @id @default(cuid())
+  id           String        @id @default(cuid())
   ticketId     String
   ticket       SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  content      String     @db.Text
+  content      String        @db.Text
   senderTypeId String
-  senderType   SenderType @relation(fields: [senderTypeId], references: [id])
+  senderType   SenderType    @relation(fields: [senderTypeId], references: [id])
   agentId      String?
   agent        SupportAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
-  createdAt    DateTime   @default(now())
+  createdAt    DateTime      @default(now())
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
