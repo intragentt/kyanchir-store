@@ -218,78 +218,168 @@ export function ProductSizeRow({
         {sizeInfo.size.value}
       </td>
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полный рефакторинг выравнивания --- */}
-      <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-500">
-        <div className="mx-auto w-28 text-right">0 шт.</div>
+      <td className="whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+        0 шт.
       </td>
-      <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-500">
-        <div className="mx-auto w-28">
-          {isStockEditing ? (
-            <div className="flex items-center justify-end gap-2">
-              <div className="flex items-baseline">
-                <input type="number" value={stockValue} onChange={(e) => setStockValue(e.target.value)} className={`${inputClassName} w-10`} disabled={isStockLoading} autoFocus />
-                <span className="text-gray-500">шт.</span>
-              </div>
-              <button onClick={handleStockSave} disabled={isStockLoading} className="text-green-600 hover:text-green-800 disabled:text-gray-400"><CheckIcon className="h-5 w-5" /></button>
-              <button onClick={handleStockCancel} disabled={isStockLoading} className="text-red-500 hover:text-red-700 disabled:text-gray-400"><XMarkIcon className="h-5 w-5" /></button>
+      <td className="whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+        {isStockEditing ? (
+          <div className="inline-flex items-center justify-center gap-2">
+            <div className="flex items-baseline text-right">
+              <input
+                type="number"
+                value={stockValue}
+                onChange={(e) => setStockValue(e.target.value)}
+                className={`${inputClassName} w-10`}
+                disabled={isStockLoading}
+                autoFocus
+              />
+              <span className="text-gray-500">шт.</span>
             </div>
-          ) : (
-            <div className="group relative flex cursor-pointer items-center justify-end gap-2" onClick={() => setIsStockEditing(true)}>
-              <span>{sizeInfo.stock} шт.</span>
-              <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
-            </div>
-          )}
-        </div>
+            <button
+              onClick={handleStockSave}
+              disabled={isStockLoading}
+              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
+            >
+              <CheckIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handleStockCancel}
+              disabled={isStockLoading}
+              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <div
+            className="group relative inline-flex cursor-pointer items-center justify-center gap-2 text-right"
+            onClick={() => setIsStockEditing(true)}
+          >
+            <span>{sizeInfo.stock} шт.</span>
+            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
+        )}
       </td>
-      <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-500">
-        <div className="mx-auto w-28">
-          {isPriceEditing ? (
-            <div className="flex items-center justify-end gap-2">
-               <div className="flex items-baseline"><input type="text" value={oldPriceValue} onChange={(e) => handleOldPriceChange(e.target.value)} className={`${inputClassName} w-16`} disabled={isPriceLoading} /><span className="text-gray-500">RUB</span></div>
-               <button onClick={handlePriceSave} disabled={isPriceLoading} className="text-green-600 hover:text-green-800 disabled:text-gray-400"><CheckIcon className="h-5 w-5" /></button>
-               <button onClick={handlePriceCancel} disabled={isPriceLoading} className="text-red-500 hover:text-red-700 disabled:text-gray-400"><XMarkIcon className="h-5 w-5" /></button>
+      <td className="whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+        {isPriceEditing ? (
+          <div className="inline-flex items-center justify-center gap-2">
+            <div className="flex items-baseline text-right">
+              <input
+                type="text"
+                value={oldPriceValue}
+                onChange={(e) => handleOldPriceChange(e.target.value)}
+                className={`${inputClassName} w-16`}
+                disabled={isPriceLoading}
+              />
+              <span className="text-gray-500">RUB</span>
             </div>
-          ) : (
-            <div className="group relative flex cursor-pointer items-center justify-end gap-2" onClick={() => setIsPriceEditing(true)}>
-              <span>{formatPrice(oldPriceForDisplay)} RUB</span>
-              <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
-            </div>
-          )}
-        </div>
+            <button
+              onClick={handlePriceSave}
+              disabled={isPriceLoading}
+              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
+            >
+              <CheckIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handlePriceCancel}
+              disabled={isPriceLoading}
+              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <div
+            className="group relative inline-flex cursor-pointer items-center justify-center gap-2 text-right"
+            onClick={() => setIsPriceEditing(true)}
+          >
+            <span>{formatPrice(oldPriceForDisplay)} RUB</span>
+            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
+        )}
       </td>
-      <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-500">
-        <div className="mx-auto w-28">
-          {isPriceEditing ? (
-            <div className="flex items-center justify-end gap-2">
-              <div className="flex items-baseline"><input type="text" value={discountValue} onChange={(e) => handleDiscountChange(e.target.value)} className={`${inputClassName} w-8`} disabled={isPriceLoading} /><span className="text-gray-500">%</span></div>
-              <button onClick={handlePriceSave} disabled={isPriceLoading} className="text-green-600 hover:text-green-800 disabled:text-gray-400"><CheckIcon className="h-5 w-5" /></button>
-              <button onClick={handlePriceCancel} disabled={isPriceLoading} className="text-red-500 hover:text-red-700 disabled:text-gray-400"><XMarkIcon className="h-5 w-5" /></button>
+      <td className="whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+        {isPriceEditing ? (
+          <div className="inline-flex items-center justify-center gap-2">
+            <div className="flex items-baseline text-right">
+              <input
+                type="text"
+                value={discountValue}
+                onChange={(e) => handleDiscountChange(e.target.value)}
+                className={`${inputClassName} w-8`}
+                disabled={isPriceLoading}
+              />
+              <span className="text-gray-500">%</span>
             </div>
-          ) : (
-            <div className="group relative flex cursor-pointer items-center justify-end gap-2" onClick={() => setIsPriceEditing(true)}>
-              <span className={discountForDisplay > 0 ? 'font-bold text-red-600' : ''}>{discountForDisplay}%</span>
-              <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
-            </div>
-          )}
-        </div>
+            <button
+              onClick={handlePriceSave}
+              disabled={isPriceLoading}
+              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
+            >
+              <CheckIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handlePriceCancel}
+              disabled={isPriceLoading}
+              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <div
+            className="group relative inline-flex cursor-pointer items-center justify-center gap-2 text-right"
+            onClick={() => setIsPriceEditing(true)}
+          >
+            <span
+              className={discountForDisplay > 0 ? 'font-bold text-red-600' : ''}
+            >
+              {discountForDisplay}%
+            </span>
+            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
+        )}
       </td>
-      <td className="whitespace-nowrap px-6 py-1 text-sm font-medium text-gray-800">
-        <div className="mx-auto w-28">
-          {isPriceEditing ? (
-            <div className="flex items-center justify-end gap-2">
-              <div className="flex items-baseline"><input type="text" value={priceValue} onChange={(e) => handlePriceChange(e.target.value)} className={`${inputClassName} w-16`} disabled={isPriceLoading} /><span className="text-gray-500">RUB</span></div>
-              <button onClick={handlePriceSave} disabled={isPriceLoading} className="text-green-600 hover:text-green-800 disabled:text-gray-400"><CheckIcon className="h-5 w-5" /></button>
-              <button onClick={handlePriceCancel} disabled={isPriceLoading} className="text-red-500 hover:text-red-700 disabled:text-gray-400"><XMarkIcon className="h-5 w-5" /></button>
+      <td className="whitespace-nowrap px-6 py-1 text-center text-sm font-medium text-gray-800">
+        {isPriceEditing ? (
+          <div className="inline-flex items-center justify-center gap-2">
+            <div className="flex items-baseline text-right">
+              <input
+                type="text"
+                value={priceValue}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                className={`${inputClassName} w-16`}
+                disabled={isPriceLoading}
+              />
+              <span className="text-gray-500">RUB</span>
             </div>
-          ) : (
-            <div className="group relative flex cursor-pointer items-center justify-end gap-2" onClick={() => setIsPriceEditing(true)}>
-              <span>{formatPrice(priceForDisplay)} RUB</span>
-              <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
-            </div>
-          )}
-        </div>
+            <button
+              onClick={handlePriceSave}
+              disabled={isPriceLoading}
+              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
+            >
+              <CheckIcon className="h-5 w-5" />
+            </button>
+            <button
+              onClick={handlePriceCancel}
+              disabled={isPriceLoading}
+              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <div
+            className="group relative inline-flex cursor-pointer items-center justify-center gap-2 text-right"
+            onClick={() => setIsPriceEditing(true)}
+          >
+            <span>{formatPrice(priceForDisplay)} RUB</span>
+            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
+        )}
       </td>
-      <td className="whitespace-nowrap px-6 py-1 text-sm font-bold text-gray-900">
-        <div className="mx-auto w-28 text-right">{formatPrice(totalValue)} RUB</div>
+      <td className="whitespace-nowrap px-6 py-1 text-center text-sm font-bold text-gray-900">
+        <div className="text-right">{formatPrice(totalValue)} RUB</div>
       </td>
       <td className="w-24 px-6 py-1"></td>
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
