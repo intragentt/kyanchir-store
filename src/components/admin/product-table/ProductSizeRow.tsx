@@ -1,6 +1,6 @@
 // Местоположение: /src/components/admin/product-table/ProductSizeRow.tsx
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Prisma } from '@prisma/client';
 import toast from 'react-hot-toast';
@@ -45,7 +45,6 @@ export function ProductSizeRow({
 }: ProductSizeRowProps) {
   const router = useRouter();
 
-  // --- ЛОГИКА ОТОБРАЖЕНИЯ ЦЕН ---
   const resolvedPrice = sizeInfo.price ?? variantPrice;
   const resolvedOldPrice = sizeInfo.oldPrice ?? variantOldPrice;
   const priceForDisplay = resolvedPrice;
@@ -60,7 +59,6 @@ export function ProductSizeRow({
     priceForDisplay,
   );
 
-  // --- СОСТОЯНИЯ КОМПОНЕНТА ---
   const [isStockEditing, setIsStockEditing] = useState(false);
   const [isStockLoading, setIsStockLoading] = useState(false);
   const [stockValue, setStockValue] = useState(String(sizeInfo.stock));
@@ -80,7 +78,6 @@ export function ProductSizeRow({
 
   const totalValue = (priceForDisplay || 0) * sizeInfo.stock;
 
-  // --- ОБРАБОТЧИКИ СОБЫТИЙ ДЛЯ ЦЕН ---
   const handleOldPriceChange = (value: string) => {
     setOldPriceValue(value);
     const oldP = parseFloat(value.replace(',', '.')) || 0;
@@ -110,21 +107,16 @@ export function ProductSizeRow({
       toast.error('Ошибка: Href размера из МойСклад не найден.');
       return;
     }
-
     let newPrice = parseFloat(priceValue.replace(',', '.'));
     let newOldPrice = parseFloat(oldPriceValue.replace(',', '.'));
-
     if (isNaN(newPrice) || isNaN(newOldPrice)) {
       toast.error('Введите корректные числовые значения для цен.');
       return;
     }
-
     setIsPriceLoading(true);
-
     if (newPrice > newOldPrice) {
       newOldPrice = newPrice;
     }
-
     const promise = fetch('/api/admin/products/update-size-price', {
       method: 'POST',
       credentials: 'include',
@@ -136,7 +128,6 @@ export function ProductSizeRow({
         newOldPrice: Math.round(newOldPrice * 100),
       }),
     });
-
     toast.promise(promise, {
       loading: 'Обновляем цены...',
       success: (res) => {
@@ -214,7 +205,11 @@ export function ProductSizeRow({
     setIsStockEditing(false);
   };
 
-  // --- JSX РАЗМЕТКА ---
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлены стили для инпутов ---
+  const inputClassName =
+    'w-20 bg-transparent border-0 border-b border-indigo-400 p-0 text-center text-sm focus:ring-0';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="w-24 px-4 py-1"></td>
@@ -231,7 +226,7 @@ export function ProductSizeRow({
               type="number"
               value={stockValue}
               onChange={(e) => setStockValue(e.target.value)}
-              className="w-16 rounded-md border-gray-300 text-center shadow-sm"
+              className={`${inputClassName} w-16`}
               disabled={isStockLoading}
               autoFocus
             />
@@ -270,7 +265,7 @@ export function ProductSizeRow({
             type="text"
             value={oldPriceValue}
             onChange={(e) => handleOldPriceChange(e.target.value)}
-            className="w-24 rounded-md border-gray-300 text-center shadow-sm"
+            className={inputClassName}
             disabled={isPriceLoading}
           />
         ) : (
@@ -285,17 +280,15 @@ export function ProductSizeRow({
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isPriceEditing ? (
-          <div className="relative">
+          <div className="flex items-center justify-center">
             <input
               type="text"
               value={discountValue}
               onChange={(e) => handleDiscountChange(e.target.value)}
-              className="w-24 rounded-md border-gray-300 text-center shadow-sm"
+              className={`${inputClassName} w-12`}
               disabled={isPriceLoading}
             />
-            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
-              %
-            </span>
+            <span className="ml-1 text-gray-500">%</span>
           </div>
         ) : (
           <div
@@ -318,7 +311,7 @@ export function ProductSizeRow({
               type="text"
               value={priceValue}
               onChange={(e) => handlePriceChange(e.target.value)}
-              className="w-24 rounded-md border-gray-300 text-center shadow-sm"
+              className={inputClassName}
               disabled={isPriceLoading}
             />
             <button
