@@ -1,4 +1,5 @@
 // /src/lib/moysklad-api.ts
+
 const MOYSKLAD_API_TOKEN = process.env.MOYSKLAD_API_TOKEN;
 const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
 if (!MOYSKLAD_API_TOKEN) {
@@ -61,30 +62,37 @@ const getMoySkladDefaultRefs = async () => {
   cachedRefs = refs;
   return refs;
 };
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Переход на документ "Инвентаризация" ---
 export const updateMoySkladVariantStock = async (
   moySkladHref: string,
-  moySkladType: string, // Принимаем type
-  newStock: number,
+  moySkladType: string,
+  newStock: number, // Старый остаток больше не нужен
 ) => {
   const { organization, store } = await getMoySkladDefaultRefs();
+
   const body = {
     organization: { meta: organization },
     store: { meta: store },
     positions: [
       {
-        quantity: newStock,
-        assortment: {
-          meta: {
-            href: moySkladHref,
-            type: moySkladType, // Используем type
-          },
-        },
+        quantity: 0, // Это поле обязательно, но для инвентаризации оно игнорируется
+        assortment: { meta: { href: moySkladHref, type: moySkladType } },
+        correctionAmount: newStock, // <-- Устанавливаем фактический остаток
       },
     ],
   };
-  const data = await moySkladFetch('entity/enter', {
+
+  console.log(
+    `[API МойСклад] Создание Инвентаризации. Установка остатка: ${newStock} шт.`,
+  );
+
+  // Отправляем POST запрос на создание документа "Инвентаризация"
+  const data = await moySkladFetch('entity/inventory', {
     method: 'POST',
     body: JSON.stringify(body),
   });
+
   return data;
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---

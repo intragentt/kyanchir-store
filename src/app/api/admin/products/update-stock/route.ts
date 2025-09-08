@@ -9,6 +9,7 @@ interface RequestBody {
   moySkladHref: string;
   moySkladType: string;
   newStock: number;
+  // oldStock больше не нужен
   productSizeId: string;
 }
 export async function POST(req: Request) {
@@ -32,7 +33,10 @@ export async function POST(req: Request) {
     if (typeof newStock !== 'number' || newStock < 0) {
       return new NextResponse('Некорректное значение остатка', { status: 400 });
     }
+
+    // Старый остаток больше не передаем
     await updateMoySkladVariantStock(moySkladHref, moySkladType, newStock);
+
     await prisma.productSize.update({
       where: { id: productSizeId },
       data: { stock: newStock },

@@ -59,6 +59,7 @@ export function ProductSizeRow({
         moySkladHref: sizeInfo.moySkladHref,
         moySkladType: sizeInfo.moySkladType,
         newStock: newStock,
+        // oldStock больше не отправляем
         productSizeId: sizeInfo.id,
       }),
     });
