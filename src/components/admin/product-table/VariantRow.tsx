@@ -131,7 +131,7 @@ export function VariantRow({ variant }: VariantRowProps) {
                   <th className="w-32 px-6 py-2 text-center">Склад</th>
                   <th className="w-32 px-6 py-2 text-center">Цена</th>
                   <th className="w-32 px-6 py-2 text-center">Скидка %</th>
-                  <th className="w-32 px-6 py-2 text-center">Итого</th>
+                  <th className="w-32 px-6 py-2 text-center">Итого/шт</th>
                   <th className="w-32 px-6 py-2 text-center">Сумма</th>
                   <th className="w-24 px-6 py-2"></th>
                 </tr>

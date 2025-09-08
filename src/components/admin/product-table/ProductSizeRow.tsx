@@ -218,12 +218,12 @@ export function ProductSizeRow({
         {sizeInfo.size.value}
       </td>
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полный рефакторинг выравнивания --- */}
-      <td className="w-32 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
-        <span className="inline-block w-full text-right">0 шт.</span>
+      <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
+        0 шт.
       </td>
-      <td className="w-32 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+      <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         {isStockEditing ? (
-          <div className="flex items-center justify-end gap-2">
+          <div className="inline-flex items-center justify-end gap-2">
             <div className="flex items-baseline">
               <input
                 type="number"
@@ -252,7 +252,7 @@ export function ProductSizeRow({
           </div>
         ) : (
           <div
-            className="group relative flex cursor-pointer items-center justify-end gap-2"
+            className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
             onClick={() => setIsStockEditing(true)}
           >
             <span>{sizeInfo.stock} шт.</span>
@@ -260,9 +260,9 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      <td className="w-32 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+      <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         {isPriceEditing ? (
-          <div className="flex items-center justify-end gap-2">
+          <div className="inline-flex items-center justify-end gap-2">
             <div className="flex items-baseline">
               <input
                 type="text"
@@ -290,7 +290,7 @@ export function ProductSizeRow({
           </div>
         ) : (
           <div
-            className="group relative flex cursor-pointer items-center justify-end gap-2"
+            className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
             onClick={() => setIsPriceEditing(true)}
           >
             <span>{formatPrice(oldPriceForDisplay)} RUB</span>
@@ -298,9 +298,9 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      <td className="w-32 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+      <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         {isPriceEditing ? (
-          <div className="flex items-center justify-end gap-2">
+          <div className="inline-flex items-center justify-end gap-2">
             <div className="flex items-baseline">
               <input
                 type="text"
@@ -328,7 +328,7 @@ export function ProductSizeRow({
           </div>
         ) : (
           <div
-            className="group relative flex cursor-pointer items-center justify-end gap-2"
+            className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
             onClick={() => setIsPriceEditing(true)}
           >
             <span
@@ -340,9 +340,9 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      <td className="w-32 whitespace-nowrap px-6 py-1 text-center text-sm font-medium text-gray-800">
+      <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm font-medium text-gray-800">
         {isPriceEditing ? (
-          <div className="flex items-center justify-end gap-2">
+          <div className="inline-flex items-center justify-end gap-2">
             <div className="flex items-baseline">
               <input
                 type="text"
@@ -370,7 +370,7 @@ export function ProductSizeRow({
           </div>
         ) : (
           <div
-            className="group relative flex cursor-pointer items-center justify-end gap-2"
+            className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
             onClick={() => setIsPriceEditing(true)}
           >
             <span>{formatPrice(priceForDisplay)} RUB</span>
@@ -378,10 +378,8 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      <td className="w-32 whitespace-nowrap px-6 py-1 text-center text-sm font-bold text-gray-900">
-        <span className="inline-block w-full text-right">
-          {formatPrice(totalValue)} RUB
-        </span>
+      <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm font-bold text-gray-900">
+        {formatPrice(totalValue)} RUB
       </td>
       <td className="w-24 px-6 py-1"></td>
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
