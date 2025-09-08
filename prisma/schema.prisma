@@ -32,7 +32,7 @@ model ProductVariant {
   product            Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
   color              String?
   images             Image[]
-  price              Int
+  price              Int // Цена по умолчанию для всех размеров
   oldPrice           Int?
   discountPercentage Int?
   discountExpiresAt  DateTime?
@@ -56,14 +56,18 @@ model Image {
 model ProductSize {
   id               String         @id @default(cuid())
   moySkladHref     String?        @unique
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем поле для типа сущности ---
-  moySkladType     String         @default("variant") // Тип сущности в МойСклад ('product' или 'variant')
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  moySkladType     String         @default("variant")
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
   sizeId           String
   size             Size           @relation(fields: [sizeId], references: [id])
   stock            Int
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем поля для переопределения цены ---
+  price            Int? // Индивидуальная цена для этого размера
+  oldPrice         Int? // Индивидуальная старая цена
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   @@unique([productVariantId, sizeId])
 }
 
