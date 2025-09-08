@@ -49,17 +49,27 @@ interface VariantRowProps {
 export function VariantRow({ variant }: VariantRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const totalStock = variant.sizes.reduce((sum, size) => sum + size.stock, 0);
+
+  // --- НАЧАЛО ИСПРАВЛЕНИЯ: Обновлена логика расчета сумм ---
   const totalSalePrice = variant.sizes.reduce(
     (sum, size) => sum + (size.price ?? variant.price ?? 0) * size.stock,
     0,
   );
-  const totalOldPrice = variant.sizes.reduce(
-    (sum, size) =>
-      sum +
-      (size.oldPrice ?? size.price ?? variant.oldPrice ?? variant.price ?? 0) *
-        size.stock,
-    0,
-  );
+
+  const totalOldPrice = variant.sizes.reduce((sum, size) => {
+    const resolvedPrice = size.price ?? variant.price;
+    const resolvedOldPrice = size.oldPrice ?? variant.oldPrice;
+
+    const priceForOldSum =
+      resolvedPrice !== null &&
+      resolvedOldPrice !== null &&
+      resolvedOldPrice > resolvedPrice
+        ? resolvedOldPrice
+        : resolvedPrice;
+
+    return sum + (priceForOldSum ?? 0) * size.stock;
+  }, 0);
+  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
   return (
     <Fragment>
@@ -103,9 +113,11 @@ export function VariantRow({ variant }: VariantRowProps) {
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
           {totalStock} шт.
         </td>
+        {/* --- НАЧАЛО ИСПРАВЛЕНИЯ: Убрана условная логика с прочерком --- */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500">
-          {totalOldPrice > totalSalePrice ? formatPrice(totalOldPrice) : '—'}
+          {formatPrice(totalOldPrice)}
         </td>
+        {/* --- КОНЕЦ ИСПРАВЛЕНИЯ --- */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold text-gray-800">
           {formatPrice(totalSalePrice)}
         </td>
