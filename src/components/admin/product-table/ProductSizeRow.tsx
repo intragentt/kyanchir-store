@@ -48,6 +48,11 @@ export function ProductSizeRow({
 }: ProductSizeRowProps) {
   const router = useRouter();
 
+  // --- НАЧАЛО БЛОКА РЕФАКТОРИНГА: Централизация состояния ---
+  const [editMode, setEditMode] = useState<'none' | 'stock' | 'price'>('none');
+  const [isSaving, setIsSaving] = useState(false);
+  // --- КОНЕЦ БЛОКА РЕФАКТОРИНГА ---
+
   const resolvedPrice = sizeInfo.price ?? variantPrice;
   const resolvedOldPrice = sizeInfo.oldPrice ?? variantOldPrice;
   const priceForDisplay = resolvedPrice;
@@ -62,13 +67,7 @@ export function ProductSizeRow({
     priceForDisplay,
   );
 
-  const [isStockEditing, setIsStockEditing] = useState(false);
-  const [isStockLoading, setIsStockLoading] = useState(false);
   const [stockValue, setStockValue] = useState(String(sizeInfo.stock));
-
-  const [isPriceEditing, setIsPriceEditing] = useState(false);
-  const [isPriceLoading, setIsPriceLoading] = useState(false);
-
   const [priceValue, setPriceValue] = useState(
     priceForDisplay ? (priceForDisplay / 100).toString() : '',
   );
@@ -116,7 +115,7 @@ export function ProductSizeRow({
       toast.error('Введите корректные числовые значения для цен.');
       return;
     }
-    setIsPriceLoading(true);
+    setIsSaving(true);
     if (newPrice > newOldPrice) {
       newOldPrice = newPrice;
     }
@@ -136,7 +135,7 @@ export function ProductSizeRow({
       success: (res) => {
         if (!res.ok) throw new Error('Ошибка.');
         router.refresh();
-        setIsPriceEditing(false);
+        setEditMode('none');
         return 'Цены успешно обновлены!';
       },
       error: 'Не удалось обновить цены.',
@@ -145,7 +144,7 @@ export function ProductSizeRow({
       await promise;
     } catch (error) {
     } finally {
-      setIsPriceLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -155,7 +154,6 @@ export function ProductSizeRow({
       oldPriceForDisplay ? (oldPriceForDisplay / 100).toString() : '',
     );
     setDiscountValue(String(discountForDisplay));
-    setIsPriceEditing(false);
   };
 
   const handleStockSave = async () => {
@@ -165,14 +163,14 @@ export function ProductSizeRow({
       return;
     }
     if (newStock === sizeInfo.stock) {
-      setIsStockEditing(false);
+      setEditMode('none');
       return;
     }
     if (!sizeInfo.moySkladHref) {
       toast.error('Ошибка: Href размера из МойСклад не найден.');
       return;
     }
-    setIsStockLoading(true);
+    setIsSaving(true);
     const promise = fetch('/api/admin/products/update-stock', {
       method: 'POST',
       credentials: 'include',
@@ -190,7 +188,7 @@ export function ProductSizeRow({
       success: (res) => {
         if (!res.ok) throw new Error('Ошибка.');
         router.refresh();
-        setIsStockEditing(false);
+        setEditMode('none');
         return 'Остатки успешно обновлены!';
       },
       error: 'Не удалось обновить остатки.',
@@ -199,17 +197,35 @@ export function ProductSizeRow({
       await promise;
     } catch (error) {
     } finally {
-      setIsStockLoading(false);
+      setIsSaving(false);
     }
   };
 
   const handleStockCancel = () => {
     setStockValue(String(sizeInfo.stock));
-    setIsStockEditing(false);
   };
 
+  // --- НАЧАЛО БЛОКА РЕФАКТОРИНГА: Мастер-функции сохранения/отмены ---
+  const handleSave = () => {
+    if (editMode === 'stock') {
+      handleStockSave();
+    } else if (editMode === 'price') {
+      handlePriceSave();
+    }
+  };
+
+  const handleCancel = () => {
+    if (editMode === 'stock') {
+      handleStockCancel();
+    } else if (editMode === 'price') {
+      handlePriceCancel();
+    }
+    setEditMode('none');
+  };
+  // --- КОНЕЦ БЛОКА РЕФАКТОРИНГА ---
+
   const inputClassName =
-    'bg-transparent border-0 border-b border-indigo-400 p-0 text-right text-sm focus:ring-0';
+    'bg-transparent border-0 border-b border-indigo-400 p-0 text-right text-sm focus:ring-0 disabled:bg-gray-100';
 
   return (
     <tr className="bg-gray-50/50 hover:bg-gray-100">
@@ -217,119 +233,74 @@ export function ProductSizeRow({
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
         {sizeInfo.size.value}
       </td>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полный рефакторинг выравнивания --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         0 шт.
       </td>
+      {/* --- ЯЧЕЙКА "СКЛАД" --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
-        {isStockEditing ? (
-          <div className="inline-flex items-center justify-end gap-2">
-            <div className="flex items-baseline">
-              <input
-                type="number"
-                value={stockValue}
-                onChange={(e) => setStockValue(e.target.value)}
-                className={`${inputClassName} w-10`}
-                disabled={isStockLoading}
-                autoFocus
-              />
-              <span className="text-gray-500">шт.</span>
-            </div>
-            <button
-              onClick={handleStockSave}
-              disabled={isStockLoading}
-              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
-            >
-              <CheckIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleStockCancel}
-              disabled={isStockLoading}
-              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
+        {editMode === 'stock' ? (
+          <div className="flex items-baseline justify-end">
+            <input
+              type="number"
+              value={stockValue}
+              onChange={(e) => setStockValue(e.target.value)}
+              className={`${inputClassName} w-10`}
+              disabled={isSaving}
+              autoFocus
+            />
+            <span className="text-gray-500">шт.</span>
           </div>
         ) : (
           <div
             className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
-            onClick={() => setIsStockEditing(true)}
+            onClick={() => !isSaving && setEditMode('stock')}
           >
             <span>{sizeInfo.stock} шт.</span>
             <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
         )}
       </td>
+      {/* --- ЯЧЕЙКА "ЦЕНА" (СТАРАЯ) --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
-        {isPriceEditing ? (
-          <div className="inline-flex items-center justify-end gap-2">
-            <div className="flex items-baseline">
-              <input
-                type="text"
-                value={oldPriceValue}
-                onChange={(e) => handleOldPriceChange(e.target.value)}
-                className={`${inputClassName} w-16`}
-                disabled={isPriceLoading}
-              />
-              <span className="text-gray-500">RUB</span>
-            </div>
-            <button
-              onClick={handlePriceSave}
-              disabled={isPriceLoading}
-              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
-            >
-              <CheckIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handlePriceCancel}
-              disabled={isPriceLoading}
-              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
+        {editMode === 'price' ? (
+          <div className="flex items-baseline justify-end">
+            <input
+              type="text"
+              value={oldPriceValue}
+              onChange={(e) => handleOldPriceChange(e.target.value)}
+              className={`${inputClassName} w-16`}
+              disabled={isSaving}
+              autoFocus
+            />
+            <span className="text-gray-500">RUB</span>
           </div>
         ) : (
           <div
             className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
-            onClick={() => setIsPriceEditing(true)}
+            onClick={() => !isSaving && setEditMode('price')}
           >
             <span>{formatPrice(oldPriceForDisplay)} RUB</span>
             <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
         )}
       </td>
+      {/* --- ЯЧЕЙКА "СКИДКА %" --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
-        {isPriceEditing ? (
-          <div className="inline-flex items-center justify-end gap-2">
-            <div className="flex items-baseline">
-              <input
-                type="text"
-                value={discountValue}
-                onChange={(e) => handleDiscountChange(e.target.value)}
-                className={`${inputClassName} w-8`}
-                disabled={isPriceLoading}
-              />
-              <span className="text-gray-500">%</span>
-            </div>
-            <button
-              onClick={handlePriceSave}
-              disabled={isPriceLoading}
-              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
-            >
-              <CheckIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handlePriceCancel}
-              disabled={isPriceLoading}
-              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
+        {editMode === 'price' ? (
+          <div className="flex items-baseline justify-end">
+            <input
+              type="text"
+              value={discountValue}
+              onChange={(e) => handleDiscountChange(e.target.value)}
+              className={`${inputClassName} w-8`}
+              disabled={isSaving}
+            />
+            <span className="text-gray-500">%</span>
           </div>
         ) : (
           <div
             className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
-            onClick={() => setIsPriceEditing(true)}
+            onClick={() => !isSaving && setEditMode('price')}
           >
             <span
               className={discountForDisplay > 0 ? 'font-bold text-red-600' : ''}
@@ -340,38 +311,23 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
+      {/* --- ЯЧЕЙКА "ИТОГО/ШТ" --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm font-medium text-gray-800">
-        {isPriceEditing ? (
-          <div className="inline-flex items-center justify-end gap-2">
-            <div className="flex items-baseline">
-              <input
-                type="text"
-                value={priceValue}
-                onChange={(e) => handlePriceChange(e.target.value)}
-                className={`${inputClassName} w-16`}
-                disabled={isPriceLoading}
-              />
-              <span className="text-gray-500">RUB</span>
-            </div>
-            <button
-              onClick={handlePriceSave}
-              disabled={isPriceLoading}
-              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
-            >
-              <CheckIcon className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handlePriceCancel}
-              disabled={isPriceLoading}
-              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
+        {editMode === 'price' ? (
+          <div className="flex items-baseline justify-end">
+            <input
+              type="text"
+              value={priceValue}
+              onChange={(e) => handlePriceChange(e.target.value)}
+              className={`${inputClassName} w-16`}
+              disabled={isSaving}
+            />
+            <span className="text-gray-500">RUB</span>
           </div>
         ) : (
           <div
             className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
-            onClick={() => setIsPriceEditing(true)}
+            onClick={() => !isSaving && setEditMode('price')}
           >
             <span>{formatPrice(priceForDisplay)} RUB</span>
             <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -381,8 +337,34 @@ export function ProductSizeRow({
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm font-bold text-gray-900">
         {formatPrice(totalValue)} RUB
       </td>
-      <td className="w-24 px-6 py-1"></td>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+      {/* --- НАЧАЛО БЛОКА РЕФАКТОРИНГА: Новая колонка "Действия" --- */}
+      <td className="w-24 px-6 py-1">
+        {editMode !== 'none' && (
+          <div className="flex items-center justify-start gap-3">
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="text-green-600 hover:text-green-800 disabled:text-gray-400"
+              title="Сохранить"
+            >
+              {isSaving ? (
+                <SpinnerIcon className="h-5 w-5" />
+              ) : (
+                <CheckIcon className="h-5 w-5" />
+              )}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isSaving}
+              className="text-red-500 hover:text-red-700 disabled:text-gray-400"
+              title="Отменить"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+      </td>
+      {/* --- КОНЕЦ БЛОКА РЕФАКТОРИНГА --- */}
     </tr>
   );
 }
