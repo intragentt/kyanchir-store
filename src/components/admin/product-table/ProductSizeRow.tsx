@@ -10,11 +10,16 @@ import { CheckIcon } from '@/components/icons/CheckIcon';
 import { XMarkIcon } from '@/components/icons/XMarkIcon';
 import { SpinnerIcon } from '@/components/icons/SpinnerIcon';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: formatPrice теперь возвращает только число ---
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '—';
   const priceInRubles = priceInCents / 100;
-  return `${new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(priceInRubles)} RUB`;
+  return new Intl.NumberFormat('ru-RU', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(priceInRubles);
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const calculateDiscount = (oldPrice: number | null, price: number | null) => {
   if (oldPrice && price && oldPrice > price) {
@@ -67,10 +72,10 @@ export function ProductSizeRow({
   const [isPriceLoading, setIsPriceLoading] = useState(false);
 
   const [priceValue, setPriceValue] = useState(
-    String(priceForDisplay ? priceForDisplay / 100 : ''),
+    priceForDisplay ? (priceForDisplay / 100).toString() : '',
   );
   const [oldPriceValue, setOldPriceValue] = useState(
-    String(oldPriceForDisplay ? oldPriceForDisplay / 100 : ''),
+    oldPriceForDisplay ? (oldPriceForDisplay / 100).toString() : '',
   );
   const [discountValue, setDiscountValue] = useState(
     String(discountForDisplay),
@@ -147,9 +152,9 @@ export function ProductSizeRow({
   };
 
   const handlePriceCancel = () => {
-    setPriceValue(String(priceForDisplay ? priceForDisplay / 100 : ''));
+    setPriceValue(priceForDisplay ? (priceForDisplay / 100).toString() : '');
     setOldPriceValue(
-      String(oldPriceForDisplay ? oldPriceForDisplay / 100 : ''),
+      oldPriceForDisplay ? (oldPriceForDisplay / 100).toString() : '',
     );
     setDiscountValue(String(discountForDisplay));
     setIsPriceEditing(false);
@@ -205,10 +210,8 @@ export function ProductSizeRow({
     setIsStockEditing(false);
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлены стили для инпутов ---
   const inputClassName =
-    'w-20 bg-transparent border-0 border-b border-indigo-400 p-0 text-center text-sm focus:ring-0';
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    'bg-transparent border-0 border-b border-indigo-400 p-0 text-right text-sm focus:ring-0';
 
   return (
     <tr className="bg-gray-50/50 hover:bg-gray-100">
@@ -219,17 +222,21 @@ export function ProductSizeRow({
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         0 шт.
       </td>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полный рефакторинг ячеек для inline-редактирования --- */}
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isStockEditing ? (
           <div className="flex items-center justify-center gap-2">
-            <input
-              type="number"
-              value={stockValue}
-              onChange={(e) => setStockValue(e.target.value)}
-              className={`${inputClassName} w-16`}
-              disabled={isStockLoading}
-              autoFocus
-            />
+            <div className="flex items-baseline justify-center">
+              <input
+                type="number"
+                value={stockValue}
+                onChange={(e) => setStockValue(e.target.value)}
+                className={`${inputClassName} w-12`}
+                disabled={isStockLoading}
+                autoFocus
+              />
+              <span className="text-gray-500">шт.</span>
+            </div>
             <button
               onClick={handleStockSave}
               disabled={isStockLoading}
@@ -261,34 +268,37 @@ export function ProductSizeRow({
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isPriceEditing ? (
-          <input
-            type="text"
-            value={oldPriceValue}
-            onChange={(e) => handleOldPriceChange(e.target.value)}
-            className={inputClassName}
-            disabled={isPriceLoading}
-          />
+          <div className="flex items-baseline justify-center">
+            <input
+              type="text"
+              value={oldPriceValue}
+              onChange={(e) => handleOldPriceChange(e.target.value)}
+              className={`${inputClassName} w-20`}
+              disabled={isPriceLoading}
+            />
+            <span className="text-gray-500">RUB</span>
+          </div>
         ) : (
           <div
             className="group relative flex cursor-pointer items-center justify-center gap-2"
             onClick={() => setIsPriceEditing(true)}
           >
-            <span>{formatPrice(oldPriceForDisplay)}</span>
+            <span>{formatPrice(oldPriceForDisplay)} RUB</span>
             <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
         )}
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isPriceEditing ? (
-          <div className="flex items-center justify-center">
+          <div className="flex items-baseline justify-center">
             <input
               type="text"
               value={discountValue}
               onChange={(e) => handleDiscountChange(e.target.value)}
-              className={`${inputClassName} w-12`}
+              className={`${inputClassName} w-10`}
               disabled={isPriceLoading}
             />
-            <span className="ml-1 text-gray-500">%</span>
+            <span className="text-gray-500">%</span>
           </div>
         ) : (
           <div
@@ -307,13 +317,16 @@ export function ProductSizeRow({
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm font-medium text-gray-800">
         {isPriceEditing ? (
           <div className="flex items-center justify-center gap-2">
-            <input
-              type="text"
-              value={priceValue}
-              onChange={(e) => handlePriceChange(e.target.value)}
-              className={inputClassName}
-              disabled={isPriceLoading}
-            />
+            <div className="flex items-baseline justify-center">
+              <input
+                type="text"
+                value={priceValue}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                className={`${inputClassName} w-20`}
+                disabled={isPriceLoading}
+              />
+              <span className="text-gray-500">RUB</span>
+            </div>
             <button
               onClick={handlePriceSave}
               disabled={isPriceLoading}
@@ -338,15 +351,16 @@ export function ProductSizeRow({
             className="group relative flex cursor-pointer items-center justify-center gap-2"
             onClick={() => setIsPriceEditing(true)}
           >
-            <span>{formatPrice(priceForDisplay)}</span>
+            <span>{formatPrice(priceForDisplay)} RUB</span>
             <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
         )}
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-right text-sm font-bold text-gray-900">
-        {formatPrice(totalValue)}
+        {formatPrice(totalValue)} RUB
       </td>
       <td className="w-24 px-6 py-1"></td>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </tr>
   );
 }
