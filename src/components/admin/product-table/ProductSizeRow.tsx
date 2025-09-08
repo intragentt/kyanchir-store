@@ -10,7 +10,6 @@ import { CheckIcon } from '@/components/icons/CheckIcon';
 import { XMarkIcon } from '@/components/icons/XMarkIcon';
 import { SpinnerIcon } from '@/components/icons/SpinnerIcon';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: formatPrice теперь возвращает только число ---
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '—';
   const priceInRubles = priceInCents / 100;
@@ -19,7 +18,6 @@ const formatPrice = (priceInCents: number | null | undefined) => {
     maximumFractionDigits: 2,
   }).format(priceInRubles);
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const calculateDiscount = (oldPrice: number | null, price: number | null) => {
   if (oldPrice && price && oldPrice > price) {
@@ -210,8 +208,10 @@ export function ProductSizeRow({
     setIsStockEditing(false);
   };
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлены стили для инпутов ---
   const inputClassName =
-    'bg-transparent border-0 border-b border-indigo-400 p-0 text-right text-sm focus:ring-0';
+    'bg-transparent border-0 border-b border-indigo-400 p-0 text-center text-sm focus:ring-0';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <tr className="bg-gray-50/50 hover:bg-gray-100">
@@ -222,7 +222,6 @@ export function ProductSizeRow({
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         0 шт.
       </td>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полный рефакторинг ячеек для inline-редактирования --- */}
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isStockEditing ? (
           <div className="flex items-center justify-center gap-2">
@@ -360,7 +359,6 @@ export function ProductSizeRow({
         {formatPrice(totalValue)} RUB
       </td>
       <td className="w-24 px-6 py-1"></td>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </tr>
   );
 }
