@@ -208,10 +208,8 @@ export function ProductSizeRow({
     setIsStockEditing(false);
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлены стили для инпутов ---
   const inputClassName =
     'bg-transparent border-0 border-b border-indigo-400 p-0 text-center text-sm focus:ring-0';
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <tr className="bg-gray-50/50 hover:bg-gray-100">
@@ -222,15 +220,16 @@ export function ProductSizeRow({
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         0 шт.
       </td>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полный рефакторинг ячеек для идеального центрирования --- */}
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isStockEditing ? (
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex items-baseline justify-center">
+          <div className="inline-flex items-center justify-center gap-2">
+            <div className="flex items-baseline">
               <input
                 type="number"
                 value={stockValue}
                 onChange={(e) => setStockValue(e.target.value)}
-                className={`${inputClassName} w-12`}
+                className={`${inputClassName} w-10`}
                 disabled={isStockLoading}
                 autoFocus
               />
@@ -257,7 +256,7 @@ export function ProductSizeRow({
           </div>
         ) : (
           <div
-            className="group relative flex cursor-pointer items-center justify-center gap-2"
+            className="group relative inline-flex cursor-pointer items-center justify-center gap-2"
             onClick={() => setIsStockEditing(true)}
           >
             <span>{sizeInfo.stock} шт.</span>
@@ -267,19 +266,19 @@ export function ProductSizeRow({
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isPriceEditing ? (
-          <div className="flex items-baseline justify-center">
+          <div className="inline-flex items-baseline justify-center">
             <input
               type="text"
               value={oldPriceValue}
               onChange={(e) => handleOldPriceChange(e.target.value)}
-              className={`${inputClassName} w-20`}
+              className={`${inputClassName} w-16`}
               disabled={isPriceLoading}
             />
             <span className="text-gray-500">RUB</span>
           </div>
         ) : (
           <div
-            className="group relative flex cursor-pointer items-center justify-center gap-2"
+            className="group relative inline-flex cursor-pointer items-center justify-center gap-2"
             onClick={() => setIsPriceEditing(true)}
           >
             <span>{formatPrice(oldPriceForDisplay)} RUB</span>
@@ -289,19 +288,19 @@ export function ProductSizeRow({
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isPriceEditing ? (
-          <div className="flex items-baseline justify-center">
+          <div className="inline-flex items-baseline justify-center">
             <input
               type="text"
               value={discountValue}
               onChange={(e) => handleDiscountChange(e.target.value)}
-              className={`${inputClassName} w-10`}
+              className={`${inputClassName} w-8`}
               disabled={isPriceLoading}
             />
             <span className="text-gray-500">%</span>
           </div>
         ) : (
           <div
-            className="group relative flex cursor-pointer items-center justify-center gap-2"
+            className="group relative inline-flex cursor-pointer items-center justify-center gap-2"
             onClick={() => setIsPriceEditing(true)}
           >
             <span
@@ -315,13 +314,13 @@ export function ProductSizeRow({
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm font-medium text-gray-800">
         {isPriceEditing ? (
-          <div className="flex items-center justify-center gap-2">
-            <div className="flex items-baseline justify-center">
+          <div className="inline-flex items-center justify-center gap-2">
+            <div className="flex items-baseline">
               <input
                 type="text"
                 value={priceValue}
                 onChange={(e) => handlePriceChange(e.target.value)}
-                className={`${inputClassName} w-20`}
+                className={`${inputClassName} w-16`}
                 disabled={isPriceLoading}
               />
               <span className="text-gray-500">RUB</span>
@@ -347,7 +346,7 @@ export function ProductSizeRow({
           </div>
         ) : (
           <div
-            className="group relative flex cursor-pointer items-center justify-center gap-2"
+            className="group relative inline-flex cursor-pointer items-center justify-center gap-2"
             onClick={() => setIsPriceEditing(true)}
           >
             <span>{formatPrice(priceForDisplay)} RUB</span>
@@ -359,6 +358,7 @@ export function ProductSizeRow({
         {formatPrice(totalValue)} RUB
       </td>
       <td className="w-24 px-6 py-1"></td>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </tr>
   );
 }
