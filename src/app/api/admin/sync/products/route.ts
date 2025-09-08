@@ -132,24 +132,8 @@ async function runSync() {
   );
   let totalProductsSynced = 0;
   for (const [productName, variantsMap] of groupedProducts.entries()) {
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" фильтрация призрачных вариантов ---
-    // Если у товара есть несколько вариантов (например, S, M, L) И среди них есть "Основной" (безразмерный),
-    // то мы удаляем этот "призрачный" вариант, чтобы не создавать лишнюю строку ONE_SIZE.
-    if (variantsMap.size > 1 && variantsMap.has('Основной')) {
-      const mainVariantSizes = variantsMap.get('Основной')!;
-      // Убеждаемся, что у этого варианта действительно нет заданного размера
-      if (mainVariantSizes.every((item) => item.size === null)) {
-        variantsMap.delete('Основной');
-        console.log(
-          `[SYNC] Отфильтрован "призрачный" вариант 'Основной' для товара "${productName}".`,
-        );
-      }
-    }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
     const firstVariantData = Array.from(variantsMap.values())[0][0];
-    if (!firstVariantData) continue; // Пропускаем, если после фильтрации не осталось вариантов
-
+    if (!firstVariantData) continue;
     const categoryMoySkladId = firstVariantData.productFolder
       ? getUUIDFromHref(firstVariantData.productFolder.meta.href)
       : null;
@@ -174,7 +158,20 @@ async function runSync() {
       },
     });
     for (const [variantName, sizesArray] of variantsMap.entries()) {
-      const representativeSize = sizesArray[0];
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" фильтрация призрачных размеров ВНУТРИ варианта ---
+      let finalSizesArray = sizesArray;
+      const hasNullSize = sizesArray.some((item) => item.size === null);
+      const hasRealSizes = sizesArray.some((item) => item.size !== null);
+      if (hasNullSize && hasRealSizes) {
+        finalSizesArray = sizesArray.filter((item) => item.size !== null);
+        console.log(
+          `[SYNC] Отфильтрован "призрачный" размер для варианта "${variantName}" товара "${productName}".`,
+        );
+      }
+      if (finalSizesArray.length === 0) continue; // Если после фильтрации не осталось размеров, пропускаем вариант
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+      const representativeSize = finalSizesArray[0];
       const variantMoySkladId = getUUIDFromHref(
         representativeSize.moySkladHref,
       );
@@ -215,7 +212,8 @@ async function runSync() {
           moySkladId: variantMoySkladId,
         },
       });
-      for (const sizeData of sizesArray) {
+      for (const sizeData of finalSizesArray) {
+        // <--- Используем отфильтрованный массив
         const sizeValue = sizeData.size || 'ONE_SIZE';
         const sizeRecord = await prisma.size.upsert({
           where: { value: sizeValue },
