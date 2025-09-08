@@ -9,7 +9,7 @@ interface RequestBody {
   moySkladHref: string;
   moySkladType: string;
   newStock: number;
-  // oldStock больше не нужен
+  oldStock: number; // Добавляем oldStock
   productSizeId: string;
 }
 export async function POST(req: Request) {
@@ -19,11 +19,13 @@ export async function POST(req: Request) {
   }
   try {
     const body = (await req.json()) as RequestBody;
-    const { moySkladHref, moySkladType, newStock, productSizeId } = body;
+    const { moySkladHref, moySkladType, newStock, oldStock, productSizeId } =
+      body;
     if (
       !moySkladHref ||
       !moySkladType ||
       newStock === undefined ||
+      oldStock === undefined ||
       !productSizeId
     ) {
       return new NextResponse('Отсутствуют необходимые данные', {
@@ -34,8 +36,13 @@ export async function POST(req: Request) {
       return new NextResponse('Некорректное значение остатка', { status: 400 });
     }
 
-    // Старый остаток больше не передаем
-    await updateMoySkladVariantStock(moySkladHref, moySkladType, newStock);
+    // Передаем oldStock в API-мост
+    await updateMoySkladVariantStock(
+      moySkladHref,
+      moySkladType,
+      newStock,
+      oldStock,
+    );
 
     await prisma.productSize.update({
       where: { id: productSizeId },

@@ -63,36 +63,47 @@ const getMoySkladDefaultRefs = async () => {
   return refs;
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Переход на документ "Инвентаризация" ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: "Умное" обновление остатков через Оприходование/Списание ---
 export const updateMoySkladVariantStock = async (
   moySkladHref: string,
   moySkladType: string,
-  newStock: number, // Старый остаток больше не нужен
+  newStock: number,
+  oldStock: number, // Принимаем старый остаток
 ) => {
+  const delta = newStock - oldStock;
+  if (delta === 0) {
+    console.log('[API МойСклад] Остаток не изменился, операция пропущена.');
+    return null;
+  }
+
   const { organization, store } = await getMoySkladDefaultRefs();
+  const quantity = Math.abs(delta);
+  let endpoint = '';
+  const position = {
+    quantity: quantity,
+    assortment: { meta: { href: moySkladHref, type: moySkladType } },
+  };
+
+  // Если остаток увеличился -> создаем "Оприходование"
+  if (delta > 0) {
+    endpoint = 'entity/enter';
+    console.log(`[API МойСклад] Создание Оприходования на ${quantity} шт.`);
+  }
+  // Если остаток уменьшился -> создаем "Списание"
+  else {
+    endpoint = 'entity/loss';
+    console.log(`[API МойСклад] Создание Списания на ${quantity} шт.`);
+  }
 
   const body = {
     organization: { meta: organization },
     store: { meta: store },
-    positions: [
-      {
-        quantity: 0, // Это поле обязательно, но для инвентаризации оно игнорируется
-        assortment: { meta: { href: moySkladHref, type: moySkladType } },
-        correctionAmount: newStock, // <-- Устанавливаем фактический остаток
-      },
-    ],
+    positions: [position],
   };
 
-  console.log(
-    `[API МойСклад] Создание Инвентаризации. Установка остатка: ${newStock} шт.`,
-  );
-
-  // Отправляем POST запрос на создание документа "Инвентаризация"
-  const data = await moySkladFetch('entity/inventory', {
+  return await moySkladFetch(endpoint, {
     method: 'POST',
     body: JSON.stringify(body),
   });
-
-  return data;
 };
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---

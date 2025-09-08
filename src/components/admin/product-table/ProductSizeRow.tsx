@@ -59,7 +59,7 @@ export function ProductSizeRow({
         moySkladHref: sizeInfo.moySkladHref,
         moySkladType: sizeInfo.moySkladType,
         newStock: newStock,
-        // oldStock больше не отправляем
+        oldStock: sizeInfo.stock, // <-- Возвращаем отправку старого остатка
         productSizeId: sizeInfo.id,
       }),
     });
