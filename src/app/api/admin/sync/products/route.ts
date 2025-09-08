@@ -1,4 +1,5 @@
 // /src/app/api/admin/sync/products/route.ts
+
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
@@ -12,7 +13,7 @@ interface MoySkladProduct {
   description?: string;
   productFolder?: { meta: { href: string } };
   salePrices?: { value: number; priceType: { name: string } }[];
-  meta: { href: string; type: string }; // Добавляем type
+  meta: { href: string; type: string };
 }
 function getUUIDFromHref(href: string): string {
   const pathPart = href.split('/').pop() || '';
@@ -56,10 +57,9 @@ function parseMoySkladName(name: string): ParsedProductInfo {
   }
   return { productName, variantName, size };
 }
-
 interface ProductSizeData {
   moySkladHref: string;
-  moySkladType: string; // Добавляем type
+  moySkladType: string;
   size: string | null;
   description?: string;
   productFolder?: { meta: { href: string } };
@@ -111,7 +111,7 @@ async function runSync() {
     const variantSizes = productVariants.get(variantName)!;
     variantSizes.push({
       moySkladHref: product.meta.href,
-      moySkladType: product.meta.type, // Сохраняем type
+      moySkladType: product.meta.type,
       size,
       description: product.description,
       productFolder: product.productFolder,
@@ -132,7 +132,24 @@ async function runSync() {
   );
   let totalProductsSynced = 0;
   for (const [productName, variantsMap] of groupedProducts.entries()) {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" фильтрация призрачных вариантов ---
+    // Если у товара есть несколько вариантов (например, S, M, L) И среди них есть "Основной" (безразмерный),
+    // то мы удаляем этот "призрачный" вариант, чтобы не создавать лишнюю строку ONE_SIZE.
+    if (variantsMap.size > 1 && variantsMap.has('Основной')) {
+      const mainVariantSizes = variantsMap.get('Основной')!;
+      // Убеждаемся, что у этого варианта действительно нет заданного размера
+      if (mainVariantSizes.every((item) => item.size === null)) {
+        variantsMap.delete('Основной');
+        console.log(
+          `[SYNC] Отфильтрован "призрачный" вариант 'Основной' для товара "${productName}".`,
+        );
+      }
+    }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     const firstVariantData = Array.from(variantsMap.values())[0][0];
+    if (!firstVariantData) continue; // Пропускаем, если после фильтрации не осталось вариантов
+
     const categoryMoySkladId = firstVariantData.productFolder
       ? getUUIDFromHref(firstVariantData.productFolder.meta.href)
       : null;
@@ -212,10 +229,10 @@ async function runSync() {
             productVariantId: productVariant.id,
             sizeId: sizeRecord.id,
             moySkladType: sizeData.moySkladType,
-          }, // Обновляем type
+          },
           create: {
             moySkladHref: sizeData.moySkladHref,
-            moySkladType: sizeData.moySkladType, // Записываем type
+            moySkladType: sizeData.moySkladType,
             stock: sizeData.stock,
             productVariant: { connect: { id: productVariant.id } },
             size: { connect: { id: sizeRecord.id } },
