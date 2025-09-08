@@ -3,7 +3,6 @@
 
 import { useState, Fragment } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import type { Category, Tag } from '@prisma/client';
 
 import type { ProductForTable } from '@/app/admin/dashboard/page';
@@ -66,9 +65,11 @@ export const ProductTableRow = ({
 
   return (
     <Fragment>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем порядок ячеек в строке Уровня 1 --- */}
-      <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
-        <td className="w-24 px-4 py-4">
+      <tr
+        onClick={() => setIsExpanded(!isExpanded)}
+        className={`border-t ${rowClassName} cursor-pointer hover:bg-gray-50`}
+      >
+        <td className="w-24 px-4 py-4" onClick={(e) => e.stopPropagation()}>
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
@@ -97,20 +98,20 @@ export const ProductTableRow = ({
                 {product.name}
               </div>
               {product.variants.length > 0 && (
-                <button
-                  onClick={() => setIsExpanded(!isExpanded)}
-                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
-                >
-                  <span>{product.variants.length} вариант(а)</span>
+                <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <span>{product.variants.length} вариант</span>
                   {isExpanded ? (
                     <ChevronDownIcon className="h-4 w-4" />
                   ) : (
                     <ChevronRightIcon className="h-4 w-4" />
                   )}
-                </button>
+                </div>
               )}
               <button
-                onClick={() => setIsDetailsExpanded(!isDetailsExpanded)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDetailsExpanded(!isDetailsExpanded);
+                }}
                 className="mt-1 flex items-center gap-1 text-xs text-indigo-600 hover:underline"
               >
                 <PencilIcon className="h-3 w-3" />
@@ -138,14 +139,12 @@ export const ProductTableRow = ({
           {calculateTotalValue()}
         </td>
       </tr>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       {isExpanded && (
         <tr>
           <td colSpan={7} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем порядок в "мини-шапке" Уровня 2 --- */}
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
                     <th className="w-24 px-4 py-2"></th>
@@ -156,7 +155,6 @@ export const ProductTableRow = ({
                     <th className="w-40 px-6 py-2 text-center">Сумма</th>
                   </tr>
                 </thead>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <tbody className="divide-y divide-gray-200">
                   {product.variants.map((variant) => (
                     <VariantRow key={variant.id} variant={variant} />
