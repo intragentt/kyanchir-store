@@ -21,13 +21,13 @@ type SizeInfo = Prisma.ProductSizeGetPayload<{
 }> & {
   moySkladHref: string | null;
   moySkladType: string;
-  price: number | null; // <-- Поля-переопределения
+  price: number | null;
   oldPrice: number | null;
 };
 
 interface ProductSizeRowProps {
   sizeInfo: SizeInfo;
-  variantPrice: number | null; // <-- Цена родительского варианта
+  variantPrice: number | null;
   variantOldPrice: number | null;
 }
 
@@ -38,26 +38,19 @@ export function ProductSizeRow({
 }: ProductSizeRowProps) {
   const router = useRouter();
 
-  // --- Состояния для редактирования ОСТАТКОВ ---
   const [isStockEditing, setIsStockEditing] = useState(false);
   const [isStockLoading, setIsStockLoading] = useState(false);
   const [stockValue, setStockValue] = useState(String(sizeInfo.stock));
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Состояния для редактирования ЦЕН ---
   const [isPriceEditing, setIsPriceEditing] = useState(false);
   const [isPriceLoading, setIsPriceLoading] = useState(false);
-
-  // Определяем, какую цену показывать: индивидуальную или от варианта
   const displayPrice = sizeInfo.price ?? variantPrice;
   const displayOldPrice = sizeInfo.oldPrice ?? variantOldPrice;
-
   const [priceValue, setPriceValue] = useState(
     String(displayPrice ? displayPrice / 100 : ''),
   );
   const [oldPriceValue, setOldPriceValue] = useState(
     String(displayOldPrice ? displayOldPrice / 100 : ''),
   );
-
   const totalValue = (displayPrice || 0) * sizeInfo.stock;
 
   const handlePriceSave = async () => {
@@ -66,14 +59,12 @@ export function ProductSizeRow({
       return;
     }
     setIsPriceLoading(true);
-
     const newPrice = priceValue
       ? Math.round(parseFloat(priceValue) * 100)
       : null;
     const newOldPrice = oldPriceValue
       ? Math.round(parseFloat(oldPriceValue) * 100)
       : null;
-
     const promise = fetch('/api/admin/products/update-size-price', {
       method: 'POST',
       credentials: 'include',
@@ -85,7 +76,6 @@ export function ProductSizeRow({
         newOldPrice,
       }),
     });
-
     toast.promise(promise, {
       loading: 'Обновляем цены...',
       success: (res) => {
@@ -96,7 +86,6 @@ export function ProductSizeRow({
       },
       error: 'Не удалось обновить цены.',
     });
-
     try {
       await promise;
     } catch (error) {
@@ -104,14 +93,11 @@ export function ProductSizeRow({
       setIsPriceLoading(false);
     }
   };
-
   const handlePriceCancel = () => {
     setPriceValue(String(displayPrice ? displayPrice / 100 : ''));
     setOldPriceValue(String(displayOldPrice ? displayOldPrice / 100 : ''));
     setIsPriceEditing(false);
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
   const handleStockSave = async () => {
     const newStock = parseInt(stockValue, 10);
     if (isNaN(newStock) || newStock < 0) {
@@ -162,6 +148,7 @@ export function ProductSizeRow({
   };
 
   return (
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем порядок ячеек в строке Уровня 3 ---
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="w-24 px-4 py-1"></td>
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
@@ -174,6 +161,9 @@ export function ProductSizeRow({
             <PencilIcon className="h-3.5 w-3.5" />
           </button>
         </div>
+      </td>
+      <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+        0 шт.
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isStockEditing ? (
@@ -215,11 +205,6 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
-        0 шт.
-      </td>
-
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Умные" ячейки для цен --- */}
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         {isPriceEditing ? (
           <input
@@ -269,12 +254,11 @@ export function ProductSizeRow({
           formatPrice(displayPrice)
         )}
       </td>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-
       <td className="w-40 whitespace-nowrap px-6 py-1 text-right text-sm font-bold text-gray-900">
         {formatPrice(totalValue)}
       </td>
       <td className="w-24 px-6 py-1"></td>
     </tr>
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 }

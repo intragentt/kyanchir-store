@@ -66,6 +66,7 @@ export const ProductTableRow = ({
 
   return (
     <Fragment>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем порядок ячеек в строке Уровня 1 --- */}
       <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
         <td className="w-24 px-4 py-4">
           <input
@@ -131,25 +132,26 @@ export const ProductTableRow = ({
             {statusConfig[product.status.name]?.label || product.status.name}
           </span>
         </td>
-        <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
+        <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm font-bold">
           {calculateTotalValue()}
         </td>
       </tr>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       {isExpanded && (
         <tr>
           <td colSpan={7} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки --- */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем порядок в "мини-шапке" Уровня 2 --- */}
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
-                    <th className="w-24 px-4 py-2"></th> {/* Спейсер */}
+                    <th className="w-24 px-4 py-2"></th>
                     <th className="px-6 py-2 text-left">Вариант</th>
-                    <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
+                    <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Старая сумма</th>
                     <th className="w-40 px-6 py-2 text-center">Сумма</th>
                   </tr>

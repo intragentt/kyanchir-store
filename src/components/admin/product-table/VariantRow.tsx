@@ -9,7 +9,6 @@ import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { ProductSizeRow } from './ProductSizeRow';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем тип, чтобы он включал все необходимые поля для размера ---
 type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   include: {
     images: true;
@@ -17,7 +16,6 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
       include: {
         size: true;
       };
-      // Явно запрашиваем все поля, включая новые поля-переопределения цен
       select: {
         id: true;
         stock: true;
@@ -34,7 +32,6 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   oldPrice: number | null;
   moySkladId?: string | null;
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
@@ -53,57 +50,89 @@ export function VariantRow({ variant }: VariantRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const totalStock = variant.sizes.reduce((sum, size) => sum + size.stock, 0);
   const totalSalePrice = variant.sizes.reduce(
-    (sum, size) =>
-      sum + (size.price ?? variant.price ?? 0) * size.stock,
+    (sum, size) => sum + (size.price ?? variant.price ?? 0) * size.stock,
     0,
   );
   const totalOldPrice = variant.sizes.reduce(
     (sum, size) =>
-      sum + (size.oldPrice ?? size.price ?? variant.oldPrice ?? variant.price ?? 0) * size.stock,
+      sum +
+      (size.oldPrice ?? size.price ?? variant.oldPrice ?? variant.price ?? 0) *
+        size.stock,
     0,
   );
 
   return (
     <Fragment>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем порядок ячеек в строке Уровня 2 --- */}
       <tr className="bg-white hover:bg-gray-50">
-        <td className="w-24 px-4 py-2"><input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"/></td>
+        <td className="w-24 px-4 py-2">
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+          />
+        </td>
         <td className="whitespace-nowrap px-6 py-2">
           <div className="flex items-center">
-            <Image src={variant.images[0]?.url || '/placeholder.png'} alt={variant.color || 'variant'} width={32} height={40} className="h-10 w-8 rounded object-cover"/>
+            <Image
+              src={variant.images[0]?.url || '/placeholder.png'}
+              alt={variant.color || 'variant'}
+              width={32}
+              height={40}
+              className="h-10 w-8 rounded object-cover"
+            />
             <div className="ml-3">
-              <div className="text-sm font-medium text-gray-800">{variant.color || 'Основной'}</div>
+              <div className="text-sm font-medium text-gray-800">
+                {variant.color || 'Основной'}
+              </div>
               {variant.sizes.length > 0 && (
-                <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700">
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+                >
                   <span>{variant.sizes.length} размер(а)</span>
-                  {isExpanded ? <ChevronDownIcon className="h-4 w-4" /> : <ChevronRightIcon className="h-4 w-4" />}
+                  {isExpanded ? (
+                    <ChevronDownIcon className="h-4 w-4" />
+                  ) : (
+                    <ChevronRightIcon className="h-4 w-4" />
+                  )}
                 </button>
               )}
             </div>
           </div>
         </td>
-        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">{totalStock} шт.</td>
         <td className="w-40 px-6 py-2 text-center text-sm">0 шт.</td>
-        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500">{totalOldPrice > totalSalePrice ? formatPrice(totalOldPrice) : '—'}</td>
-        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold text-gray-800">{formatPrice(totalSalePrice)}</td>
+        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
+          {totalStock} шт.
+        </td>
+        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500">
+          {totalOldPrice > totalSalePrice ? formatPrice(totalOldPrice) : '—'}
+        </td>
+        <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold text-gray-800">
+          {formatPrice(totalSalePrice)}
+        </td>
       </tr>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {isExpanded && (
         <tr>
-          <td colSpan={6} className="p-0">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем colSpan --- */}
+          <td colSpan={7} className="p-0">
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <table className="min-w-full">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем "мини-шапку" Уровня 3 --- */}
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
                   <th className="w-24 px-4 py-2"></th>
                   <th className="px-6 py-2 text-left">Размер</th>
-                  <th className="w-40 px-6 py-2 text-center">Склад</th>
                   <th className="w-40 px-6 py-2 text-center">Бронь</th>
-                  <th className="w-40 px-6 py-2 text-center">Старая цена/шт</th>
-                  <th className="w-40 px-6 py-2 text-center">Цена/шт</th>
+                  <th className="w-40 px-6 py-2 text-center">Склад</th>
+                  <th className="w-40 px-6 py-2 text-center">Старая цена</th>
+                  <th className="w-40 px-6 py-2 text-center">Цена</th>
                   <th className="w-40 px-6 py-2 text-right">Сумма</th>
                   <th className="w-24 px-6 py-2"></th>
                 </tr>
               </thead>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-100">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем передачу props --- */}
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
                     key={sizeInfo.id}
@@ -112,7 +141,6 @@ export function VariantRow({ variant }: VariantRowProps) {
                     variantOldPrice={variant.oldPrice}
                   />
                 ))}
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </tbody>
             </table>
           </td>

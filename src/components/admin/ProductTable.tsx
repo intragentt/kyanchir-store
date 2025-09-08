@@ -117,6 +117,7 @@ export default function ProductTable({
         <div className="inline-block min-w-full align-middle">
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем заголовки --- */}
               <thead className="bg-gray-50">
                 <tr>
                   <th
@@ -127,25 +128,23 @@ export default function ProductTable({
                     Товар
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Категории
+                    Тип
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                     Статус
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Склад
+                    Бронь
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Бронь
+                    Склад
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
                     Сумма
                   </th>
-                  {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем заголовок для колонки "Ред." --- */}
-                  {/* Заголовок удалён */}
-                  {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 </tr>
               </thead>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-200 bg-white">
                 {products.map((product) => (
                   <ProductTableRow
