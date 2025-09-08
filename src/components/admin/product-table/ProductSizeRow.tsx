@@ -38,33 +38,80 @@ export function ProductSizeRow({
 }: ProductSizeRowProps) {
   const router = useRouter();
 
+  // --- ЛОГИКА ОТОБРАЖЕНИЯ ЦЕН ---
+  const resolvedPrice = sizeInfo.price ?? variantPrice;
+  const resolvedOldPrice = sizeInfo.oldPrice ?? variantOldPrice;
+  const priceForDisplay = resolvedPrice;
+
+  // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
+  const oldPriceForDisplay =
+    resolvedPrice !== null &&
+    resolvedOldPrice !== null &&
+    resolvedOldPrice > resolvedPrice
+      ? resolvedOldPrice
+      : resolvedPrice;
+  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+  // --- СОСТОЯНИЯ КОМПОНЕНТА ---
   const [isStockEditing, setIsStockEditing] = useState(false);
   const [isStockLoading, setIsStockLoading] = useState(false);
   const [stockValue, setStockValue] = useState(String(sizeInfo.stock));
+
   const [isPriceEditing, setIsPriceEditing] = useState(false);
   const [isPriceLoading, setIsPriceLoading] = useState(false);
-  const displayPrice = sizeInfo.price ?? variantPrice;
-  const displayOldPrice = sizeInfo.oldPrice ?? variantOldPrice;
   const [priceValue, setPriceValue] = useState(
-    String(displayPrice ? displayPrice / 100 : ''),
+    String(priceForDisplay ? priceForDisplay / 100 : ''),
   );
   const [oldPriceValue, setOldPriceValue] = useState(
-    String(displayOldPrice ? displayOldPrice / 100 : ''),
+    String(oldPriceForDisplay ? oldPriceForDisplay / 100 : ''),
   );
-  const totalValue = (displayPrice || 0) * sizeInfo.stock;
+  const [lastEditedField, setLastEditedField] = useState<
+    'price' | 'oldPrice' | null
+  >(null);
 
+  const totalValue = (priceForDisplay || 0) * sizeInfo.stock;
+
+  // --- ОБРАБОТЧИКИ СОБЫТИЙ ---
   const handlePriceSave = async () => {
     if (!sizeInfo.moySkladHref) {
       toast.error('Ошибка: Href размера из МойСклад не найден.');
       return;
     }
+
+    const newPriceParsed = parseFloat(priceValue.replace(',', '.'));
+    const newOldPriceParsed = parseFloat(oldPriceValue.replace(',', '.'));
+
+    if (isNaN(newPriceParsed) || isNaN(newOldPriceParsed)) {
+      toast.error('Введите корректные числовые значения для цен.');
+      return;
+    }
+
     setIsPriceLoading(true);
-    const newPrice = priceValue
-      ? Math.round(parseFloat(priceValue) * 100)
-      : null;
-    const newOldPrice = oldPriceValue
-      ? Math.round(parseFloat(oldPriceValue) * 100)
-      : null;
+
+    let finalPrice = Math.round(newPriceParsed * 100);
+    let finalOldPrice = Math.round(newOldPriceParsed * 100);
+
+    const originalPriceForLogic = priceForDisplay || 0;
+    const originalOldPriceForLogic = oldPriceForDisplay || 0;
+
+    if (lastEditedField === 'price') {
+      if (finalPrice < originalOldPriceForLogic) {
+        finalOldPrice = originalOldPriceForLogic;
+      } else {
+        finalOldPrice = finalPrice;
+      }
+    } else if (lastEditedField === 'oldPrice') {
+      if (finalOldPrice > originalPriceForLogic) {
+        finalPrice = originalPriceForLogic;
+      } else {
+        finalPrice = finalOldPrice;
+      }
+    } else {
+      if (finalPrice >= finalOldPrice) {
+        finalOldPrice = finalPrice;
+      }
+    }
+
     const promise = fetch('/api/admin/products/update-size-price', {
       method: 'POST',
       credentials: 'include',
@@ -72,20 +119,23 @@ export function ProductSizeRow({
       body: JSON.stringify({
         moySkladHref: sizeInfo.moySkladHref,
         productSizeId: sizeInfo.id,
-        newPrice,
-        newOldPrice,
+        newPrice: finalPrice,
+        newOldPrice: finalOldPrice,
       }),
     });
+
     toast.promise(promise, {
       loading: 'Обновляем цены...',
       success: (res) => {
         if (!res.ok) throw new Error('Ошибка.');
         router.refresh();
         setIsPriceEditing(false);
+        setLastEditedField(null);
         return 'Цены успешно обновлены!';
       },
       error: 'Не удалось обновить цены.',
     });
+
     try {
       await promise;
     } catch (error) {
@@ -93,11 +143,16 @@ export function ProductSizeRow({
       setIsPriceLoading(false);
     }
   };
+
   const handlePriceCancel = () => {
-    setPriceValue(String(displayPrice ? displayPrice / 100 : ''));
-    setOldPriceValue(String(displayOldPrice ? displayOldPrice / 100 : ''));
+    setPriceValue(String(priceForDisplay ? priceForDisplay / 100 : ''));
+    setOldPriceValue(
+      String(oldPriceForDisplay ? oldPriceForDisplay / 100 : ''),
+    );
     setIsPriceEditing(false);
+    setLastEditedField(null);
   };
+
   const handleStockSave = async () => {
     const newStock = parseInt(stockValue, 10);
     if (isNaN(newStock) || newStock < 0) {
@@ -142,25 +197,18 @@ export function ProductSizeRow({
       setIsStockLoading(false);
     }
   };
+
   const handleStockCancel = () => {
     setStockValue(String(sizeInfo.stock));
     setIsStockEditing(false);
   };
 
+  // --- JSX РАЗМЕТКА ---
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем порядок ячеек в строке Уровня 3 ---
     <tr className="bg-gray-50/50 hover:bg-gray-100">
       <td className="w-24 px-4 py-1"></td>
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
-        <div className="group flex items-center gap-2">
-          <span>{sizeInfo.size.value}</span>
-          <button
-            onClick={() => setIsPriceEditing(true)}
-            className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
-          >
-            <PencilIcon className="h-3.5 w-3.5" />
-          </button>
-        </div>
+        {sizeInfo.size.value}
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
         0 шт.
@@ -209,14 +257,22 @@ export function ProductSizeRow({
         {isPriceEditing ? (
           <input
             type="text"
-            placeholder="Старая цена"
             value={oldPriceValue}
-            onChange={(e) => setOldPriceValue(e.target.value)}
+            onChange={(e) => {
+              setOldPriceValue(e.target.value);
+              setLastEditedField('oldPrice');
+            }}
             className="w-24 rounded-md border-gray-300 text-center shadow-sm"
             disabled={isPriceLoading}
           />
         ) : (
-          formatPrice(displayOldPrice)
+          <div
+            className="group relative flex cursor-pointer items-center justify-center gap-2"
+            onClick={() => setIsPriceEditing(true)}
+          >
+            <span>{formatPrice(oldPriceForDisplay)}</span>
+            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
         )}
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm font-medium text-gray-800">
@@ -224,9 +280,11 @@ export function ProductSizeRow({
           <div className="flex items-center justify-center gap-2">
             <input
               type="text"
-              placeholder="Цена"
               value={priceValue}
-              onChange={(e) => setPriceValue(e.target.value)}
+              onChange={(e) => {
+                setPriceValue(e.target.value);
+                setLastEditedField('price');
+              }}
               className="w-24 rounded-md border-gray-300 text-center shadow-sm"
               disabled={isPriceLoading}
               autoFocus
@@ -251,7 +309,13 @@ export function ProductSizeRow({
             </button>
           </div>
         ) : (
-          formatPrice(displayPrice)
+          <div
+            className="group relative flex cursor-pointer items-center justify-center gap-2"
+            onClick={() => setIsPriceEditing(true)}
+          >
+            <span>{formatPrice(priceForDisplay)}</span>
+            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
         )}
       </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-right text-sm font-bold text-gray-900">
@@ -259,6 +323,5 @@ export function ProductSizeRow({
       </td>
       <td className="w-24 px-6 py-1"></td>
     </tr>
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 }
