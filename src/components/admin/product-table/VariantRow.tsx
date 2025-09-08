@@ -120,19 +120,19 @@ export function VariantRow({ variant }: VariantRowProps) {
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={7} className="p-0">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Исправлен colSpan и выравнивание заголовков --- */}
+          <td colSpan={6} className="p-0">
             <table className="min-w-full">
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлен заголовок для новой колонки "Скидка %" --- */}
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
                   <th className="w-24 px-4 py-2"></th>
                   <th className="px-6 py-2 text-left">Размер</th>
-                  <th className="w-40 px-6 py-2 text-center">Бронь</th>
-                  <th className="w-40 px-6 py-2 text-center">Склад</th>
-                  <th className="w-40 px-6 py-2 text-center">Старая цена</th>
-                  <th className="w-40 px-6 py-2 text-center">Скидка %</th>
-                  <th className="w-40 px-6 py-2 text-center">Цена</th>
-                  <th className="w-40 px-6 py-2 text-right">Сумма</th>
+                  <th className="px-6 py-2 text-center">Бронь</th>
+                  <th className="px-6 py-2 text-center">Склад</th>
+                  <th className="px-6 py-2 text-center">Старая цена</th>
+                  <th className="px-6 py-2 text-center">Скидка %</th>
+                  <th className="px-6 py-2 text-center">Цена</th>
+                  <th className="px-6 py-2 text-center">Сумма</th>
                   <th className="w-24 px-6 py-2"></th>
                 </tr>
               </thead>
