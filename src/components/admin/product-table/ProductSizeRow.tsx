@@ -1,6 +1,6 @@
 // Местоположение: /src/components/admin/product-table/ProductSizeRow.tsx
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Prisma } from '@prisma/client';
 import toast from 'react-hot-toast';
@@ -14,6 +14,13 @@ const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '—';
   const priceInRubles = priceInCents / 100;
   return `${new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(priceInRubles)} RUB`;
+};
+
+const calculateDiscount = (oldPrice: number | null, price: number | null) => {
+  if (oldPrice && price && oldPrice > price) {
+    return Math.round(((oldPrice - price) / oldPrice) * 100);
+  }
+  return 0;
 };
 
 type SizeInfo = Prisma.ProductSizeGetPayload<{
@@ -42,15 +49,16 @@ export function ProductSizeRow({
   const resolvedPrice = sizeInfo.price ?? variantPrice;
   const resolvedOldPrice = sizeInfo.oldPrice ?? variantOldPrice;
   const priceForDisplay = resolvedPrice;
-
-  // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
   const oldPriceForDisplay =
     resolvedPrice !== null &&
     resolvedOldPrice !== null &&
     resolvedOldPrice > resolvedPrice
       ? resolvedOldPrice
       : resolvedPrice;
-  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+  const discountForDisplay = calculateDiscount(
+    oldPriceForDisplay,
+    priceForDisplay,
+  );
 
   // --- СОСТОЯНИЯ КОМПОНЕНТА ---
   const [isStockEditing, setIsStockEditing] = useState(false);
@@ -59,57 +67,62 @@ export function ProductSizeRow({
 
   const [isPriceEditing, setIsPriceEditing] = useState(false);
   const [isPriceLoading, setIsPriceLoading] = useState(false);
+
   const [priceValue, setPriceValue] = useState(
     String(priceForDisplay ? priceForDisplay / 100 : ''),
   );
   const [oldPriceValue, setOldPriceValue] = useState(
     String(oldPriceForDisplay ? oldPriceForDisplay / 100 : ''),
   );
-  const [lastEditedField, setLastEditedField] = useState<
-    'price' | 'oldPrice' | null
-  >(null);
+  const [discountValue, setDiscountValue] = useState(
+    String(discountForDisplay),
+  );
 
   const totalValue = (priceForDisplay || 0) * sizeInfo.stock;
 
-  // --- ОБРАБОТЧИКИ СОБЫТИЙ ---
+  // --- ОБРАБОТЧИКИ СОБЫТИЙ ДЛЯ ЦЕН ---
+  const handleOldPriceChange = (value: string) => {
+    setOldPriceValue(value);
+    const oldP = parseFloat(value.replace(',', '.')) || 0;
+    const currentP = parseFloat(priceValue.replace(',', '.')) || 0;
+    const newDiscount = calculateDiscount(oldP * 100, currentP * 100);
+    setDiscountValue(String(newDiscount));
+  };
+
+  const handleDiscountChange = (value: string) => {
+    setDiscountValue(value);
+    const discount = parseFloat(value) || 0;
+    const oldP = parseFloat(oldPriceValue.replace(',', '.')) || 0;
+    const newPrice = oldP * (1 - discount / 100);
+    setPriceValue(newPrice.toFixed(2));
+  };
+
+  const handlePriceChange = (value: string) => {
+    setPriceValue(value);
+    const newP = parseFloat(value.replace(',', '.')) || 0;
+    const oldP = parseFloat(oldPriceValue.replace(',', '.')) || 0;
+    const newDiscount = calculateDiscount(oldP * 100, newP * 100);
+    setDiscountValue(String(newDiscount));
+  };
+
   const handlePriceSave = async () => {
     if (!sizeInfo.moySkladHref) {
       toast.error('Ошибка: Href размера из МойСклад не найден.');
       return;
     }
 
-    const newPriceParsed = parseFloat(priceValue.replace(',', '.'));
-    const newOldPriceParsed = parseFloat(oldPriceValue.replace(',', '.'));
+    let newPrice = parseFloat(priceValue.replace(',', '.'));
+    let newOldPrice = parseFloat(oldPriceValue.replace(',', '.'));
 
-    if (isNaN(newPriceParsed) || isNaN(newOldPriceParsed)) {
+    if (isNaN(newPrice) || isNaN(newOldPrice)) {
       toast.error('Введите корректные числовые значения для цен.');
       return;
     }
 
     setIsPriceLoading(true);
 
-    let finalPrice = Math.round(newPriceParsed * 100);
-    let finalOldPrice = Math.round(newOldPriceParsed * 100);
-
-    const originalPriceForLogic = priceForDisplay || 0;
-    const originalOldPriceForLogic = oldPriceForDisplay || 0;
-
-    if (lastEditedField === 'price') {
-      if (finalPrice < originalOldPriceForLogic) {
-        finalOldPrice = originalOldPriceForLogic;
-      } else {
-        finalOldPrice = finalPrice;
-      }
-    } else if (lastEditedField === 'oldPrice') {
-      if (finalOldPrice > originalPriceForLogic) {
-        finalPrice = originalPriceForLogic;
-      } else {
-        finalPrice = finalOldPrice;
-      }
-    } else {
-      if (finalPrice >= finalOldPrice) {
-        finalOldPrice = finalPrice;
-      }
+    if (newPrice > newOldPrice) {
+      newOldPrice = newPrice;
     }
 
     const promise = fetch('/api/admin/products/update-size-price', {
@@ -119,8 +132,8 @@ export function ProductSizeRow({
       body: JSON.stringify({
         moySkladHref: sizeInfo.moySkladHref,
         productSizeId: sizeInfo.id,
-        newPrice: finalPrice,
-        newOldPrice: finalOldPrice,
+        newPrice: Math.round(newPrice * 100),
+        newOldPrice: Math.round(newOldPrice * 100),
       }),
     });
 
@@ -130,12 +143,10 @@ export function ProductSizeRow({
         if (!res.ok) throw new Error('Ошибка.');
         router.refresh();
         setIsPriceEditing(false);
-        setLastEditedField(null);
         return 'Цены успешно обновлены!';
       },
       error: 'Не удалось обновить цены.',
     });
-
     try {
       await promise;
     } catch (error) {
@@ -149,8 +160,8 @@ export function ProductSizeRow({
     setOldPriceValue(
       String(oldPriceForDisplay ? oldPriceForDisplay / 100 : ''),
     );
+    setDiscountValue(String(discountForDisplay));
     setIsPriceEditing(false);
-    setLastEditedField(null);
   };
 
   const handleStockSave = async () => {
@@ -258,10 +269,7 @@ export function ProductSizeRow({
           <input
             type="text"
             value={oldPriceValue}
-            onChange={(e) => {
-              setOldPriceValue(e.target.value);
-              setLastEditedField('oldPrice');
-            }}
+            onChange={(e) => handleOldPriceChange(e.target.value)}
             className="w-24 rounded-md border-gray-300 text-center shadow-sm"
             disabled={isPriceLoading}
           />
@@ -275,19 +283,43 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
+      <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm text-gray-500">
+        {isPriceEditing ? (
+          <div className="relative">
+            <input
+              type="text"
+              value={discountValue}
+              onChange={(e) => handleDiscountChange(e.target.value)}
+              className="w-24 rounded-md border-gray-300 text-center shadow-sm"
+              disabled={isPriceLoading}
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
+              %
+            </span>
+          </div>
+        ) : (
+          <div
+            className="group relative flex cursor-pointer items-center justify-center gap-2"
+            onClick={() => setIsPriceEditing(true)}
+          >
+            <span
+              className={discountForDisplay > 0 ? 'font-bold text-red-600' : ''}
+            >
+              {discountForDisplay}%
+            </span>
+            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
+        )}
+      </td>
       <td className="w-40 whitespace-nowrap px-6 py-1 text-center text-sm font-medium text-gray-800">
         {isPriceEditing ? (
           <div className="flex items-center justify-center gap-2">
             <input
               type="text"
               value={priceValue}
-              onChange={(e) => {
-                setPriceValue(e.target.value);
-                setLastEditedField('price');
-              }}
+              onChange={(e) => handlePriceChange(e.target.value)}
               className="w-24 rounded-md border-gray-300 text-center shadow-sm"
               disabled={isPriceLoading}
-              autoFocus
             />
             <button
               onClick={handlePriceSave}

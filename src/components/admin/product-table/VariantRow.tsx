@@ -50,7 +50,6 @@ export function VariantRow({ variant }: VariantRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const totalStock = variant.sizes.reduce((sum, size) => sum + size.stock, 0);
 
-  // --- НАЧАЛО ИСПРАВЛЕНИЯ: Обновлена логика расчета сумм ---
   const totalSalePrice = variant.sizes.reduce(
     (sum, size) => sum + (size.price ?? variant.price ?? 0) * size.stock,
     0,
@@ -69,7 +68,6 @@ export function VariantRow({ variant }: VariantRowProps) {
 
     return sum + (priceForOldSum ?? 0) * size.stock;
   }, 0);
-  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
   return (
     <Fragment>
@@ -113,11 +111,9 @@ export function VariantRow({ variant }: VariantRowProps) {
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
           {totalStock} шт.
         </td>
-        {/* --- НАЧАЛО ИСПРАВЛЕНИЯ: Убрана условная логика с прочерком --- */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-500">
           {formatPrice(totalOldPrice)}
         </td>
-        {/* --- КОНЕЦ ИСПРАВЛЕНИЯ --- */}
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold text-gray-800">
           {formatPrice(totalSalePrice)}
         </td>
@@ -126,6 +122,7 @@ export function VariantRow({ variant }: VariantRowProps) {
         <tr>
           <td colSpan={7} className="p-0">
             <table className="min-w-full">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлен заголовок для новой колонки "Скидка %" --- */}
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
                   <th className="w-24 px-4 py-2"></th>
@@ -133,11 +130,13 @@ export function VariantRow({ variant }: VariantRowProps) {
                   <th className="w-40 px-6 py-2 text-center">Бронь</th>
                   <th className="w-40 px-6 py-2 text-center">Склад</th>
                   <th className="w-40 px-6 py-2 text-center">Старая цена</th>
+                  <th className="w-40 px-6 py-2 text-center">Скидка %</th>
                   <th className="w-40 px-6 py-2 text-center">Цена</th>
                   <th className="w-40 px-6 py-2 text-right">Сумма</th>
                   <th className="w-24 px-6 py-2"></th>
                 </tr>
               </thead>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-100">
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
