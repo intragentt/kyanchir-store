@@ -2,15 +2,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { deleteMoySkladProducts } from '@/lib/moysklad-api';
 
-// Определяем тип для context, чтобы избежать ошибок сборки
 type RouteContext = {
   params: {
     id: string;
   };
 };
 
-// GET и DELETE остаются без изменений
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const { id } = params;
   const product = await prisma.product.findUnique({
@@ -35,25 +36,67 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   return NextResponse.json(product);
 }
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем логику удаления ---
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role.name !== 'ADMIN') {
+    return new NextResponse('Неавторизован', { status: 401 });
+  }
+
   try {
     const { id } = params;
+
+    // 1. Находим товар и все ID, связанные с МойСклад
+    const productToDelete = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        variants: {
+          select: {
+            moySkladId: true,
+          },
+        },
+      },
+    });
+
+    if (!productToDelete) {
+      return new NextResponse('Продукт не найден', { status: 404 });
+    }
+
+    const moySkladIdsToDelete = productToDelete.variants
+      .map((v) => v.moySkladId)
+      .filter((id): id is string => !!id);
+
+    // Добавляем ID самого родительского товара, если он есть
+    if (productToDelete.moyskladId) {
+      moySkladIdsToDelete.push(productToDelete.moyskladId);
+    }
+
+    // 2. Сначала удаляем из МойСклад
+    if (moySkladIdsToDelete.length > 0) {
+      await deleteMoySkladProducts(moySkladIdsToDelete);
+    }
+
+    // 3. Только после этого удаляем из нашей БД
+    // Каскадное удаление в Prisma позаботится о вариантах, размерах и т.д.
     await prisma.product.delete({ where: { id } });
+
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Ошибка при удалении продукта:', error);
-    return new NextResponse('Ошибка на сервере', { status: 500 });
+    const errorMessage =
+      error instanceof Error ? error.message : 'Внутренняя ошибка сервера';
+    return new NextResponse(errorMessage, { status: 500 });
   }
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export async function PUT(req: NextRequest, { params }: RouteContext) {
   try {
     const productId = params.id;
-    // --- ИЗМЕНЕНИЕ: 'sku' заменено на 'article' ---
     const body: {
       name: string;
       status: { id: string; name: string };
-      article: string | null; // <-- ИЗМЕНЕНО
+      article: string | null;
       variants: any[];
       categories: { id: string }[];
       tags: { id: string }[];
@@ -64,7 +107,7 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
     const {
       name,
       status,
-      article, // <-- ИЗМЕНЕНО
+      article,
       variants,
       categories,
       tags,
@@ -74,12 +117,11 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
 
     const updatedProduct = await prisma.$transaction(
       async (tx) => {
-        // Шаг 1: Обновляем продукт
         await tx.product.update({
           where: { id: productId },
           data: {
             name,
-            article, // <-- ИЗМЕНЕНО
+            article,
             statusId: status.id,
             categories: {
               set: categories.map((cat: { id: string }) => ({ id: cat.id })),
@@ -88,7 +130,6 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
           },
         });
 
-        // Шаг 2: Полностью заменяем атрибуты и альтернативные имена
         await tx.attribute.deleteMany({ where: { productId } });
         if (attributes && attributes.length > 0) {
           await tx.attribute.createMany({
@@ -110,7 +151,6 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
           });
         }
 
-        // Шаг 3: Полностью заменяем варианты и их вложенные данные
         const oldVariants = await tx.productVariant.findMany({
           where: { productId },
           select: { id: true },
@@ -161,7 +201,6 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
           }
         }
 
-        // Шаг 4: Возвращаем полностью обновленный продукт с новыми данными
         return tx.product.findUnique({
           where: { id: productId },
           include: {

@@ -4,12 +4,15 @@
 import { useState, Fragment } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // <-- ШАГ 1: Импортируем useRouter
+import toast from 'react-hot-toast'; // <-- ШАГ 1: Импортируем toast
 import type { Category, Tag } from '@prisma/client';
 
 import type { ProductForTable } from '@/app/admin/dashboard/page';
 import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
 import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { PencilIcon } from '@/components/icons/PencilIcon';
+import { TrashIcon } from '@/components/icons/TrashIcon'; // <-- ШАГ 2: Импортируем иконку
 import { VariantRow } from './VariantRow';
 
 const statusConfig: Record<string, { dotClassName: string; label: string }> = {
@@ -41,7 +44,9 @@ export const ProductTableRow = ({
   allCategories,
   allTags,
 }: ProductTableRowProps) => {
+  const router = useRouter(); // <-- Инициализируем роутер
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // <-- Состояние для процесса удаления
 
   const totalStock = product.variants.reduce(
     (sum, variant) =>
@@ -49,11 +54,9 @@ export const ProductTableRow = ({
     0,
   );
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновленная функция расчета ---
   const calculateTotalValue = () => {
     const totalValue = product.variants.reduce((sum, variant) => {
       const variantValue = variant.sizes.reduce((value, size) => {
-        // Проверяем, есть ли у размера своя цена. Если нет, берем цену варианта.
         const priceToUse = size.price ?? variant.price ?? 0;
         return value + priceToUse * size.stock;
       }, 0);
@@ -61,7 +64,40 @@ export const ProductTableRow = ({
     }, 0);
     return formatPrice(totalValue);
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  // --- ШАГ 3: Создаем функцию удаления ---
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Останавливаем раскрытие строки
+
+    if (
+      window.confirm(
+        `Вы уверены, что хотите удалить товар "${product.name}"? Это действие необратимо.`,
+      )
+    ) {
+      setIsDeleting(true);
+      const toastId = toast.loading('Удаление товара...');
+      try {
+        const response = await fetch(`/api/products/${product.id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Ошибка сервера');
+        }
+
+        toast.success('Товар успешно удален!', { id: toastId });
+        router.refresh(); // Обновляем таблицу
+      } catch (error) {
+        toast.error(
+          `Не удалось удалить: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+          { id: toastId },
+        );
+        setIsDeleting(false);
+      }
+      // isDeleting(false) не нужен в `finally`, т.к. страница перезагрузится
+    }
+  };
 
   const rowClassName = isExpanded ? 'bg-indigo-50/50' : 'bg-white';
 
@@ -138,11 +174,23 @@ export const ProductTableRow = ({
         <td className="px-6 py-4 text-center text-sm font-bold">
           {calculateTotalValue()}
         </td>
+        {/* --- ШАГ 4: Добавляем новую ячейку для кнопки удаления --- */}
+        <td className="px-6 py-4 text-center text-sm">
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Удалить товар"
+          >
+            <TrashIcon className="h-5 w-5" />
+          </button>
+        </td>
       </tr>
 
       {isExpanded && (
         <tr>
-          <td colSpan={7} className="p-0">
+          {/* --- ШАГ 4: Увеличиваем colSpan, чтобы учесть новую колонку --- */}
+          <td colSpan={8} className="p-0">
             <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
               <table className="min-w-full">
                 <thead>
@@ -153,6 +201,8 @@ export const ProductTableRow = ({
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Старая сумма</th>
                     <th className="w-40 px-6 py-2 text-center">Сумма</th>
+                    {/* Пустая ячейка для выравнивания с новой колонкой */}
+                    <th className="w-[112px] px-6 py-2"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
