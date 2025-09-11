@@ -3,7 +3,7 @@
 
 import { useState, Fragment } from 'react';
 import Image from 'next/image';
-import Link from 'next/link'; // <-- ШАГ 1: Добавляем импорт Link
+import Link from 'next/link';
 import type { Category, Tag } from '@prisma/client';
 
 import type { ProductForTable } from '@/app/admin/dashboard/page';
@@ -42,7 +42,6 @@ export const ProductTableRow = ({
   allTags,
 }: ProductTableRowProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  // ШАГ 2: Удаляем ненужное состояние isDetailsExpanded
 
   const totalStock = product.variants.reduce(
     (sum, variant) =>
@@ -50,16 +49,19 @@ export const ProductTableRow = ({
     0,
   );
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновленная функция расчета ---
   const calculateTotalValue = () => {
     const totalValue = product.variants.reduce((sum, variant) => {
-      const variantValue = variant.sizes.reduce(
-        (value, size) => value + (variant.price || 0) * size.stock,
-        0,
-      );
+      const variantValue = variant.sizes.reduce((value, size) => {
+        // Проверяем, есть ли у размера своя цена. Если нет, берем цену варианта.
+        const priceToUse = size.price ?? variant.price ?? 0;
+        return value + priceToUse * size.stock;
+      }, 0);
       return sum + variantValue;
     }, 0);
     return formatPrice(totalValue);
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const rowClassName = isExpanded ? 'bg-indigo-50/50' : 'bg-white';
 
@@ -107,10 +109,9 @@ export const ProductTableRow = ({
                   )}
                 </div>
               )}
-              {/* --- ШАГ 3: Заменяем <button> на <Link> --- */}
               <Link
                 href={`/admin/products/${product.id}/edit`}
-                onClick={(e) => e.stopPropagation()} // Предотвращаем раскрытие строки при клике на ссылку
+                onClick={(e) => e.stopPropagation()}
                 className="mt-1 flex items-center gap-1 text-xs text-indigo-600 hover:underline"
               >
                 <PencilIcon className="h-3 w-3" />
