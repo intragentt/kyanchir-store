@@ -7,18 +7,18 @@ import prisma from '@/lib/prisma';
 import { getMoySkladProducts, getMoySkladStock } from '@/lib/moysklad-api';
 import type { Status } from '@prisma/client';
 
-// --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ: Правильно очищаем UUID ---
 function getUUIDFromHref(href: string): string {
   const pathPart = href.split('/').pop() || '';
-  return pathPart.split('?')[0]; // Убираем параметры запроса, такие как ?expand=...
+  return pathPart.split('?')[0];
 }
-// --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
 
 async function runSync() {
-  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v9 (ПОБЕДА) ---');
+  console.log(
+    '--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v10 (УНИВЕРСАЛЬНАЯ) ---',
+  );
 
-  // 1. ПОДГОТОВКА: Получаем все данные
-  console.log('1/5: Получение данных из МойСклад и нашей БД...');
+  // 1. ПОДГОТОВКА
+  console.log('1/6: Получение данных...');
   const [
     moySkladResponse,
     stockResponse,
@@ -54,12 +54,8 @@ async function runSync() {
   );
   const variants = moySkladItems.filter((item) => item.meta.type === 'variant');
 
-  console.log(
-    `Данные получены: Товаров=${parentProducts.length}, Модификаций=${variants.length}`,
-  );
-
-  // 2. ЭТАП 1: Синхронизация Родительских Товаров
-  console.log('2/5: Синхронизация родительских товаров...');
+  // 2. СИНХРОНИЗАЦИЯ РОДИТЕЛЕЙ
+  console.log('2/6: Синхронизация родительских товаров...');
   for (const msProduct of parentProducts) {
     const categoryMoySkladId = msProduct.productFolder
       ? getUUIDFromHref(msProduct.productFolder.meta.href)
@@ -70,9 +66,7 @@ async function runSync() {
 
     await prisma.product.upsert({
       where: { moyskladId: msProduct.id },
-      update: {
-        name: msProduct.name,
-      },
+      update: { name: msProduct.name },
       create: {
         name: msProduct.name,
         article: msProduct.article || `ms-${msProduct.id}`,
@@ -85,44 +79,85 @@ async function runSync() {
     });
   }
 
-  // 3. ЭТАП 2: Предварительная группировка вариантов
-  console.log('3/5: Группировка вариантов по цветам и размерам...');
+  // 3. ОБРАБОТКА ПРОСТЫХ ТОВАРОВ (БЕЗ ВАРИАНТОВ)
+  console.log('3/6: Обработка простых товаров (без вариантов)...');
   const ourProductsMap = new Map(
     (
       await prisma.product.findMany({ select: { id: true, moyskladId: true } })
     ).map((p) => [p.moyskladId, p.id]),
   );
 
-  const groupedVariants = new Map<string, Map<string, any[]>>();
+  for (const msProduct of parentProducts) {
+    if (msProduct.variantsCount === 0) {
+      // Проверяем, есть ли у товара модификации
+      const ourProductId = ourProductsMap.get(msProduct.id);
+      if (!ourProductId) continue;
 
+      const oneSize = await prisma.size.upsert({
+        where: { value: 'ONE SIZE' },
+        update: {},
+        create: { value: 'ONE SIZE' },
+      });
+      sizeMap.set('ONE SIZE', oneSize.id);
+
+      const priceObj = (msProduct.salePrices || []).find(
+        (p: any) => p.priceType.name === 'Цена продажи',
+      );
+      const price = priceObj ? Math.round(priceObj.value) : 0;
+
+      const variant = await prisma.productVariant.upsert({
+        where: {
+          productId_color: { productId: ourProductId, color: 'Основной' },
+        },
+        update: { price },
+        create: {
+          product: { connect: { id: ourProductId } },
+          color: 'Основной',
+          price,
+          moySkladId: msProduct.id, // ID варианта совпадает с ID родителя
+        },
+      });
+
+      await prisma.productSize.upsert({
+        where: { moySkladHref: msProduct.meta.href },
+        update: {
+          stock: stockMap.get(msProduct.id) || 0,
+        },
+        create: {
+          productVariant: { connect: { id: variant.id } },
+          size: { connect: { id: oneSize.id } },
+          stock: stockMap.get(msProduct.id) || 0,
+          moySkladHref: msProduct.meta.href,
+          moySkladType: msProduct.meta.type,
+        },
+      });
+    }
+  }
+
+  // 4. ГРУППИРОВКА СЛОЖНЫХ ВАРИАНТОВ
+  console.log('4/6: Группировка сложных вариантов...');
+  const groupedVariants = new Map<string, Map<string, any[]>>();
   for (const msVariant of variants) {
     const parentProductMoySkladId = getUUIDFromHref(
       msVariant.product.meta.href,
     );
     const ourProductId = ourProductsMap.get(parentProductMoySkladId);
     if (!ourProductId) continue;
-
     const color =
       msVariant.characteristics?.find((c: any) => c.name === 'Цвет')?.value ||
       'Основной';
-
-    if (!groupedVariants.has(ourProductId)) {
+    if (!groupedVariants.has(ourProductId))
       groupedVariants.set(ourProductId, new Map<string, any[]>());
-    }
     const productColors = groupedVariants.get(ourProductId)!;
-
-    if (!productColors.has(color)) {
-      productColors.set(color, []);
-    }
+    if (!productColors.has(color)) productColors.set(color, []);
     productColors.get(color)!.push(msVariant);
   }
 
-  // 4. ЭТАП 3: Синхронизация сгруппированных вариантов
-  console.log('4/5: Синхронизация сгруппированных вариантов и размеров...');
+  // 5. СИНХРОНИЗАЦИЯ СЛОЖНЫХ ВАРИАНТОВ
+  console.log('5/6: Синхронизация сгруппированных вариантов...');
   for (const [ourProductId, colorsMap] of groupedVariants.entries()) {
     for (const [color, msVariantsInColor] of colorsMap.entries()) {
       const representativeVariant = msVariantsInColor[0];
-
       const regularPriceObj = (representativeVariant.salePrices || []).find(
         (p: any) => p.priceType.name === 'Цена продажи',
       );
@@ -137,7 +172,6 @@ async function runSync() {
         salePrice > 0 && salePrice < regularPrice ? salePrice : regularPrice;
       const oldPrice =
         salePrice > 0 && salePrice < regularPrice ? regularPrice : null;
-
       const productVariant = await prisma.productVariant.upsert({
         where: { productId_color: { productId: ourProductId, color: color } },
         update: { price, oldPrice },
@@ -148,7 +182,6 @@ async function runSync() {
           oldPrice,
         },
       });
-
       for (const msVariant of msVariantsInColor) {
         const sizeValue =
           msVariant.characteristics?.find((c: any) => c.name === 'Размер')
@@ -161,15 +194,9 @@ async function runSync() {
           ourSizeId = newSize.id;
           sizeMap.set(sizeValue, ourSizeId);
         }
-
         await prisma.productSize.upsert({
           where: { moySkladHref: msVariant.meta.href },
-          update: {
-            stock: stockMap.get(msVariant.id) || 0,
-            productVariantId: productVariant.id,
-            sizeId: ourSizeId,
-            moySkladType: msVariant.meta.type,
-          },
+          update: { stock: stockMap.get(msVariant.id) || 0 },
           create: {
             productVariant: { connect: { id: productVariant.id } },
             size: { connect: { id: ourSizeId } },
@@ -182,12 +209,8 @@ async function runSync() {
     }
   }
 
-  console.log('5/5: Умная синхронизация завершена успешно.');
-  return {
-    message: `Синхронизация успешно завершена.`,
-    synchronizedProducts: parentProducts.length,
-    synchronizedVariants: variants.length,
-  };
+  console.log('6/6: Умная синхронизация завершена успешно.');
+  return { message: `Синхронизация успешно завершена.` };
 }
 
 export async function POST(req: NextRequest) {
