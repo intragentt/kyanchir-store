@@ -185,7 +185,7 @@ async function runSync() {
       for (const msVariant of msVariantsInColor) {
         const sizeValue =
           msVariant.characteristics?.find((c: any) => c.name === 'Размер')
-            ?.value || 'ONE_SIZE';
+            ?.value || 'ONE SIZE';
         let ourSizeId = sizeMap.get(sizeValue);
         if (!ourSizeId) {
           const newSize = await prisma.size.create({
