@@ -37,12 +37,12 @@ async function runSync() {
     allOurCategories.map((cat) => [cat.moyskladId, cat.id]),
   );
   const sizeMap = new Map(allOurSizes.map((size) => [size.value, size.id]));
-
-  // --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ: Используем href-ключ и суммируем ---
+  
+  // --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ: Используем правильный assortmentId и суммируем ---
   const stockMap = new Map<string, number>();
   stockResponse.rows.forEach((item: any) => {
-    // Используем UUID из meta.href, это единственный надежный ключ
-    const assortmentId = getUUIDFromHref(item.meta.href);
+    // Используем `assortmentId` - это прямой ID товара/модификации из отчета по остаткам
+    const assortmentId = item.assortmentId; 
     const currentStock = stockMap.get(assortmentId) || 0;
     stockMap.set(assortmentId, currentStock + (item.stock || 0));
   });
@@ -92,7 +92,7 @@ async function runSync() {
       await prisma.product.findMany({ select: { id: true, moyskladId: true } })
     ).map((p) => [p.moyskladId, p.id]),
   );
-
+  
   const groupedVariants = new Map<string, Map<string, any[]>>();
 
   for (const msVariant of variants) {
