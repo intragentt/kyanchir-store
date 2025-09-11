@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { updateMoySkladPrice } from '@/lib/moysklad-api';
 
+// --- ИЗМЕНЕНИЕ: Убираем moySkladHref из ожидаемого тела запроса ---
 interface RequestBody {
   productSizeId: string;
   newPrice: number | null;
@@ -21,15 +22,17 @@ export async function POST(req: Request) {
 
   try {
     const body = (await req.json()) as RequestBody;
+    // --- ИЗМЕНЕНИЕ: Не получаем moySkladHref из тела ---
     const { productSizeId, newPrice, newOldPrice } = body;
 
+    // --- ИЗМЕНЕНИЕ: Обновленная валидация ---
     if (!productSizeId) {
       return new NextResponse('Отсутствует ID размера для обновления', {
         status: 400,
       });
     }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем актуальный moySkladId ---
+    // --- НОВАЯ ЛОГИКА: Получаем актуальный moySkladId ---
 
     // 1. Находим ProductSize и его родительский ProductVariant в нашей БД
     const sizeWithVariant = await prisma.productSize.findUnique({
@@ -48,10 +51,10 @@ export async function POST(req: Request) {
     // 2. Извлекаем ID товара в МойСклад из родительского варианта
     const moySkladProductId = sizeWithVariant.productVariant.moySkladId;
 
-    // 3. Вызываем API-мост с правильным ID товара
+    // 3. Вызываем API-мост с правильным ID товара, а не с href
     await updateMoySkladPrice(moySkladProductId, newPrice, newOldPrice);
 
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
 
     // 4. Синхронизация с нашей БД (остается без изменений)
     await prisma.productSize.update({
