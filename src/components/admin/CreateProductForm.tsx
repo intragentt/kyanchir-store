@@ -3,54 +3,71 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { Category, Status } from '@prisma/client';
+import toast, { Toaster } from 'react-hot-toast';
+import Link from 'next/link';
 
-export default function CreateProductForm() {
+interface CreateProductFormProps {
+  categories: Category[];
+  statuses: Status[];
+}
+
+export default function CreateProductForm({
+  categories,
+  statuses,
+}: CreateProductFormProps) {
   const router = useRouter();
-  const [name, setName] = useState('');
-  // VVV--- ИЗМЕНЕНИЕ: Состояние для description больше не нужно здесь ---VVV
-  // const [description, setDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    article: '',
+    description: '',
+    categoryId: categories[0]?.id || '',
+    statusId: statuses[0]?.id || '',
+  });
+
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
+    toast.loading('Создаём товар...', { id: 'create-product' });
 
-    try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          // VVV--- ИЗМЕНЕНИЕ: Отправляем пустой description, будем заполнять его на странице редактирования ---VVV
-          description: '',
-          status: 'DRAFT',
-        }),
-      });
+    // ЗАГЛУШКА: Пока что просто выводим данные в консоль.
+    // На следующем шаге здесь будет fetch-запрос к нашему API.
+    console.log('Данные для отправки:', formData);
 
-      if (!response.ok) {
-        throw new Error('Не удалось создать продукт');
-      }
+    // Имитация задержки сети
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const newProduct = await response.json();
-      router.push(`/admin/products/${newProduct.id}/edit`);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Произошла неизвестная ошибка',
-      );
-      setIsLoading(false);
-    }
+    toast.success('Товар успешно создан (симуляция)', {
+      id: 'create-product',
+    });
+
+    // В будущем здесь будет редирект на страницу редактирования товара
+    // router.push(`/admin/products/${newProductId}`);
+
+    router.push('/admin/dashboard'); // Возвращаемся на дашборд
+    router.refresh(); // Обновляем данные на странице
+    setIsLoading(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 rounded-lg border border-gray-200 bg-white p-8 shadow-sm"
+    >
+      <Toaster position="top-center" />
 
+      {/* Название товара */}
       <div>
         <label
           htmlFor="name"
@@ -58,29 +75,118 @@ export default function CreateProductForm() {
         >
           Название товара
         </label>
-        <div className="mt-1">
-          <input
-            id="name"
-            name="name"
-            type="text"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="block w-full rounded-md border-gray-300 bg-gray-50 p-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="например, Комплект белья 'Нежность'"
-          />
-        </div>
+        <input
+          type="text"
+          id="name"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          placeholder="Например, Комплект 'Нежность'"
+        />
       </div>
 
-      {/* VVV--- ИЗМЕНЕНИЕ: Полностью удален блок для Описания ---VVV */}
+      {/* Артикул */}
+      <div>
+        <label
+          htmlFor="article"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Артикул
+        </label>
+        <input
+          type="text"
+          id="article"
+          name="article"
+          value={formData.article}
+          onChange={handleChange}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          placeholder="Генерируется автоматически, если оставить пустым"
+        />
+      </div>
 
-      <div className="flex justify-end pt-4">
+      {/* Описание */}
+      <div>
+        <label
+          htmlFor="description"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Описание
+        </label>
+        <textarea
+          id="description"
+          name="description"
+          rows={4}
+          value={formData.description}
+          onChange={handleChange}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          placeholder="Ключевые фичи, уход, ощущения..."
+        ></textarea>
+      </div>
+
+      {/* Категория */}
+      <div>
+        <label
+          htmlFor="categoryId"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Категория
+        </label>
+        <select
+          id="categoryId"
+          name="categoryId"
+          value={formData.categoryId}
+          onChange={handleChange}
+          required
+          className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+        >
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Статус */}
+      <div>
+        <label
+          htmlFor="statusId"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Статус
+        </label>
+        <select
+          id="statusId"
+          name="statusId"
+          value={formData.statusId}
+          onChange={handleChange}
+          required
+          className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+        >
+          {statuses.map((status) => (
+            <option key={status.id} value={status.id}>
+              {status.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Кнопки управления */}
+      <div className="flex items-center justify-end gap-x-4 border-t border-gray-200 pt-6">
+        <Link
+          href="/admin/dashboard"
+          className="text-sm font-semibold text-gray-600 hover:text-gray-800"
+        >
+          Отмена
+        </Link>
         <button
           type="submit"
-          disabled={isLoading || !name.trim()} // Кнопка неактивна, если имя пустое
-          className="hover:bg-opacity-80 rounded-md border border-transparent bg-[#272727] px-4 py-2 text-sm font-medium text-white shadow-sm focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
+          disabled={isLoading}
+          className="rounded-lg bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? 'Создание...' : 'Создать и перейти к деталям →'}
+          {isLoading ? 'Создание...' : 'Создать товар'}
         </button>
       </div>
     </form>

@@ -11,7 +11,7 @@ datasource db {
 // === МОДЕЛИ E-COMMERCE ===
 model Product {
   id               String            @id @default(cuid())
-  sku              String?           @unique
+  article          String?           @unique // ПЕРЕИМЕНОВАНО: было 'sku'
   name             String            @unique
   alternativeNames AlternativeName[]
   description      String?           @db.Text
@@ -34,6 +34,7 @@ model ProductVariant {
   images             Image[]
   price              Int // Цена по умолчанию для всех размеров
   oldPrice           Int?
+  costPrice          Int? // ДОБАВЛЕНО: Себестоимость
   discountPercentage Int?
   discountExpiresAt  DateTime?
   bonusPoints        Int?
@@ -62,12 +63,9 @@ model ProductSize {
   sizeId           String
   size             Size           @relation(fields: [sizeId], references: [id])
   stock            Int
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем поля для переопределения цены ---
-  price            Int? // Индивидуальная цена для этого размера
-  oldPrice         Int? // Индивидуальная старая цена
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
+  price            Int?
+  oldPrice         Int?
+  orderItems       OrderItem[] // ДОБАВЛЕНО: Связь с позициями в заказах
   @@unique([productVariantId, sizeId])
 }
 
@@ -77,7 +75,6 @@ model Size {
   productSizes ProductSize[]
 }
 
-// ... остальная часть файла без изменений ...
 model Attribute {
   id        String  @id @default(cuid())
   productId String
@@ -121,6 +118,52 @@ model Status {
   name     String    @unique // DRAFT, PUBLISHED, ARCHIVED
   products Product[]
 }
+
+// === МОДЕЛИ ЗАКАЗОВ (НОВЫЙ БЛОК) ===
+model OrderStatus {
+  id     String  @id @default(cuid())
+  name   String  @unique // PENDING_PAYMENT, AWAITING_SHIPMENT, SHIPPED, DELIVERED, CANCELED
+  orders Order[]
+}
+
+model Order {
+  id                   String      @id @default(cuid())
+  orderNumber          String      @unique
+  statusId             String
+  status               OrderStatus @relation(fields: [statusId], references: [id])
+  items                OrderItem[]
+  totalAmount          Int
+  customerName         String
+  customerEmail        String
+  customerPhone        String
+  shippingAddress      String      @db.Text
+  shippingCity         String
+  shippingPostalCode   String
+  userId               String?
+  user                 User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  moySkladId           String?     @unique
+  cdekId               String?     @unique
+  paymentTransactionId String?     @unique
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+}
+
+model OrderItem {
+  id                 String      @id @default(cuid())
+  orderId            String
+  order              Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productSizeId      String
+  productSize        ProductSize @relation(fields: [productSizeId], references: [id], onDelete: Restrict)
+  quantity           Int
+  priceAtPurchase    Int
+  productName        String
+  productArticle     String?
+  productColor       String?
+  productSizeValue   String
+}
+
+
+// === МОДЕЛИ ПОЛЬЗОВАТЕЛЕЙ, АУТЕНТИФИКАЦИИ И ПОДДЕРЖКИ ===
 
 model FilterPreset {
   id        String       @id @default(cuid())
@@ -173,6 +216,7 @@ model User {
   roleId        String
   role          UserRole     @relation(fields: [roleId], references: [id])
   bonusPoints   Int          @default(0)
+  orders        Order[] // ДОБАВЛЕНО: Связь с заказами пользователя
 }
 
 model Account {
