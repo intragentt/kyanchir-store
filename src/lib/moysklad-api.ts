@@ -54,9 +54,8 @@ export const createMoySkladProduct = async (
   });
 };
 
-// --- НАЧАЛО ФИНАЛЬНЫХ ИЗМЕНЕНИЙ ---
+// --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
 
-// Кэшируем полный meta-объект характеристики "Цвет"
 let cachedColorCharacteristicMeta: any | null = null;
 
 const getMoySkladColorCharacteristicMeta = async () => {
@@ -70,7 +69,7 @@ const getMoySkladColorCharacteristicMeta = async () => {
   if (!colorChar) {
     throw new Error('Характеристика "Цвет" не найдена в МойСклад.');
   }
-  cachedColorCharacteristicMeta = colorChar.meta; // Кэшируем весь meta-объект
+  cachedColorCharacteristicMeta = colorChar.meta;
   return cachedColorCharacteristicMeta;
 };
 
@@ -87,8 +86,6 @@ export const createMoySkladVariant = async (
 
   const body = {
     article: variantArticle,
-    // УДАЛЯЕМ 'name', так как МойСклад сгенерирует его из характеристик.
-    // Это устраняет конфликт в API.
     product: {
       meta: {
         href: `${MOYSKLAD_API_URL}/entity/product/${productMoySkladId}`,
@@ -96,10 +93,12 @@ export const createMoySkladVariant = async (
         mediaType: 'application/json',
       },
     },
-    // Отправляем полный meta-объект, как требует документация.
+    // ИСПРАВЛЕННАЯ СТРУКТУРА: Добавлен ключ "characteristic"
     characteristics: [
       {
-        meta: colorCharacteristicMeta,
+        characteristic: {
+          meta: colorCharacteristicMeta,
+        },
         value: variantColorValue,
       },
     ],
@@ -110,7 +109,7 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ ФИНАЛЬНЫХ ИЗМЕНЕНИЙ ---
+// --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
 
 export const getMoySkladProducts = async () => {
   return await moySkladFetch('entity/assortment?expand=productFolder,images');
@@ -124,28 +123,25 @@ export const getMoySkladStock = async () => {
   const data = await moySkladFetch('report/stock/all?stockMode=all');
   return data;
 };
+
+// ... (весь остальной код файла без изменений) ...
+
 let cachedRefs: { organization: any; store: any } | null = null;
 const getMoySkladDefaultRefs = async () => {
-  if (cachedRefs) {
-    return cachedRefs;
-  }
-  console.log('[API МойСклад] Получение организации и склада по умолчанию...');
+  if (cachedRefs) return cachedRefs;
   const [orgResponse, storeResponse] = await Promise.all([
     moySkladFetch('entity/organization'),
     moySkladFetch('entity/store'),
   ]);
-  if (!orgResponse?.rows?.[0] || !storeResponse?.rows?.[0]) {
-    throw new Error(
-      'Не удалось получить организацию или склад по умолчанию из МойСклад.',
-    );
-  }
-  const refs = {
+  if (!orgResponse?.rows?.[0] || !storeResponse?.rows?.[0])
+    throw new Error('Не удалось получить организацию или склад по умолчанию.');
+  cachedRefs = {
     organization: orgResponse.rows[0].meta,
     store: storeResponse.rows[0].meta,
   };
-  cachedRefs = refs;
-  return refs;
+  return cachedRefs;
 };
+
 export const updateMoySkladVariantStock = async (
   moySkladHref: string,
   moySkladType: string,
@@ -153,52 +149,40 @@ export const updateMoySkladVariantStock = async (
   oldStock: number,
 ) => {
   const delta = newStock - oldStock;
-  if (delta === 0) {
-    console.log('[API МойСклад] Остаток не изменился, операция пропущена.');
-    return null;
-  }
+  if (delta === 0) return null;
   const { organization, store } = await getMoySkladDefaultRefs();
   const quantity = Math.abs(delta);
-  let endpoint = '';
-  const position = {
-    quantity: quantity,
-    assortment: { meta: { href: moySkladHref, type: moySkladType } },
-  };
-  if (delta > 0) {
-    endpoint = 'entity/enter';
-    console.log(`[API МойСклад] Создание Оприходования на ${quantity} шт.`);
-  } else {
-    endpoint = 'entity/loss';
-    console.log(`[API МойСклад] Создание Списания на ${quantity} шт.`);
-  }
+  const endpoint = delta > 0 ? 'entity/enter' : 'entity/loss';
   const body = {
     organization: { meta: organization },
     store: { meta: store },
-    positions: [position],
+    positions: [
+      {
+        quantity,
+        assortment: { meta: { href: moySkladHref, type: moySkladType } },
+      },
+    ],
   };
   return await moySkladFetch(endpoint, {
     method: 'POST',
     body: JSON.stringify(body),
   });
 };
+
 let cachedPriceTypes: { salePrice: any; discountPrice: any } | null = null;
 const getMoySkladPriceTypes = async () => {
-  if (cachedPriceTypes) {
-    return cachedPriceTypes;
-  }
-  console.log('[API МойСклад] Получение ID типов цен...');
+  if (cachedPriceTypes) return cachedPriceTypes;
   const response = await moySkladFetch('context/companysettings/pricetype');
   const salePrice = response.find((pt: any) => pt.name === 'Цена продажи');
   const discountPrice = response.find((pt: any) => pt.name === 'Скидка');
-  if (!salePrice) {
-    throw new Error('Тип цены "Цена продажи" не найден в МойСклад.');
-  }
+  if (!salePrice) throw new Error('Тип цены "Цена продажи" не найден.');
   cachedPriceTypes = {
     salePrice: salePrice.meta,
     discountPrice: discountPrice ? discountPrice.meta : null,
   };
   return cachedPriceTypes;
 };
+
 export const updateMoySkladPrice = async (
   moySkladHref: string,
   price: number | null,
@@ -206,12 +190,8 @@ export const updateMoySkladPrice = async (
 ) => {
   const { salePrice, discountPrice } = await getMoySkladPriceTypes();
   const salePrices = [];
-  if (oldPrice && oldPrice > 0) {
-    salePrices.push({
-      value: oldPrice * 100,
-      priceType: { meta: salePrice },
-    });
-  }
+  if (oldPrice && oldPrice > 0)
+    salePrices.push({ value: oldPrice * 100, priceType: { meta: salePrice } });
   const currentPrice = price || 0;
   if (oldPrice && currentPrice < oldPrice && discountPrice) {
     salePrices.push({
@@ -222,20 +202,17 @@ export const updateMoySkladPrice = async (
     const existingSalePriceIndex = salePrices.findIndex(
       (p) => p.priceType.meta.href === salePrice.href,
     );
-    if (existingSalePriceIndex !== -1) {
+    if (existingSalePriceIndex !== -1)
       salePrices.splice(existingSalePriceIndex, 1);
-    }
     salePrices.push({
       value: currentPrice * 100,
       priceType: { meta: salePrice },
     });
   }
   const body = { salePrices };
-  console.log(`[API МойСклад] Обновление цен для ${moySkladHref}...`);
   const endpoint = moySkladHref.replace(`${MOYSKLAD_API_URL}/`, '');
   return await moySkladFetch(endpoint, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
 };
-
