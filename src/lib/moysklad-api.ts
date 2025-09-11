@@ -54,24 +54,24 @@ export const createMoySkladProduct = async (
   });
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Используем ID характеристики вместо meta ---
 
-// Кэшируем метаданные характеристики "Цвет"
-let cachedColorCharacteristic: any | null = null;
+// Кэшируем ID характеристики "Цвет"
+let cachedColorCharacteristicId: string | null = null;
 
-const getMoySkladColorCharacteristic = async () => {
-  if (cachedColorCharacteristic) {
-    return cachedColorCharacteristic;
+const getMoySkladColorCharacteristicId = async () => {
+  if (cachedColorCharacteristicId) {
+    return cachedColorCharacteristicId;
   }
-  console.log('[API МойСклад] Получение характеристики "Цвет"...');
+  console.log('[API МойСклад] Получение ID характеристики "Цвет"...');
   const response = await moySkladFetch('entity/characteristic');
   const colorChar = response.rows.find((char: any) => char.name === 'Цвет');
 
   if (!colorChar) {
     throw new Error('Характеристика "Цвет" не найдена в МойСклад.');
   }
-  cachedColorCharacteristic = colorChar.meta;
-  return cachedColorCharacteristic;
+  cachedColorCharacteristicId = colorChar.id; // Кэшируем именно ID
+  return cachedColorCharacteristicId;
 };
 
 export const createMoySkladVariant = async (
@@ -83,13 +83,12 @@ export const createMoySkladVariant = async (
     `[API МойСклад] Создание модификации "${variantName}" для товара ${productMoySkladId}...`,
   );
 
-  // Получаем метаданные для характеристики "Цвет"
-  const colorCharacteristicMeta = await getMoySkladColorCharacteristic();
+  // Получаем ID для характеристики "Цвет"
+  const colorCharId = await getMoySkladColorCharacteristicId();
 
   const body = {
-    // 'code' и 'article' - это разные поля для МойСклад, используем оба
-    code: variantArticle,
     article: variantArticle,
+    name: variantName, // Имя самой модификации будет равно цвету
     product: {
       meta: {
         href: `${MOYSKLAD_API_URL}/entity/product/${productMoySkladId}`,
@@ -97,11 +96,11 @@ export const createMoySkladVariant = async (
         mediaType: 'application/json',
       },
     },
-    // Указываем, к какой характеристике относится наш вариант
+    // Указываем характеристику через ее ID
     characteristics: [
       {
-        meta: colorCharacteristicMeta,
-        value: variantName, // Значение характеристики - это название нашего цвета
+        id: colorCharId,
+        value: variantName,
       },
     ],
   };
@@ -114,14 +113,13 @@ export const createMoySkladVariant = async (
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export const getMoySkladProducts = async () => {
-  // ... (остальной код без изменений)
   return await moySkladFetch('entity/assortment?expand=productFolder,images');
 };
+
 export const getMoySkladCategories = async () => {
-  // ... (остальной код без изменений)
   return await moySkladFetch('entity/productfolder?expand=productFolder');
 };
-// ... (весь остальной код файла без изменений) ...
+
 export const getMoySkladStock = async () => {
   const data = await moySkladFetch('report/stock/all?stockMode=all');
   return data;
