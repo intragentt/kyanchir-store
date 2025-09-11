@@ -1,0 +1,413 @@
+.
+├── README.md
+├── README_KYANCHIR.md
+├── data
+│   └── products.csv
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.mjs
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── prettier.config.js
+├── prisma
+│   ├── migrations
+│   │   ├── 20250804055736_update_product_model
+│   │   │   └── migration.sql
+│   │   ├── 20250804064546_professional_product_schema
+│   │   │   └── migration.sql
+│   │   ├── 20250804065626_add_oldprice_to_variant
+│   │   │   └── migration.sql
+│   │   ├── 20250805100134_updated_image_and_variant_models
+│   │   │   └── migration.sql
+│   │   ├── 20250805113356_add_attribute_is_main
+│   │   │   └── migration.sql
+│   │   ├── 20250805120911_add_product_sku
+│   │   │   └── migration.sql
+│   │   ├── 20250805125838_add_alternative_names
+│   │   │   └── migration.sql
+│   │   ├── 20250805230659_add_variant_bonus_points
+│   │   │   └── migration.sql
+│   │   ├── 20250805231642_add_discount_timer
+│   │   │   └── migration.sql
+│   │   ├── 20250815102236_add_subcategories_and_tags
+│   │   │   └── migration.sql
+│   │   ├── 20250815105048_add_order_to_classifications
+│   │   │   └── migration.sql
+│   │   ├── 20250815154758_add_color_and_order
+│   │   │   └── migration.sql
+│   │   ├── 20250820044652_add_filter_presets
+│   │   │   └── migration.sql
+│   │   ├── 20250827112815_add_password_hash
+│   │   │   └── migration.sql
+│   │   ├── 20250831103116_enhance_user_and_add_support_models
+│   │   │   └── migration.sql
+│   │   ├── 20250831113229_add_agent_username
+│   │   │   └── migration.sql
+│   │   ├── 20250831113511_add_agent_phone
+│   │   │   └── migration.sql
+│   │   ├── 20250831113912_fix_agent_model
+│   │   │   └── migration.sql
+│   │   ├── 20250831130634_prepare_for_multi_email
+│   │   │   └── migration.sql
+│   │   ├── 20250901112310_add_management_user_role
+│   │   │   └── migration.sql
+│   │   ├── 20250901135644_add_moysklad_ids
+│   │   │   └── migration.sql
+│   │   ├── 20250902084543_make_category_name_not_unique
+│   │   │   └── migration.sql
+│   │   ├── 20250903111212_refactor_product_hierarchy
+│   │   │   └── migration.sql
+│   │   ├── 20250903111813_finalize_product_schema
+│   │   │   └── migration.sql
+│   │   ├── 20250903130816_init
+│   │   │   └── migration.sql
+│   │   ├── 20250907143944_add_moyskladid_to_variant
+│   │   │   └── migration.sql
+│   │   ├── 20250907151420_change_moyskladid_to_href
+│   │   │   └── migration.sql
+│   │   ├── 20250907155544_add_moysklad_type_to_productsize
+│   │   │   └── migration.sql
+│   │   ├── 20250908130837_add_price_overrides_to_productsize
+│   │   │   └── migration.sql
+│   │   ├── 20250911092936_add_orders_and_product_updates
+│   │   │   └── migration.sql
+│   │   └── migration_lock.toml
+│   ├── schema.prisma
+│   └── seed.ts
+├── project-structure.txt
+├── project_tree.txt
+├── public
+│   ├── images
+│   │   └── how-to-measure.png
+│   ├── placeholder.png
+│   ├── uploads
+│   │   ├── 1754434951477-Фото_-_3.png
+│   │   ├── 1755177589971-Screenshot_2025-08-14_at_2.00.06_PM.png
+│   │   ├── 1755177596756-Screenshot_2025-08-13_at_3.44.59_AM.png
+│   │   ├── 1755177648337-placeholder.png
+│   │   ├── 1755177653286-Фото_-_3.png
+│   │   ├── 1755178046700-Фото_-_4.png
+│   │   ├── 1755178046710-Фото_-_2.png
+│   │   ├── 1755178046729-Фото_-_3.png
+│   │   ├── 1755178046736-placeholder.png
+│   │   ├── 1755178046799-Фото_-_1.png
+│   │   ├── 1755178283161-placeholder.png
+│   │   ├── 1755178283166-Фото_-_4.png
+│   │   ├── 1755178283169-Фото_-_1.png
+│   │   ├── 1755178283179-Фото_-_3.png
+│   │   ├── 1755178283201-Фото_-_2.png
+│   │   ├── 1755178546039-Фото_-_1.png
+│   │   ├── 1755178546040-Фото_-_2.png
+│   │   ├── 1755178546046-placeholder.png
+│   │   ├── 1755178546046-Фото_-_3.png
+│   │   ├── 1755203352119-Фото_-_2.png
+│   │   ├── 1755203352123-Фото_-_3.png
+│   │   ├── 1755203352131-Фото_-_1.png
+│   │   ├── 1755206370050-Фото_-_2.png
+│   │   ├── 1755206370059-Фото_-_4.png
+│   │   ├── 1755244985927-Фото_-_2.png
+│   │   ├── 1755244985928-Фото_-_4.png
+│   │   ├── 1755244985929-Фото_-_1.png
+│   │   ├── 1755244985934-Фото_-_3.png
+│   │   ├── 1755248622931-Фото_-_3.png
+│   │   ├── 1755248622936-Фото_-_4.png
+│   │   └── route.ts
+│   ├── Фото - 1.png
+│   ├── Фото - 2.png
+│   ├── Фото - 3.png
+│   └── Фото - 4.png
+├── src
+│   ├── app
+│   │   ├── admin
+│   │   │   ├── categories
+│   │   │   │   ├── ClassificationClient.tsx
+│   │   │   │   ├── actions.ts
+│   │   │   │   └── page.tsx
+│   │   │   ├── dashboard
+│   │   │   │   └── page.tsx
+│   │   │   ├── filters
+│   │   │   │   ├── FilterManagerClient.tsx
+│   │   │   │   ├── SortableCategoryItem.tsx
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── update
+│   │   │   ├── mail
+│   │   │   │   ├── MailClient.tsx
+│   │   │   │   └── page.tsx
+│   │   │   ├── page.tsx
+│   │   │   └── products
+│   │   │       ├── [id]
+│   │   │       │   └── edit
+│   │   │       │       └── page.tsx
+│   │   │       └── new
+│   │   │           └── page.tsx
+│   │   ├── api
+│   │   │   ├── admin
+│   │   │   │   ├── filters
+│   │   │   │   │   └── update
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── product-sizes
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── products
+│   │   │   │   │   ├── create
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── update-stock
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── sync
+│   │   │   │   │   ├── categories
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── products
+│   │   │   │   │   │   ├── new
+│   │   │   │   │   │   │   └── page.tsx
+│   │   │   │   │   │   ├── route.ts
+│   │   │   │   │   │   └── update-size-price
+│   │   │   │   │   │       └── route.ts
+│   │   │   │   │   └── reset-products
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── tickets
+│   │   │   │   │   ├── [id]
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── variants
+│   │   │   │       └── route.ts
+│   │   │   ├── auth
+│   │   │   │   ├── [...nextauth]
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── check-login-token
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── check-user
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── create-login-token
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── login
+│   │   │   │   ├── logout
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── register
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── send-verification-code
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── send-verification-link
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── telegram
+│   │   │   │   │   ├── check
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   ├── finalize
+│   │   │   │   │   │   └── route.ts
+│   │   │   │   │   └── start
+│   │   │   │   │       └── route.ts
+│   │   │   │   ├── validate-credentials
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── verify
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── verify-code
+│   │   │   │   ├── verify-email
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── verify-token
+│   │   │   │       └── route.ts
+│   │   │   ├── bot
+│   │   │   │   ├── create-login-link
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
+│   │   │   ├── mail-webhook
+│   │   │   │   └── route.ts
+│   │   │   ├── moysklad-webhook
+│   │   │   │   └── route.ts
+│   │   │   ├── products
+│   │   │   │   ├── [id]
+│   │   │   │   │   └── route.ts
+│   │   │   │   ├── bulk-update-status
+│   │   │   │   │   └── route.ts
+│   │   │   │   └── route.ts
+│   │   │   ├── support-form
+│   │   │   │   └── route.ts
+│   │   │   ├── telegram-support-webhook
+│   │   │   │   └── route.ts
+│   │   │   ├── telegram-webhook
+│   │   │   │   └── route.ts
+│   │   │   ├── upload
+│   │   │   │   └── route.ts
+│   │   │   ├── user
+│   │   │   │   └── profile
+│   │   │   │       └── route.ts
+│   │   │   └── variants
+│   │   │       ├── [id]
+│   │   │       │   └── route.ts
+│   │   │       ├── batch-update
+│   │   │       │   └── route.ts
+│   │   │       └── route.ts
+│   │   ├── auth
+│   │   │   └── verify-email
+│   │   │       └── page.tsx
+│   │   ├── catalog
+│   │   │   └── page.tsx
+│   │   ├── favicon.ico
+│   │   ├── favicon.svg
+│   │   ├── fonts.ts
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   ├── loading.tsx
+│   │   ├── login
+│   │   │   ├── page.tsx
+│   │   │   ├── verify-code
+│   │   │   │   └── page.tsx
+│   │   │   └── verify-request
+│   │   │       └── page.tsx
+│   │   ├── page.tsx
+│   │   ├── product
+│   │   │   └── [id]
+│   │   │       └── page.tsx
+│   │   ├── profile
+│   │   │   ├── ProfileClient.tsx
+│   │   │   ├── SignOutButton.tsx
+│   │   │   └── page.tsx
+│   │   ├── register
+│   │   │   └── page.tsx
+│   │   ├── styleguide
+│   │   │   └── typography
+│   │   │       └── page.tsx
+│   │   ├── support
+│   │   │   └── page.tsx
+│   │   └── verify-email
+│   │       └── page.tsx
+│   ├── components
+│   │   ├── AppCore.tsx
+│   │   ├── CatalogContent.tsx
+│   │   ├── CategoryFilter.tsx
+│   │   ├── ClientInteractivity.tsx
+│   │   ├── ConditionalHeader.tsx
+│   │   ├── DynamicHeroSection.tsx
+│   │   ├── FloatingLogoButton.tsx
+│   │   ├── FloatingMenuOverlay.tsx
+│   │   ├── Footer.tsx
+│   │   ├── Header.tsx
+│   │   ├── HeroSection.tsx
+│   │   ├── HomePageClient.tsx
+│   │   ├── ImagePlaceholder.tsx
+│   │   ├── MiniBannerSlider.tsx
+│   │   ├── NetworkStatusManager.tsx
+│   │   ├── NotificationManager.tsx
+│   │   ├── Preloader.tsx
+│   │   ├── ProductCard.tsx
+│   │   ├── ProductDetails.tsx
+│   │   ├── SaleBadge.tsx
+│   │   ├── SearchOverlay.tsx
+│   │   ├── SmartStickyCategoryFilter.tsx
+│   │   ├── admin
+│   │   │   ├── AddSizeForm.tsx
+│   │   │   ├── AddVariantForm.tsx
+│   │   │   ├── CreateProductForm.tsx
+│   │   │   ├── EditProductDetails.tsx
+│   │   │   ├── EditProductForm.tsx
+│   │   │   ├── ProductTable.tsx
+│   │   │   ├── VariantManager.tsx
+│   │   │   ├── edit-product-form
+│   │   │   │   ├── AboutProductManager.tsx
+│   │   │   │   ├── AttributeManager.tsx
+│   │   │   │   ├── CategoryManager.tsx
+│   │   │   │   ├── DescriptionManager.tsx
+│   │   │   │   ├── DetailManager.tsx
+│   │   │   │   ├── ImageManager.tsx
+│   │   │   │   ├── PriceManager.tsx
+│   │   │   │   ├── SizeManager.tsx
+│   │   │   │   ├── SkuManager.tsx
+│   │   │   │   └── VariantManager.tsx
+│   │   │   ├── layout.tsx
+│   │   │   └── product-table
+│   │   │       ├── EditableCountdownTimer.tsx
+│   │   │       ├── ProductDetailsPanel.tsx
+│   │   │       ├── ProductSizeRow.tsx
+│   │   │       ├── ProductTableRow.tsx
+│   │   │       └── VariantRow.tsx
+│   │   ├── header
+│   │   │   ├── DesktopNav.tsx
+│   │   │   └── MobileNav.tsx
+│   │   ├── hooks
+│   │   │   ├── useElementRect.ts
+│   │   │   ├── useFilterRect.ts
+│   │   │   ├── useScrollInfo.ts
+│   │   │   ├── useSmartSticky.ts
+│   │   │   └── useStickyCategoryFilter.ts
+│   │   ├── icons
+│   │   │   ├── BurgerIcon.tsx
+│   │   │   ├── CartIcon.tsx
+│   │   │   ├── CheckIcon.tsx
+│   │   │   ├── ChevronDownIcon.tsx
+│   │   │   ├── ChevronIcon.tsx
+│   │   │   ├── ChevronRightIcon.tsx
+│   │   │   ├── ClearIcon.tsx
+│   │   │   ├── ClockIcon.tsx
+│   │   │   ├── CloseIcon.tsx
+│   │   │   ├── CopyIcon.tsx
+│   │   │   ├── DiscountBadgeIcon.tsx
+│   │   │   ├── EmailIcon.tsx
+│   │   │   ├── HeartIcon.tsx
+│   │   │   ├── Logo.tsx
+│   │   │   ├── PencilIcon.tsx
+│   │   │   ├── SearchIcon.tsx
+│   │   │   ├── ShareIcon.tsx
+│   │   │   ├── ShortLogo.tsx
+│   │   │   ├── SortIcon.tsx
+│   │   │   ├── SpinnerIcon.tsx
+│   │   │   ├── TelegramOfficialIcon.tsx
+│   │   │   ├── TrashIcon.tsx
+│   │   │   ├── UserIcon.tsx
+│   │   │   └── XMarkIcon.tsx
+│   │   ├── illustrations
+│   │   │   └── ArrowStep1.tsx
+│   │   ├── layout
+│   │   │   ├── CatalogHeaderController.tsx
+│   │   │   ├── PageContainer.tsx
+│   │   │   ├── ProductPageHeader.tsx
+│   │   │   ├── StickyCategoryFilter.tsx
+│   │   │   ├── StickyHeader.tsx
+│   │   │   └── StickyProductPageHeader.tsx
+│   │   ├── product-details
+│   │   │   ├── AddToCartButton.tsx
+│   │   │   ├── DesktopActionButtons.tsx
+│   │   │   ├── DesktopProductGallery.tsx
+│   │   │   ├── DesktopSizeAndCartButton.tsx
+│   │   │   ├── LowStockBadge.tsx
+│   │   │   ├── MobileProductGallery.tsx
+│   │   │   ├── ProductActions.tsx
+│   │   │   ├── ProductAttributes.tsx
+│   │   │   ├── ProductGallery.tsx
+│   │   │   ├── ProductHeader.tsx
+│   │   │   ├── SizeChart.tsx
+│   │   │   ├── SizeGuideContent.tsx
+│   │   │   └── SizeSelector.tsx
+│   │   ├── providers
+│   │   │   └── AuthProvider.tsx
+│   │   └── ui
+│   │       ├── BottomSheet.tsx
+│   │       └── Button.tsx
+│   ├── config
+│   │   └── navigation.ts
+│   ├── context
+│   │   ├── FooterContext.tsx
+│   │   └── StickyHeaderContext.tsx
+│   ├── hooks
+│   │   ├── useMediaQuery.ts
+│   │   └── useSmartSticky.ts
+│   ├── lib
+│   │   ├── auth.ts
+│   │   ├── csvParser.ts
+│   │   ├── moysklad-api.ts
+│   │   ├── prisma.ts
+│   │   ├── session.ts
+│   │   ├── telegramService.ts
+│   │   └── types.ts
+│   ├── middleware.ts
+│   ├── store
+│   │   └── useAppStore.ts
+│   ├── types
+│   │   └── next-auth.d.ts
+│   └── utils
+│       ├── formatPrice.ts
+│       └── formatTimeLeft.ts
+├── tailwind.config.ts
+├── telegram.d.ts
+├── tsconfig.json
+├── tsconfig.seed.json
+└── vercel.json
+
+134 directories, 277 files
