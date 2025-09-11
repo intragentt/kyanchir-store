@@ -5,11 +5,29 @@ import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаемся к простому запросу ---
-// Теперь, когда скрипт синхронизации работает правильно, нам больше не нужна сложная фильтрация.
-// Мы просто запрашиваем все продукты, а скрипт гарантирует, что в таблице Product лежат только родительские сущности.
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "умный" запрос данных ---
 async function getProductsForTable() {
+  // 1. Собираем "черный список" - ID всех товаров, которые являются вариантами
+  // Мы ищем в НАШЕЙ таблице ProductVariant, чтобы найти все moyskladId, которые мы УЖЕ определили как варианты.
+  const variants = await prisma.productVariant.findMany({
+    where: {
+      moySkladId: {
+        not: null,
+      },
+    },
+    select: {
+      moySkladId: true,
+    },
+  });
+  const variantMoySkladIds = variants.map((v) => v.moySkladId as string);
+
+  // 2. Запрашиваем только те товары, которые НЕ входят в этот список
   const products = await prisma.product.findMany({
+    where: {
+      moyskladId: {
+        notIn: variantMoySkladIds,
+      },
+    },
     orderBy: { createdAt: 'desc' },
     include: {
       status: true,
