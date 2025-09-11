@@ -5,28 +5,23 @@ import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "умный" запрос данных ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: показываем ТОЛЬКО родительские товары ---
 async function getProductsForTable() {
-  // 1. Собираем "черный список" - ID всех товаров, которые являются вариантами
-  // Мы ищем в НАШЕЙ таблице ProductVariant, чтобы найти все moyskladId, которые мы УЖЕ определили как варианты.
-  const variants = await prisma.productVariant.findMany({
-    where: {
-      moySkladId: {
-        not: null,
-      },
-    },
-    select: {
-      moySkladId: true,
-    },
+  // 1) Забираем все moySkladId из вариантов (это товары-варианты в МойСклад)
+  const variantMoyIdsRaw = await prisma.productVariant.findMany({
+    select: { moySkladId: true }, // у Variant поле с большой S
   });
-  const variantMoySkladIds = variants.map((v) => v.moySkladId as string);
 
-  // 2. Запрашиваем только те товары, которые НЕ входят в этот список
+  // 2) Превращаем в массив строк и отбрасываем null/undefined/пустые
+  const variantMsIds = variantMoyIdsRaw
+    .map((v) => v.moySkladId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+  // 3) Тянем продукты, исключая те, чей moyskladId совпадает с любым variant.moySkladId
   const products = await prisma.product.findMany({
     where: {
-      moyskladId: {
-        notIn: variantMoySkladIds,
-      },
+      // у Product поле с маленькой s: moyskladId
+      moyskladId: { notIn: variantMsIds },
     },
     orderBy: { createdAt: 'desc' },
     include: {
@@ -38,15 +33,12 @@ async function getProductsForTable() {
         orderBy: { createdAt: 'asc' },
         include: {
           images: { orderBy: { order: 'asc' } },
-          sizes: {
-            include: {
-              size: true,
-            },
-          },
+          sizes: { include: { size: true } },
         },
       },
     },
   });
+
   return products;
 }
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
