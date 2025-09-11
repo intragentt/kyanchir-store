@@ -49,11 +49,11 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
 export async function PUT(req: NextRequest, { params }: RouteContext) {
   try {
     const productId = params.id;
-    // Определяем тип для тела запроса
+    // --- ИЗМЕНЕНИЕ: 'sku' заменено на 'article' ---
     const body: {
       name: string;
-      status: { id: string; name: string }; // Теперь status - это объект
-      sku: string | null;
+      status: { id: string; name: string };
+      article: string | null; // <-- ИЗМЕНЕНО
       variants: any[];
       categories: { id: string }[];
       tags: { id: string }[];
@@ -63,8 +63,8 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
 
     const {
       name,
-      status, // Получаем объект status
-      sku,
+      status,
+      article, // <-- ИЗМЕНЕНО
       variants,
       categories,
       tags,
@@ -74,13 +74,13 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
 
     const updatedProduct = await prisma.$transaction(
       async (tx) => {
-        // Шаг 1: Обновляем продукт, используя status.id для связи
+        // Шаг 1: Обновляем продукт
         await tx.product.update({
           where: { id: productId },
           data: {
             name,
-            sku,
-            statusId: status.id, // <--- ИСПОЛЬЗУЕМ ID СТАТУСА
+            article, // <-- ИЗМЕНЕНО
+            statusId: status.id,
             categories: {
               set: categories.map((cat: { id: string }) => ({ id: cat.id })),
             },
