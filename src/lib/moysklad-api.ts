@@ -55,6 +55,7 @@ export const createMoySkladProduct = async (
 };
 
 let cachedColorCharacteristicMeta: any | null = null;
+
 const getMoySkladColorCharacteristicMeta = async () => {
   if (cachedColorCharacteristicMeta) {
     return cachedColorCharacteristicMeta;
@@ -62,12 +63,14 @@ const getMoySkladColorCharacteristicMeta = async () => {
   console.log('[API МойСклад] Получение meta-данных характеристики "Цвет"...');
   const response = await moySkladFetch('entity/characteristic');
   const colorChar = response.rows.find((char: any) => char.name === 'Цвет');
+
   if (!colorChar) {
     throw new Error('Характеристика "Цвет" не найдена в МойСклад.');
   }
   cachedColorCharacteristicMeta = colorChar.meta;
   return cachedColorCharacteristicMeta;
 };
+
 export const createMoySkladVariant = async (
   productMoySkladId: string,
   variantColorValue: string,
@@ -76,7 +79,9 @@ export const createMoySkladVariant = async (
   console.log(
     `[API МойСклад] Создание модификации со значением "${variantColorValue}" для товара ${productMoySkladId}...`,
   );
+
   const colorCharacteristicMeta = await getMoySkladColorCharacteristicMeta();
+
   const body = {
     article: variantArticle,
     product: {
@@ -95,6 +100,7 @@ export const createMoySkladVariant = async (
       },
     ],
   };
+
   return await moySkladFetch('entity/variant', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -178,7 +184,6 @@ const getMoySkladPriceTypes = async () => {
   return cachedPriceTypes;
 };
 
-// Функция ПЕРЕПИСАНА для работы с ID ТОВАРА, а не с Href
 export const updateMoySkladPrice = async (
   moySkladProductId: string,
   price: number | null,
@@ -187,25 +192,22 @@ export const updateMoySkladPrice = async (
   const { salePriceMeta, discountPriceMeta } = await getMoySkladPriceTypes();
 
   const salePrices = [];
-  const currentPrice = price || 0;
+  const currentPrice = price || 0; // Цена приходит уже в копейках
 
-  // Если есть "старая цена" и она больше "текущей", то старая цена - это "Цена продажи"
   if (oldPrice && oldPrice > currentPrice) {
     salePrices.push({
-      value: oldPrice * 100, // Конвертируем рубли в копейки
+      value: oldPrice, // Просто передаем копейки, БЕЗ умножения
       priceType: { meta: salePriceMeta },
     });
-    // А "текущая цена" - это "Скидка"
     if (discountPriceMeta) {
       salePrices.push({
-        value: currentPrice * 100,
+        value: currentPrice, // Просто передаем копейки, БЕЗ умножения
         priceType: { meta: discountPriceMeta },
       });
     }
   } else {
-    // Иначе "текущая цена" - это и есть "Цена продажи"
     salePrices.push({
-      value: currentPrice * 100,
+      value: currentPrice, // Просто передаем копейки, БЕЗ умножения
       priceType: { meta: salePriceMeta },
     });
   }
@@ -216,7 +218,6 @@ export const updateMoySkladPrice = async (
     `[API МойСклад] Обновление цен для товара ${moySkladProductId}...`,
   );
 
-  // Формируем эндпоинт для обновления товара
   const endpoint = `entity/product/${moySkladProductId}`;
   return await moySkladFetch(endpoint, {
     method: 'PUT',
