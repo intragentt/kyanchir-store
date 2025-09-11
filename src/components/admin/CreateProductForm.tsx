@@ -24,7 +24,8 @@ export default function CreateProductForm({
     article: '',
     description: '',
     categoryId: categories[0]?.id || '',
-    statusId: statuses[0]?.id || '',
+    statusId:
+      statuses.find((s) => s.name === 'DRAFT')?.id || statuses[0]?.id || '',
   });
 
   const handleChange = (
@@ -39,25 +40,40 @@ export default function CreateProductForm({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    toast.loading('Создаём товар...', { id: 'create-product' });
+    const toastId = toast.loading('Создаём товар...');
 
-    // ЗАГЛУШКА: Пока что просто выводим данные в консоль.
-    // На следующем шаге здесь будет fetch-запрос к нашему API.
-    console.log('Данные для отправки:', formData);
+    try {
+      const response = await fetch('/api/admin/products/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
 
-    // Имитация задержки сети
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Ошибка: ${response.status} - ${errorData}`);
+      }
 
-    toast.success('Товар успешно создан (симуляция)', {
-      id: 'create-product',
-    });
+      const newProduct = await response.json();
 
-    // В будущем здесь будет редирект на страницу редактирования товара
-    // router.push(`/admin/products/${newProductId}`);
+      toast.success('Товар успешно создан!', { id: toastId });
 
-    router.push('/admin/dashboard'); // Возвращаемся на дашборд
-    router.refresh(); // Обновляем данные на странице
-    setIsLoading(false);
+      // В будущем можно будет переходить на страницу редактирования
+      // router.push(`/admin/products/${newProduct.id}/edit`);
+
+      router.push('/admin/dashboard');
+      router.refresh();
+    } catch (error) {
+      console.error('Не удалось создать товар:', error);
+      toast.error(
+        error instanceof Error ? error.message : 'Произошла неизвестная ошибка',
+        { id: toastId },
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
