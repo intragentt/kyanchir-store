@@ -54,41 +54,41 @@ export const createMoySkladProduct = async (
   });
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Используем ID характеристики вместо meta ---
+// --- НАЧАЛО ФИНАЛЬНЫХ ИЗМЕНЕНИЙ ---
 
-// Кэшируем ID характеристики "Цвет"
-let cachedColorCharacteristicId: string | null = null;
+// Кэшируем полный meta-объект характеристики "Цвет"
+let cachedColorCharacteristicMeta: any | null = null;
 
-const getMoySkladColorCharacteristicId = async () => {
-  if (cachedColorCharacteristicId) {
-    return cachedColorCharacteristicId;
+const getMoySkladColorCharacteristicMeta = async () => {
+  if (cachedColorCharacteristicMeta) {
+    return cachedColorCharacteristicMeta;
   }
-  console.log('[API МойСклад] Получение ID характеристики "Цвет"...');
+  console.log('[API МойСклад] Получение meta-данных характеристики "Цвет"...');
   const response = await moySkladFetch('entity/characteristic');
   const colorChar = response.rows.find((char: any) => char.name === 'Цвет');
 
   if (!colorChar) {
     throw new Error('Характеристика "Цвет" не найдена в МойСклад.');
   }
-  cachedColorCharacteristicId = colorChar.id; // Кэшируем именно ID
-  return cachedColorCharacteristicId;
+  cachedColorCharacteristicMeta = colorChar.meta; // Кэшируем весь meta-объект
+  return cachedColorCharacteristicMeta;
 };
 
 export const createMoySkladVariant = async (
   productMoySkladId: string,
-  variantName: string, // Это по-прежнему наш цвет, например "Черный"
+  variantColorValue: string,
   variantArticle: string,
 ) => {
   console.log(
-    `[API МойСклад] Создание модификации "${variantName}" для товара ${productMoySkladId}...`,
+    `[API МойСклад] Создание модификации со значением "${variantColorValue}" для товара ${productMoySkladId}...`,
   );
 
-  // Получаем ID для характеристики "Цвет"
-  const colorCharId = await getMoySkladColorCharacteristicId();
+  const colorCharacteristicMeta = await getMoySkladColorCharacteristicMeta();
 
   const body = {
     article: variantArticle,
-    name: variantName, // Имя самой модификации будет равно цвету
+    // УДАЛЯЕМ 'name', так как МойСклад сгенерирует его из характеристик.
+    // Это устраняет конфликт в API.
     product: {
       meta: {
         href: `${MOYSKLAD_API_URL}/entity/product/${productMoySkladId}`,
@@ -96,11 +96,11 @@ export const createMoySkladVariant = async (
         mediaType: 'application/json',
       },
     },
-    // Указываем характеристику через ее ID
+    // Отправляем полный meta-объект, как требует документация.
     characteristics: [
       {
-        id: colorCharId,
-        value: variantName,
+        meta: colorCharacteristicMeta,
+        value: variantColorValue,
       },
     ],
   };
@@ -110,7 +110,7 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+// --- КОНЕЦ ФИНАЛЬНЫХ ИЗМЕНЕНИЙ ---
 
 export const getMoySkladProducts = async () => {
   return await moySkladFetch('entity/assortment?expand=productFolder,images');
@@ -238,3 +238,4 @@ export const updateMoySkladPrice = async (
     body: JSON.stringify(body),
   });
 };
+
