@@ -2,9 +2,11 @@
 
 const MOYSKLAD_API_TOKEN = process.env.MOYSKLAD_API_TOKEN;
 const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
+
 if (!MOYSKLAD_API_TOKEN) {
   throw new Error('Переменная окружения MOYSKLAD_API_TOKEN не определена!');
 }
+
 const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   const url = `${MOYSKLAD_API_URL}/${endpoint}`;
   const headers = new Headers(options.headers || {});
@@ -27,7 +29,6 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   }
 };
 
-// --- НОВАЯ ФУНКЦИЯ: Создание продукта в МойСклад ---
 export const createMoySkladProduct = async (
   name: string,
   article: string,
@@ -48,6 +49,34 @@ export const createMoySkladProduct = async (
   };
 
   return await moySkladFetch('entity/product', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+};
+
+// --- НОВАЯ ФУНКЦИЯ: Создание модификации (варианта) в МойСклад ---
+export const createMoySkladVariant = async (
+  productMoySkladId: string,
+  variantName: string, // Это будет наш цвет
+  variantArticle: string,
+) => {
+  console.log(
+    `[API МойСклад] Создание модификации "${variantName}" для товара ${productMoySkladId}...`,
+  );
+
+  const body = {
+    code: variantArticle,
+    name: variantName,
+    product: {
+      meta: {
+        href: `${MOYSKLAD_API_URL}/entity/product/${productMoySkladId}`,
+        type: 'product',
+        mediaType: 'application/json',
+      },
+    },
+  };
+
+  return await moySkladFetch('entity/variant', {
     method: 'POST',
     body: JSON.stringify(body),
   });

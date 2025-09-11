@@ -58,22 +58,22 @@ export default function CreateProductForm({
 
       const newProduct = await response.json();
 
-      toast.success('Товар успешно создан!', { id: toastId });
+      toast.success('Товар успешно создан! Переходим к деталям...', {
+        id: toastId,
+      });
 
-      // В будущем можно будет переходить на страницу редактирования
-      // router.push(`/admin/products/${newProduct.id}/edit`);
-
-      router.push('/admin/dashboard');
-      router.refresh();
+      // --- ИЗМЕНЕНИЕ: Редирект на страницу редактирования ---
+      router.push(`/admin/products/${newProduct.id}/edit`);
     } catch (error) {
       console.error('Не удалось создать товар:', error);
       toast.error(
         error instanceof Error ? error.message : 'Произошла неизвестная ошибка',
         { id: toastId },
       );
-    } finally {
+      // В случае ошибки оставляем пользователя на форме
       setIsLoading(false);
     }
+    // setIsLoading(false) убран из `finally`, чтобы не сбрасывать состояние при успешном редиректе
   };
 
   return (
@@ -202,7 +202,8 @@ export default function CreateProductForm({
           disabled={isLoading}
           className="rounded-lg bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isLoading ? 'Создание...' : 'Создать товар'}
+          {/* --- ИЗМЕНЕНИЕ: Текст кнопки --- */}
+          {isLoading ? 'Создание...' : 'Создать и перейти к деталям'}
         </button>
       </div>
     </form>
