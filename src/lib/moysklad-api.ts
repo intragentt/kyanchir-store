@@ -54,19 +54,42 @@ export const createMoySkladProduct = async (
   });
 };
 
-// --- НОВАЯ ФУНКЦИЯ: Создание модификации (варианта) в МойСклад ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+
+// Кэшируем метаданные характеристики "Цвет"
+let cachedColorCharacteristic: any | null = null;
+
+const getMoySkladColorCharacteristic = async () => {
+  if (cachedColorCharacteristic) {
+    return cachedColorCharacteristic;
+  }
+  console.log('[API МойСклад] Получение характеристики "Цвет"...');
+  const response = await moySkladFetch('entity/characteristic');
+  const colorChar = response.rows.find((char: any) => char.name === 'Цвет');
+
+  if (!colorChar) {
+    throw new Error('Характеристика "Цвет" не найдена в МойСклад.');
+  }
+  cachedColorCharacteristic = colorChar.meta;
+  return cachedColorCharacteristic;
+};
+
 export const createMoySkladVariant = async (
   productMoySkladId: string,
-  variantName: string, // Это будет наш цвет
+  variantName: string, // Это по-прежнему наш цвет, например "Черный"
   variantArticle: string,
 ) => {
   console.log(
     `[API МойСклад] Создание модификации "${variantName}" для товара ${productMoySkladId}...`,
   );
 
+  // Получаем метаданные для характеристики "Цвет"
+  const colorCharacteristicMeta = await getMoySkladColorCharacteristic();
+
   const body = {
+    // 'code' и 'article' - это разные поля для МойСклад, используем оба
     code: variantArticle,
-    name: variantName,
+    article: variantArticle,
     product: {
       meta: {
         href: `${MOYSKLAD_API_URL}/entity/product/${productMoySkladId}`,
@@ -74,6 +97,13 @@ export const createMoySkladVariant = async (
         mediaType: 'application/json',
       },
     },
+    // Указываем, к какой характеристике относится наш вариант
+    characteristics: [
+      {
+        meta: colorCharacteristicMeta,
+        value: variantName, // Значение характеристики - это название нашего цвета
+      },
+    ],
   };
 
   return await moySkladFetch('entity/variant', {
@@ -81,18 +111,17 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export const getMoySkladProducts = async () => {
-  const data = await moySkladFetch(
-    'entity/assortment?expand=productFolder,images',
-  );
-  return data;
+  // ... (остальной код без изменений)
+  return await moySkladFetch('entity/assortment?expand=productFolder,images');
 };
 export const getMoySkladCategories = async () => {
-  const data = await moySkladFetch('entity/productfolder?expand=productFolder');
-  return data;
+  // ... (остальной код без изменений)
+  return await moySkladFetch('entity/productfolder?expand=productFolder');
 };
+// ... (весь остальной код файла без изменений) ...
 export const getMoySkladStock = async () => {
   const data = await moySkladFetch('report/stock/all?stockMode=all');
   return data;
