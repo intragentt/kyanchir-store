@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { createMoySkladVariant } from '@/lib/moysklad-api';
+// --- ИЗМЕНЕНИЕ: Используем функцию создания ТОВАРА, а не варианта ---
+import { createMoySkladProduct } from '@/lib/moysklad-api';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -21,33 +22,44 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const product = await prisma.product.findUnique({
+    // Находим родительский продукт в нашей БД, чтобы получить его данные
+    const parentProduct = await prisma.product.findUnique({
       where: { id: productId },
+      include: { categories: true },
     });
 
-    if (!product || !product.moyskladId || !product.article) {
-      throw new Error('Родительский товар не найден или не синхронизирован');
+    if (!parentProduct || !parentProduct.categories[0]?.moyskladId) {
+      throw new Error(
+        'Родительский товар или его категория не найдены/не синхронизированы',
+      );
     }
 
-    const variantArticle = `${product.article}-${color.toUpperCase()}`;
+    // --- НОВАЯ ЛОГИКА ---
+    // 1. Формируем имя и артикул для НОВОГО ТОВАРА в Моем складе
+    const newProductNameInMoySklad = `${parentProduct.name} (${color})`;
+    const newProductArticleInMoySklad = `${
+      parentProduct.article
+    }-${color.toUpperCase()}`;
+    const categoryMoySkladId = parentProduct.categories[0].moyskladId;
 
-    // 1. Создаем модификацию в МойСклад
-    const newMoySkladVariant = await createMoySkladVariant(
-      product.moyskladId,
-      color,
-      variantArticle,
+    // 2. Создаем НОВЫЙ ТОВАР в Моем складе
+    const newMoySkladProduct = await createMoySkladProduct(
+      newProductNameInMoySklad,
+      newProductArticleInMoySklad,
+      categoryMoySkladId,
     );
-    if (!newMoySkladVariant || !newMoySkladVariant.id) {
-      throw new Error('Не удалось создать модификацию в МойСклад');
+
+    if (!newMoySkladProduct || !newMoySkladProduct.id) {
+      throw new Error('Не удалось создать новый товар в МойСклад');
     }
 
-    // 2. Создаем вариант в нашей БД
+    // 3. Создаем ВАРИАНТ в нашей БД, связывая его с ID нового товара из МойСклад
     const newVariant = await prisma.productVariant.create({
       data: {
-        productId: product.id,
+        productId: parentProduct.id,
         color: color,
-        price: 0, // Цена по умолчанию, ее можно будет изменить позже
-        moySkladId: newMoySkladVariant.id,
+        price: 0, // Цена по умолчанию
+        moySkladId: newMoySkladProduct.id, // <-- ID нового ТОВАРА
       },
     });
 
