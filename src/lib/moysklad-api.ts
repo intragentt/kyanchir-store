@@ -17,7 +17,7 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
     if (!response.ok) {
       const errorBody = await response.text();
       console.error(`Ошибка API МойСклад [${response.status}]: ${errorBody}`);
-      throw new Error(`Ошибка API МойСклад: ${response.status}`);
+      throw new Error(`Ошибка API МойСклад: ${response.status} - ${errorBody}`);
     }
     if (response.status === 204) return null;
     return await response.json();
@@ -26,6 +26,34 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
     throw error;
   }
 };
+
+// --- НОВАЯ ФУНКЦИЯ: Создание продукта в МойСклад ---
+export const createMoySkladProduct = async (
+  name: string,
+  article: string,
+  categoryMoySkladId: string,
+) => {
+  console.log(`[API МойСклад] Создание товара "${name}"...`);
+
+  const body = {
+    name,
+    article,
+    productFolder: {
+      meta: {
+        href: `${MOYSKLAD_API_URL}/entity/productfolder/${categoryMoySkladId}`,
+        type: 'productfolder',
+        mediaType: 'application/json',
+      },
+    },
+  };
+
+  return await moySkladFetch('entity/product', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+};
+// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
+
 export const getMoySkladProducts = async () => {
   const data = await moySkladFetch(
     'entity/assortment?expand=productFolder,images',
@@ -97,12 +125,7 @@ export const updateMoySkladVariantStock = async (
     body: JSON.stringify(body),
   });
 };
-
-// --- НАЧАЛО ИЗМЕНЕНИЙ: "Умное" обновление цен ---
-
-// Кэшируем ID типов цен, чтобы не запрашивать их постоянно
 let cachedPriceTypes: { salePrice: any; discountPrice: any } | null = null;
-
 const getMoySkladPriceTypes = async () => {
   if (cachedPriceTypes) {
     return cachedPriceTypes;
@@ -114,44 +137,32 @@ const getMoySkladPriceTypes = async () => {
   if (!salePrice) {
     throw new Error('Тип цены "Цена продажи" не найден в МойСклад.');
   }
-
   cachedPriceTypes = {
     salePrice: salePrice.meta,
     discountPrice: discountPrice ? discountPrice.meta : null,
   };
   return cachedPriceTypes;
 };
-
 export const updateMoySkladPrice = async (
   moySkladHref: string,
   price: number | null,
   oldPrice: number | null,
 ) => {
   const { salePrice, discountPrice } = await getMoySkladPriceTypes();
-
   const salePrices = [];
-
-  // Если есть "старая цена" (она же "Цена продажи"), добавляем её
   if (oldPrice && oldPrice > 0) {
     salePrices.push({
-      value: oldPrice * 100, // Конвертируем рубли в копейки
+      value: oldPrice * 100,
       priceType: { meta: salePrice },
     });
   }
-
-  // Основная цена (может быть как ценой продажи, так и скидкой)
   const currentPrice = price || 0;
-
-  // Если есть "старая цена" и "текущая цена" меньше, то "текущая" - это скидка
   if (oldPrice && currentPrice < oldPrice && discountPrice) {
     salePrices.push({
       value: currentPrice * 100,
       priceType: { meta: discountPrice },
     });
-  }
-  // Иначе "текущая цена" - это основная "Цена продажи"
-  else {
-    // Убираем старую цену, если она была, чтобы не дублировать
+  } else {
     const existingSalePriceIndex = salePrices.findIndex(
       (p) => p.priceType.meta.href === salePrice.href,
     );
@@ -163,17 +174,11 @@ export const updateMoySkladPrice = async (
       priceType: { meta: salePrice },
     });
   }
-
   const body = { salePrices };
-
   console.log(`[API МойСклад] Обновление цен для ${moySkladHref}...`);
-
-  // Отправляем PUT запрос на Href самой сущности (товара или модификации)
-  // Для этого нам нужно убрать базовый URL из href
   const endpoint = moySkladHref.replace(`${MOYSKLAD_API_URL}/`, '');
   return await moySkladFetch(endpoint, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
