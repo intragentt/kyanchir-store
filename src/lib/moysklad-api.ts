@@ -217,22 +217,22 @@ export const updateMoySkladPrice = async (
   });
 };
 
-// --- НОВАЯ ФУНКЦИЯ: Удаление товаров в МойСклад ---
-export const deleteMoySkladProducts = async (moySkladIds: string[]) => {
-  console.log(`[API МойСклад] Удаление ${moySkladIds.length} товаров...`);
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем удаление на архивацию ---
+export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
+  console.log(`[API МойСклад] Архивация ${moySkladIds.length} товаров...`);
 
-  // API ожидает массив объектов meta
-  const body = moySkladIds.map((id) => ({
-    meta: {
-      href: `${MOYSKLAD_API_URL}/entity/product/${id}`,
-      type: 'product',
-      mediaType: 'application/json',
-    },
-  }));
+  const body = {
+    archived: true,
+  };
 
-  return await moySkladFetch('entity/product/delete', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
+  // Выполняем запросы на архивацию параллельно для всех ID
+  const promises = moySkladIds.map((id) =>
+    moySkladFetch(`entity/product/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
+  );
+
+  return Promise.all(promises);
 };
-// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---

@@ -6,7 +6,25 @@ import prisma from '@/lib/prisma';
 export const dynamic = 'force-dynamic';
 
 async function getProductsForTable() {
+  const variants = await prisma.productVariant.findMany({
+    where: {
+      moySkladId: {
+        not: null,
+      },
+    },
+    select: {
+      moySkladId: true,
+    },
+  });
+  const variantMoySkladIds = variants.map((v) => v.moySkladId as string);
+
   const products = await prisma.product.findMany({
+    where: {
+      // --- ИСПРАВЛЕНИЕ: 'moySkladId' заменено на 'moyskladId' ---
+      moyskladId: {
+        notIn: variantMoySkladIds,
+      },
+    },
     orderBy: { createdAt: 'desc' },
     include: {
       status: true,

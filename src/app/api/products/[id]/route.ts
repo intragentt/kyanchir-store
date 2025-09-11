@@ -4,7 +4,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { deleteMoySkladProducts } from '@/lib/moysklad-api';
+// --- ИЗМЕНЕНИЕ: Импортируем новую функцию архивации ---
+import { archiveMoySkladProducts } from '@/lib/moysklad-api';
 
 type RouteContext = {
   params: {
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   return NextResponse.json(product);
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем логику удаления ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписываем логику "удаления" на "архивацию" ---
 export async function DELETE(req: NextRequest, { params }: RouteContext) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role.name !== 'ADMIN') {
@@ -47,7 +48,7 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     const { id } = params;
 
     // 1. Находим товар и все ID, связанные с МойСклад
-    const productToDelete = await prisma.product.findUnique({
+    const productToArchive = await prisma.product.findUnique({
       where: { id },
       include: {
         variants: {
@@ -58,31 +59,42 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
       },
     });
 
-    if (!productToDelete) {
+    if (!productToArchive) {
       return new NextResponse('Продукт не найден', { status: 404 });
     }
 
-    const moySkladIdsToDelete = productToDelete.variants
+    const moySkladIdsToArchive = productToArchive.variants
       .map((v) => v.moySkladId)
       .filter((id): id is string => !!id);
 
-    // Добавляем ID самого родительского товара, если он есть
-    if (productToDelete.moyskladId) {
-      moySkladIdsToDelete.push(productToDelete.moyskladId);
+    if (productToArchive.moyskladId) {
+      moySkladIdsToArchive.push(productToArchive.moyskladId);
     }
 
-    // 2. Сначала удаляем из МойСклад
-    if (moySkladIdsToDelete.length > 0) {
-      await deleteMoySkladProducts(moySkladIdsToDelete);
+    // 2. Архивируем в МойСклад
+    if (moySkladIdsToArchive.length > 0) {
+      await archiveMoySkladProducts(moySkladIdsToArchive);
     }
 
-    // 3. Только после этого удаляем из нашей БД
-    // Каскадное удаление в Prisma позаботится о вариантах, размерах и т.д.
-    await prisma.product.delete({ where: { id } });
+    // 3. Находим ID статуса "ARCHIVED" в нашей БД
+    const archivedStatus = await prisma.status.findUnique({
+      where: { name: 'ARCHIVED' },
+    });
+    if (!archivedStatus) {
+      throw new Error('Статус "ARCHIVED" не найден в базе данных.');
+    }
+
+    // 4. Обновляем статус товара в нашей БД, а не удаляем его
+    await prisma.product.update({
+      where: { id },
+      data: {
+        statusId: archivedStatus.id,
+      },
+    });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Ошибка при удалении продукта:', error);
+    console.error('Ошибка при архивации продукта:', error);
     const errorMessage =
       error instanceof Error ? error.message : 'Внутренняя ошибка сервера';
     return new NextResponse(errorMessage, { status: 500 });
