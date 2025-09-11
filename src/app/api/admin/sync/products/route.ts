@@ -12,7 +12,7 @@ function getUUIDFromHref(href: string): string {
 }
 
 async function runSync() {
-  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ ---');
+  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v3 ---');
 
   // 1. ПОДГОТОВКА: Получаем все данные
   console.log('1/5: Получение данных из МойСклад и нашей БД...');
@@ -37,10 +37,15 @@ async function runSync() {
     allOurCategories.map((cat) => [cat.moyskladId, cat.id]),
   );
   const sizeMap = new Map(allOurSizes.map((size) => [size.value, size.id]));
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Правильно суммируем остатки ---
   const stockMap = new Map<string, number>();
   stockResponse.rows.forEach((item: any) => {
-    stockMap.set(getUUIDFromHref(item.meta.href), item.stock || 0);
+    const assortmentId = getUUIDFromHref(item.meta.href);
+    const currentStock = stockMap.get(assortmentId) || 0;
+    stockMap.set(assortmentId, currentStock + (item.stock || 0));
   });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const moySkladItems: any[] = moySkladResponse.rows || [];
   const parentProducts = moySkladItems.filter(
@@ -93,7 +98,6 @@ async function runSync() {
     ).map((p) => [p.moyskladId, p.id]),
   );
 
-  // Структура: Map<ourProductId, Map<color, Array<sizeData>>>
   const groupedVariants = new Map<string, Map<string, any[]>>();
 
   for (const msVariant of variants) {
@@ -122,7 +126,7 @@ async function runSync() {
   console.log('4/5: Синхронизация сгруппированных вариантов и размеров...');
   for (const [ourProductId, colorsMap] of groupedVariants.entries()) {
     for (const [color, msVariantsInColor] of colorsMap.entries()) {
-      const representativeVariant = msVariantsInColor[0]; // Берем первый для общих данных
+      const representativeVariant = msVariantsInColor[0];
 
       const regularPriceObj = (representativeVariant.salePrices || []).find(
         (p: any) => p.priceType.name === 'Цена продажи',
@@ -139,7 +143,6 @@ async function runSync() {
       const oldPrice =
         salePrice > 0 && salePrice < regularPrice ? regularPrice : null;
 
-      // Создаем ProductVariant ОДИН РАЗ для каждого цвета
       const productVariant = await prisma.productVariant.upsert({
         where: { productId_color: { productId: ourProductId, color: color } },
         update: { price, oldPrice },
@@ -148,11 +151,9 @@ async function runSync() {
           color,
           price,
           oldPrice,
-          // moySkladId здесь не храним, т.к. он относится к конкретному размеру
         },
       });
 
-      // Теперь создаем ProductSize для КАЖДОГО реального варианта из МойСклад
       for (const msVariant of msVariantsInColor) {
         const sizeValue =
           msVariant.characteristics?.find((c: any) => c.name === 'Размер')
