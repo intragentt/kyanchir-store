@@ -102,7 +102,7 @@ export function ProductSizeRow({
     setDiscountValue(String(newDiscount));
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Улучшаем обработку ошибок ---
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем логику сохранения ---
   const handlePriceSave = async () => {
     let newPrice = parseFloat(priceValue.replace(',', '.'));
     let newOldPrice = parseFloat(oldPriceValue.replace(',', '.'));
@@ -120,29 +120,18 @@ export function ProductSizeRow({
     }
 
     try {
-      const response = await fetch('/api/admin/products/update-size-price', {
-        method: 'POST',
+      const response = await fetch(`/api/admin/product-sizes/${sizeInfo.id}`, {
+        method: 'PATCH', // Используем PATCH
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // moySkladHref больше не нужен нашему новому API, но мы его оставим, чтобы не было ошибок
-          moySkladHref: sizeInfo.moySkladHref,
-          productSizeId: sizeInfo.id,
-          newPrice: Math.round(newPrice * 100),
-          newOldPrice: Math.round(newOldPrice * 100),
+          price: Math.round(newPrice * 100),
+          oldPrice: Math.round(newOldPrice * 100),
         }),
       });
 
       if (!response.ok) {
-        // Получаем текстовое сообщение об ошибке от сервера
         const errorText = await response.text();
-        // Выводим его в консоль для полной диагностики
-        console.error(
-          'Server responded with an error:',
-          response.status,
-          errorText,
-        );
-        // Бросаем ошибку с этим текстом, чтобы toast ее показал
         throw new Error(errorText || `Ошибка сервера: ${response.status}`);
       }
 
@@ -150,7 +139,48 @@ export function ProductSizeRow({
       router.refresh();
       setEditMode('none');
     } catch (error) {
-      // Теперь toast покажет реальную причину ошибки
+      toast.error(
+        `Не удалось обновить: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+        { id: toastId },
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleStockSave = async () => {
+    const newStock = parseInt(stockValue, 10);
+    if (isNaN(newStock) || newStock < 0) {
+      toast.error('Введите корректное число.');
+      return;
+    }
+    if (newStock === sizeInfo.stock) {
+      setEditMode('none');
+      return;
+    }
+
+    setIsSaving(true);
+    const toastId = toast.loading('Обновляем остатки...');
+
+    try {
+      const response = await fetch(`/api/admin/product-sizes/${sizeInfo.id}`, {
+        method: 'PATCH', // Используем PATCH
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stock: newStock,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Ошибка сервера: ${response.status}`);
+      }
+
+      toast.success('Остатки успешно обновлены!', { id: toastId });
+      router.refresh();
+      setEditMode('none');
+    } catch (error) {
       toast.error(
         `Не удалось обновить: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
         { id: toastId },
@@ -167,51 +197,6 @@ export function ProductSizeRow({
       oldPriceForDisplay ? (oldPriceForDisplay / 100).toString() : '',
     );
     setDiscountValue(String(discountForDisplay));
-  };
-
-  const handleStockSave = async () => {
-    const newStock = parseInt(stockValue, 10);
-    if (isNaN(newStock) || newStock < 0) {
-      toast.error('Введите корректное число.');
-      return;
-    }
-    if (newStock === sizeInfo.stock) {
-      setEditMode('none');
-      return;
-    }
-    if (!sizeInfo.moySkladHref) {
-      toast.error('Ошибка: Href размера из МойСклад не найден.');
-      return;
-    }
-    setIsSaving(true);
-    const promise = fetch('/api/admin/products/update-stock', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        moySkladHref: sizeInfo.moySkladHref,
-        moySkladType: sizeInfo.moySkladType,
-        newStock: newStock,
-        oldStock: sizeInfo.stock,
-        productSizeId: sizeInfo.id,
-      }),
-    });
-    toast.promise(promise, {
-      loading: 'Обновляем остатки...',
-      success: (res) => {
-        if (!res.ok) throw new Error('Ошибка.');
-        router.refresh();
-        setEditMode('none');
-        return 'Остатки успешно обновлены!';
-      },
-      error: 'Не удалось обновить остатки.',
-    });
-    try {
-      await promise;
-    } catch (error) {
-    } finally {
-      setIsSaving(false);
-    }
   };
 
   const handleStockCancel = () => {
