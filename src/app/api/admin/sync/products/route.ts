@@ -12,7 +12,7 @@ function getUUIDFromHref(href: string): string {
 }
 
 async function runSync() {
-  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v5 ---');
+  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v6 ---');
 
   // 1. ПОДГОТОВКА: Получаем все данные
   console.log('1/5: Получение данных из МойСклад и нашей БД...');
@@ -37,16 +37,16 @@ async function runSync() {
     allOurCategories.map((cat) => [cat.moyskladId, cat.id]),
   );
   const sizeMap = new Map(allOurSizes.map((size) => [size.value, size.id]));
-  
-  // --- НАЧАЛО ИСПРАВЛЕНИЯ: Используем правильный ID из отчета по остаткам ---
+
+  // --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ: Используем правильный ID и суммируем ---
   const stockMap = new Map<string, number>();
   stockResponse.rows.forEach((item: any) => {
-    // Отчет по остаткам возвращает assortmentId, который и является ID товара/модификации
+    // Используем `assortmentId` - это прямой ID товара/модификации из отчета по остаткам
     const assortmentId = item.assortmentId;
     const currentStock = stockMap.get(assortmentId) || 0;
     stockMap.set(assortmentId, currentStock + (item.stock || 0));
   });
-  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+  // --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
 
   const moySkladItems: any[] = moySkladResponse.rows || [];
   const parentProducts = moySkladItems.filter(
@@ -92,7 +92,7 @@ async function runSync() {
       await prisma.product.findMany({ select: { id: true, moyskladId: true } })
     ).map((p) => [p.moyskladId, p.id]),
   );
-  
+
   const groupedVariants = new Map<string, Map<string, any[]>>();
 
   for (const msVariant of variants) {
