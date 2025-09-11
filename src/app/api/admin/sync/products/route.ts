@@ -12,7 +12,7 @@ function getUUIDFromHref(href: string): string {
 }
 
 async function runSync() {
-  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v8 (ГАРАНТИЯ) ---');
+  console.log('--- ЗАПУСК ДИАГНОСТИЧЕСКОЙ СИНХРОНИЗАЦИИ v8 ---');
 
   // 1. ПОДГОТОВКА: Получаем все данные
   console.log('1/5: Получение данных из МойСклад и нашей БД...');
@@ -37,16 +37,16 @@ async function runSync() {
     allOurCategories.map((cat) => [cat.moyskladId, cat.id]),
   );
   const sizeMap = new Map(allOurSizes.map((size) => [size.value, size.id]));
-
-  // --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ: Используем href-ключ и суммируем ---
+  
+  // --- ДИАГНОСТИКА: Суммируем остатки и логируем ---
   const stockMap = new Map<string, number>();
   stockResponse.rows.forEach((item: any) => {
-    // Используем UUID из meta.href, это единственный надежный ключ
-    const assortmentId = getUUIDFromHref(item.meta.href);
+    const assortmentId = getUUIDFromHref(item.meta.href); 
     const currentStock = stockMap.get(assortmentId) || 0;
     stockMap.set(assortmentId, currentStock + (item.stock || 0));
   });
-  // --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
+  console.log(`[DIAGNOSTIC] stockMap содержит ${stockMap.size} записей. Первые 5 ключей:`, Array.from(stockMap.keys()).slice(0, 5));
+  // --- КОНЕЦ ДИАГНОСТИКИ ---
 
   const moySkladItems: any[] = moySkladResponse.rows || [];
   const parentProducts = moySkladItems.filter(
@@ -54,89 +54,48 @@ async function runSync() {
   );
   const variants = moySkladItems.filter((item) => item.meta.type === 'variant');
 
-  console.log(
-    `Данные получены: Товаров=${parentProducts.length}, Модификаций=${variants.length}`,
-  );
-
-  // 2. ЭТАП 1: Синхронизация Родительских Товаров
+  // ... (остальной код до цикла синхронизации вариантов) ...
   console.log('2/5: Синхронизация родительских товаров...');
   for (const msProduct of parentProducts) {
-    const categoryMoySkladId = msProduct.productFolder
-      ? getUUIDFromHref(msProduct.productFolder.meta.href)
-      : null;
-    const ourCategoryId = categoryMoySkladId
-      ? categoryMap.get(categoryMoySkladId)
-      : undefined;
-
+    const categoryMoySkladId = msProduct.productFolder ? getUUIDFromHref(msProduct.productFolder.meta.href) : null;
+    const ourCategoryId = categoryMoySkladId ? categoryMap.get(categoryMoySkladId) : undefined;
     await prisma.product.upsert({
       where: { moyskladId: msProduct.id },
-      update: {
-        name: msProduct.name,
-      },
+      update: { name: msProduct.name },
       create: {
         name: msProduct.name,
         article: msProduct.article || `ms-${msProduct.id}`,
         statusId: draftStatus.id,
         moyskladId: msProduct.id,
-        categories: ourCategoryId
-          ? { connect: { id: ourCategoryId } }
-          : undefined,
+        categories: ourCategoryId ? { connect: { id: ourCategoryId } } : undefined,
       },
     });
   }
 
-  // 3. ЭТАП 2: Предварительная группировка вариантов
   console.log('3/5: Группировка вариантов по цветам и размерам...');
-  const ourProductsMap = new Map(
-    (
-      await prisma.product.findMany({ select: { id: true, moyskladId: true } })
-    ).map((p) => [p.moyskladId, p.id]),
-  );
-
+  const ourProductsMap = new Map((await prisma.product.findMany({ select: { id: true, moyskladId: true } })).map((p) => [p.moyskladId, p.id]));
   const groupedVariants = new Map<string, Map<string, any[]>>();
-
   for (const msVariant of variants) {
-    const parentProductMoySkladId = getUUIDFromHref(
-      msVariant.product.meta.href,
-    );
+    const parentProductMoySkladId = getUUIDFromHref(msVariant.product.meta.href);
     const ourProductId = ourProductsMap.get(parentProductMoySkladId);
     if (!ourProductId) continue;
-
-    const color =
-      msVariant.characteristics?.find((c: any) => c.name === 'Цвет')?.value ||
-      'Основной';
-
-    if (!groupedVariants.has(ourProductId)) {
-      groupedVariants.set(ourProductId, new Map<string, any[]>());
-    }
+    const color = msVariant.characteristics?.find((c: any) => c.name === 'Цвет')?.value || 'Основной';
+    if (!groupedVariants.has(ourProductId)) groupedVariants.set(ourProductId, new Map<string, any[]>());
     const productColors = groupedVariants.get(ourProductId)!;
-
-    if (!productColors.has(color)) {
-      productColors.set(color, []);
-    }
+    if (!productColors.has(color)) productColors.set(color, []);
     productColors.get(color)!.push(msVariant);
   }
 
-  // 4. ЭТАП 3: Синхронизация сгруппированных вариантов
   console.log('4/5: Синхронизация сгруппированных вариантов и размеров...');
   for (const [ourProductId, colorsMap] of groupedVariants.entries()) {
     for (const [color, msVariantsInColor] of colorsMap.entries()) {
       const representativeVariant = msVariantsInColor[0];
-
-      const regularPriceObj = (representativeVariant.salePrices || []).find(
-        (p: any) => p.priceType.name === 'Цена продажи',
-      );
-      const salePriceObj = (representativeVariant.salePrices || []).find(
-        (p: any) => p.priceType.name === 'Скидка',
-      );
-      const regularPrice = regularPriceObj
-        ? Math.round(regularPriceObj.value)
-        : 0;
+      const regularPriceObj = (representativeVariant.salePrices || []).find((p: any) => p.priceType.name === 'Цена продажи');
+      const salePriceObj = (representativeVariant.salePrices || []).find((p: any) => p.priceType.name === 'Скидка');
+      const regularPrice = regularPriceObj ? Math.round(regularPriceObj.value) : 0;
       const salePrice = salePriceObj ? Math.round(salePriceObj.value) : 0;
-      const price =
-        salePrice > 0 && salePrice < regularPrice ? salePrice : regularPrice;
-      const oldPrice =
-        salePrice > 0 && salePrice < regularPrice ? regularPrice : null;
+      const price = salePrice > 0 && salePrice < regularPrice ? salePrice : regularPrice;
+      const oldPrice = salePrice > 0 && salePrice < regularPrice ? regularPrice : null;
 
       const productVariant = await prisma.productVariant.upsert({
         where: { productId_color: { productId: ourProductId, color: color } },
@@ -150,30 +109,27 @@ async function runSync() {
       });
 
       for (const msVariant of msVariantsInColor) {
-        const sizeValue =
-          msVariant.characteristics?.find((c: any) => c.name === 'Размер')
-            ?.value || 'ONE_SIZE';
+        const sizeValue = msVariant.characteristics?.find((c: any) => c.name === 'Размер')?.value || 'ONE_SIZE';
         let ourSizeId = sizeMap.get(sizeValue);
         if (!ourSizeId) {
-          const newSize = await prisma.size.create({
-            data: { value: sizeValue },
-          });
+          const newSize = await prisma.size.create({ data: { value: sizeValue } });
           ourSizeId = newSize.id;
           sizeMap.set(sizeValue, ourSizeId);
         }
+        
+        // --- ДИАГНОСТИКА: Логируем ключ, по которому ищем остаток ---
+        const stockKey = msVariant.id; // Ключ, который мы используем
+        const stock = stockMap.get(stockKey) || 0;
+        console.log(`[DIAGNOSTIC] Ищем остаток для "${msVariant.name}" по ключу: ${stockKey}. Найдено: ${stock}`);
+        // --- КОНЕЦ ДИАГНОСТИКИ ---
 
         await prisma.productSize.upsert({
           where: { moySkladHref: msVariant.meta.href },
-          update: {
-            stock: stockMap.get(msVariant.id) || 0,
-            productVariantId: productVariant.id,
-            sizeId: ourSizeId,
-            moySkladType: msVariant.meta.type,
-          },
+          update: { stock, productVariantId: productVariant.id, sizeId: ourSizeId },
           create: {
             productVariant: { connect: { id: productVariant.id } },
             size: { connect: { id: ourSizeId } },
-            stock: stockMap.get(msVariant.id) || 0,
+            stock,
             moySkladHref: msVariant.meta.href,
             moySkladType: msVariant.meta.type,
           },
@@ -183,11 +139,7 @@ async function runSync() {
   }
 
   console.log('5/5: Умная синхронизация завершена успешно.');
-  return {
-    message: `Синхронизация успешно завершена.`,
-    synchronizedProducts: parentProducts.length,
-    synchronizedVariants: variants.length,
-  };
+  return { message: `Синхронизация успешно завершена.` };
 }
 
 export async function POST(req: NextRequest) {
@@ -195,18 +147,13 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     // @ts-ignore
     if (!session?.user || session.user.role?.name !== 'ADMIN') {
-      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
-        status: 403,
-      });
+      return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), { status: 403 });
     }
     const result = await runSync();
     return NextResponse.json(result);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[MANUAL SYNC ERROR]:', errorMessage);
-    return new NextResponse(
-      JSON.stringify({ error: `Внутренняя ошибка сервера: ${errorMessage}` }),
-      { status: 500 },
-    );
+    return new NextResponse(JSON.stringify({ error: `Внутренняя ошибка сервера: ${errorMessage}` }), { status: 500 });
   }
 }
