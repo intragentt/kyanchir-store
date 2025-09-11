@@ -54,10 +54,7 @@ export const createMoySkladProduct = async (
   });
 };
 
-// --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
-
 let cachedColorCharacteristicMeta: any | null = null;
-
 const getMoySkladColorCharacteristicMeta = async () => {
   if (cachedColorCharacteristicMeta) {
     return cachedColorCharacteristicMeta;
@@ -65,14 +62,12 @@ const getMoySkladColorCharacteristicMeta = async () => {
   console.log('[API МойСклад] Получение meta-данных характеристики "Цвет"...');
   const response = await moySkladFetch('entity/characteristic');
   const colorChar = response.rows.find((char: any) => char.name === 'Цвет');
-
   if (!colorChar) {
     throw new Error('Характеристика "Цвет" не найдена в МойСклад.');
   }
   cachedColorCharacteristicMeta = colorChar.meta;
   return cachedColorCharacteristicMeta;
 };
-
 export const createMoySkladVariant = async (
   productMoySkladId: string,
   variantColorValue: string,
@@ -81,9 +76,7 @@ export const createMoySkladVariant = async (
   console.log(
     `[API МойСклад] Создание модификации со значением "${variantColorValue}" для товара ${productMoySkladId}...`,
   );
-
   const colorCharacteristicMeta = await getMoySkladColorCharacteristicMeta();
-
   const body = {
     article: variantArticle,
     product: {
@@ -93,7 +86,6 @@ export const createMoySkladVariant = async (
         mediaType: 'application/json',
       },
     },
-    // ИСПРАВЛЕННАЯ СТРУКТУРА: Добавлен ключ "characteristic"
     characteristics: [
       {
         characteristic: {
@@ -103,28 +95,22 @@ export const createMoySkladVariant = async (
       },
     ],
   };
-
   return await moySkladFetch('entity/variant', {
     method: 'POST',
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
 
 export const getMoySkladProducts = async () => {
   return await moySkladFetch('entity/assortment?expand=productFolder,images');
 };
-
 export const getMoySkladCategories = async () => {
   return await moySkladFetch('entity/productfolder?expand=productFolder');
 };
-
 export const getMoySkladStock = async () => {
   const data = await moySkladFetch('report/stock/all?stockMode=all');
   return data;
 };
-
-// ... (весь остальной код файла без изменений) ...
 
 let cachedRefs: { organization: any; store: any } | null = null;
 const getMoySkladDefaultRefs = async () => {
@@ -169,50 +155,72 @@ export const updateMoySkladVariantStock = async (
   });
 };
 
-let cachedPriceTypes: { salePrice: any; discountPrice: any } | null = null;
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+let cachedPriceTypes: { salePriceMeta: any; discountPriceMeta: any } | null =
+  null;
+
 const getMoySkladPriceTypes = async () => {
-  if (cachedPriceTypes) return cachedPriceTypes;
+  if (cachedPriceTypes) {
+    return cachedPriceTypes;
+  }
+  console.log('[API МойСклад] Получение ID типов цен...');
   const response = await moySkladFetch('context/companysettings/pricetype');
   const salePrice = response.find((pt: any) => pt.name === 'Цена продажи');
   const discountPrice = response.find((pt: any) => pt.name === 'Скидка');
-  if (!salePrice) throw new Error('Тип цены "Цена продажи" не найден.');
+  if (!salePrice) {
+    throw new Error('Тип цены "Цена продажи" не найден в МойСклад.');
+  }
+
   cachedPriceTypes = {
-    salePrice: salePrice.meta,
-    discountPrice: discountPrice ? discountPrice.meta : null,
+    salePriceMeta: salePrice.meta,
+    discountPriceMeta: discountPrice ? discountPrice.meta : null,
   };
   return cachedPriceTypes;
 };
 
+// Функция ПЕРЕПИСАНА для работы с ID ТОВАРА, а не с Href
 export const updateMoySkladPrice = async (
-  moySkladHref: string,
+  moySkladProductId: string,
   price: number | null,
   oldPrice: number | null,
 ) => {
-  const { salePrice, discountPrice } = await getMoySkladPriceTypes();
+  const { salePriceMeta, discountPriceMeta } = await getMoySkladPriceTypes();
+
   const salePrices = [];
-  if (oldPrice && oldPrice > 0)
-    salePrices.push({ value: oldPrice * 100, priceType: { meta: salePrice } });
   const currentPrice = price || 0;
-  if (oldPrice && currentPrice < oldPrice && discountPrice) {
+
+  // Если есть "старая цена" и она больше "текущей", то старая цена - это "Цена продажи"
+  if (oldPrice && oldPrice > currentPrice) {
     salePrices.push({
-      value: currentPrice * 100,
-      priceType: { meta: discountPrice },
+      value: oldPrice * 100, // Конвертируем рубли в копейки
+      priceType: { meta: salePriceMeta },
     });
+    // А "текущая цена" - это "Скидка"
+    if (discountPriceMeta) {
+      salePrices.push({
+        value: currentPrice * 100,
+        priceType: { meta: discountPriceMeta },
+      });
+    }
   } else {
-    const existingSalePriceIndex = salePrices.findIndex(
-      (p) => p.priceType.meta.href === salePrice.href,
-    );
-    if (existingSalePriceIndex !== -1)
-      salePrices.splice(existingSalePriceIndex, 1);
+    // Иначе "текущая цена" - это и есть "Цена продажи"
     salePrices.push({
       value: currentPrice * 100,
-      priceType: { meta: salePrice },
+      priceType: { meta: salePriceMeta },
     });
   }
+
   const body = { salePrices };
-  const endpoint = moySkladHref.replace(`${MOYSKLAD_API_URL}/`, '');
+
+  console.log(
+    `[API МойСклад] Обновление цен для товара ${moySkladProductId}...`,
+  );
+
+  // Формируем эндпоинт для обновления товара
+  const endpoint = `entity/product/${moySkladProductId}`;
   return await moySkladFetch(endpoint, {
     method: 'PUT',
     body: JSON.stringify(body),
   });
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
