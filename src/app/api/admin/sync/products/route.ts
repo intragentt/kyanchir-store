@@ -12,7 +12,7 @@ function getUUIDFromHref(href: string): string {
 }
 
 async function runSync() {
-  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v3 ---');
+  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v4 ---');
 
   // 1. ПОДГОТОВКА: Получаем все данные
   console.log('1/5: Получение данных из МойСклад и нашей БД...');
@@ -38,14 +38,14 @@ async function runSync() {
   );
   const sizeMap = new Map(allOurSizes.map((size) => [size.value, size.id]));
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Правильно суммируем остатки ---
+  // --- НАЧАЛО ИСПРАВЛЕНИЯ: Правильно суммируем остатки со всех складов ---
   const stockMap = new Map<string, number>();
   stockResponse.rows.forEach((item: any) => {
     const assortmentId = getUUIDFromHref(item.meta.href);
     const currentStock = stockMap.get(assortmentId) || 0;
     stockMap.set(assortmentId, currentStock + (item.stock || 0));
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
   const moySkladItems: any[] = moySkladResponse.rows || [];
   const parentProducts = moySkladItems.filter(
