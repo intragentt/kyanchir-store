@@ -12,10 +12,10 @@ function getUUIDFromHref(href: string): string {
 }
 
 async function runSync() {
-  console.log('--- ЗАПУСК ФИНАЛЬНОЙ УМНОЙ СИНХРОНИЗАЦИИ v4 ---');
+  console.log('--- ЗАПУСК ДИАГНОСТИЧЕСКОЙ СИНХРОНИЗАЦИИ v5 ---');
 
-  // 1. ПОДГОТОВКА: Получаем все данные
-  console.log('1/5: Получение данных из МойСклад и нашей БД...');
+  // 1. ПОДГОТОВКА
+  console.log('1/5: Получение данных...');
   const [
     moySkladResponse,
     stockResponse,
@@ -38,14 +38,16 @@ async function runSync() {
   );
   const sizeMap = new Map(allOurSizes.map((size) => [size.value, size.id]));
 
-  // --- НАЧАЛО ИСПРАВЛЕНИЯ: Правильно суммируем остатки со всех складов ---
+  // --- ДИАГНОСТИКА: Суммируем остатки и логируем ---
   const stockMap = new Map<string, number>();
   stockResponse.rows.forEach((item: any) => {
     const assortmentId = getUUIDFromHref(item.meta.href);
     const currentStock = stockMap.get(assortmentId) || 0;
     stockMap.set(assortmentId, currentStock + (item.stock || 0));
   });
-  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+  console.log(`[DIAGNOSTIC] stockMap содержит ${stockMap.size} записей.`);
+  // Раскомментируй, если хочешь увидеть все ключи в логах:
+  // console.log('[DIAGNOSTIC] Ключи в stockMap:', Array.from(stockMap.keys()));
 
   const moySkladItems: any[] = moySkladResponse.rows || [];
   const parentProducts = moySkladItems.filter(
@@ -53,11 +55,7 @@ async function runSync() {
   );
   const variants = moySkladItems.filter((item) => item.meta.type === 'variant');
 
-  console.log(
-    `Данные получены: Товаров=${parentProducts.length}, Модификаций=${variants.length}`,
-  );
-
-  // 2. ЭТАП 1: Синхронизация Родительских Товаров
+  // 2. СИНХРОНИЗАЦИЯ РОДИТЕЛЕЙ
   console.log('2/5: Синхронизация родительских товаров...');
   for (const msProduct of parentProducts) {
     const categoryMoySkladId = msProduct.productFolder
@@ -69,17 +67,9 @@ async function runSync() {
 
     await prisma.product.upsert({
       where: { moyskladId: msProduct.id },
-      update: {
-        name: msProduct.name,
-        description: msProduct.description || '',
-        article: msProduct.article || '',
-        categories: ourCategoryId
-          ? { set: [{ id: ourCategoryId }] }
-          : undefined,
-      },
+      update: { name: msProduct.name },
       create: {
         name: msProduct.name,
-        description: msProduct.description || '',
         article: msProduct.article || `ms-${msProduct.id}`,
         statusId: draftStatus.id,
         moyskladId: msProduct.id,
@@ -90,8 +80,8 @@ async function runSync() {
     });
   }
 
-  // 3. ЭТАП 2: Предварительная группировка вариантов
-  console.log('3/5: Группировка вариантов по цветам и размерам...');
+  // 3. ГРУППИРОВКА ВАРИАНТОВ
+  console.log('3/5: Группировка вариантов...');
   const ourProductsMap = new Map(
     (
       await prisma.product.findMany({ select: { id: true, moyskladId: true } })
@@ -99,35 +89,27 @@ async function runSync() {
   );
 
   const groupedVariants = new Map<string, Map<string, any[]>>();
-
   for (const msVariant of variants) {
     const parentProductMoySkladId = getUUIDFromHref(
       msVariant.product.meta.href,
     );
     const ourProductId = ourProductsMap.get(parentProductMoySkladId);
     if (!ourProductId) continue;
-
     const color =
       msVariant.characteristics?.find((c: any) => c.name === 'Цвет')?.value ||
       'Основной';
-
-    if (!groupedVariants.has(ourProductId)) {
+    if (!groupedVariants.has(ourProductId))
       groupedVariants.set(ourProductId, new Map<string, any[]>());
-    }
     const productColors = groupedVariants.get(ourProductId)!;
-
-    if (!productColors.has(color)) {
-      productColors.set(color, []);
-    }
+    if (!productColors.has(color)) productColors.set(color, []);
     productColors.get(color)!.push(msVariant);
   }
 
-  // 4. ЭТАП 3: Синхронизация сгруппированных вариантов
+  // 4. СИНХРОНИЗАЦИЯ ВАРИАНТОВ И РАЗМЕРОВ
   console.log('4/5: Синхронизация сгруппированных вариантов и размеров...');
   for (const [ourProductId, colorsMap] of groupedVariants.entries()) {
     for (const [color, msVariantsInColor] of colorsMap.entries()) {
       const representativeVariant = msVariantsInColor[0];
-
       const regularPriceObj = (representativeVariant.salePrices || []).find(
         (p: any) => p.priceType.name === 'Цена продажи',
       );
@@ -167,18 +149,27 @@ async function runSync() {
           sizeMap.set(sizeValue, ourSizeId);
         }
 
+        // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Мы должны обновлять по уникальному ID из МойСклад, а не по Href ---
+        // И при создании варианта мы должны сохранять его moySkladId, чтобы потом находить.
+        // Но так как у нас уникальность по Href, будем использовать его для поиска, но stock брать по ID.
+        const stock = stockMap.get(msVariant.id) || 0;
+        if (stock === 0) {
+          console.log(
+            `[DIAGNOSTIC] Не найден остаток для варианта ${msVariant.name} (ID: ${msVariant.id}). Результат: 0.`,
+          );
+        }
+
         await prisma.productSize.upsert({
           where: { moySkladHref: msVariant.meta.href },
           update: {
-            stock: stockMap.get(msVariant.id) || 0,
+            stock,
             productVariantId: productVariant.id,
             sizeId: ourSizeId,
-            moySkladType: msVariant.meta.type,
           },
           create: {
             productVariant: { connect: { id: productVariant.id } },
             size: { connect: { id: ourSizeId } },
-            stock: stockMap.get(msVariant.id) || 0,
+            stock,
             moySkladHref: msVariant.meta.href,
             moySkladType: msVariant.meta.type,
           },
