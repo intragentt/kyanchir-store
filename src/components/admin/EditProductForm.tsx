@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { ProductWithDetails } from '@/app/admin/products/[id]/edit/page';
 import { Size, Category, Tag, Status } from '@prisma/client';
 import toast, { Toaster } from 'react-hot-toast';
-import AddVariantForm from './AddVariantForm'; // <-- Импортируем наш новый компонент
+import AddVariantForm from './AddVariantForm';
+import AddSizeForm from './AddSizeForm'; // <-- Импортируем новый компонент
 
 interface EditProductFormProps {
   product: ProductWithDetails;
@@ -19,6 +20,7 @@ interface EditProductFormProps {
 export default function EditProductForm({
   product,
   allStatuses,
+  allSizes, // <-- Нам понадобятся все размеры
 }: EditProductFormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -43,12 +45,9 @@ export default function EditProductForm({
     const toastId = toast.loading('Сохраняем детали...');
 
     try {
-      // Используем старый API эндпоинт для обновления базовых деталей
       const response = await fetch(`/api/products/${product.id}`, {
-        // Метод PUT, т.к. старый API ожидает его. PATCH можно будет сделать при рефакторинге.
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        // Собираем полное тело запроса, которое ожидает старый API
         body: JSON.stringify({
           ...formData,
           article: product.article,
@@ -87,9 +86,8 @@ export default function EditProductForm({
         className="space-y-6 rounded-lg bg-white p-8 shadow-sm"
       >
         <h2 className="text-lg font-semibold text-gray-900">Основные детали</h2>
-
+        {/* ... (содержимое формы без изменений) ... */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {/* Поле Название */}
           <div>
             <label
               htmlFor="name"
@@ -106,7 +104,6 @@ export default function EditProductForm({
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
-          {/* Поле Статус */}
           <div>
             <label
               htmlFor="statusId"
@@ -129,7 +126,6 @@ export default function EditProductForm({
             </select>
           </div>
         </div>
-        {/* Поле Описание */}
         <div>
           <label
             htmlFor="description"
@@ -146,7 +142,6 @@ export default function EditProductForm({
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
-
         <div className="flex justify-end border-t pt-6">
           <button
             type="submit"
@@ -163,17 +158,62 @@ export default function EditProductForm({
         <h2 className="text-lg font-semibold text-gray-900">
           Варианты (цвета)
         </h2>
-
-        {/* Список существующих вариантов */}
-        <div className="space-y-2">
+        <div className="space-y-6">
           {product.variants.length > 0 ? (
             product.variants.map((variant) => (
-              <div
-                key={variant.id}
-                className="flex items-center justify-between rounded border p-3"
-              >
-                <span className="font-medium">{variant.color}</span>
-                {/* Здесь в будущем будут кнопки для редактирования/удаления */}
+              <div key={variant.id} className="rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-md font-semibold text-gray-800">
+                    {variant.color}
+                  </h3>
+                  {/* Здесь будут кнопки удаления/редактирования варианта */}
+                </div>
+
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Блок управления размерами --- */}
+                <div className="mt-4 border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-600">
+                    Размеры и остатки
+                  </h4>
+
+                  {/* Список существующих размеров для этого варианта */}
+                  <div className="mt-2 space-y-2">
+                    {variant.sizes.length > 0 ? (
+                      variant.sizes.map((sizeInfo) => (
+                        <div
+                          key={sizeInfo.id}
+                          className="flex items-center justify-between text-sm"
+                        >
+                          <span>
+                            Размер:{' '}
+                            <span className="font-bold">
+                              {sizeInfo.size.value}
+                            </span>
+                          </span>
+                          <span>
+                            Склад:{' '}
+                            <span className="font-bold">
+                              {sizeInfo.stock} шт.
+                            </span>
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-gray-500">
+                        У этого варианта еще нет размеров.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Форма добавления нового размера */}
+                  <div className="mt-4">
+                    <AddSizeForm
+                      productVariantId={variant.id}
+                      allSizes={allSizes}
+                      existingSizeIds={variant.sizes.map((s) => s.sizeId)}
+                    />
+                  </div>
+                </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             ))
           ) : (
@@ -183,7 +223,6 @@ export default function EditProductForm({
           )}
         </div>
 
-        {/* Форма добавления нового варианта */}
         <div className="border-t pt-6">
           <h3 className="text-md font-medium text-gray-800">
             Добавить новый вариант
