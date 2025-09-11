@@ -1,27 +1,32 @@
-// src/app/admin/dashboard/page.tsx
-
+// Местоположение: src/app/admin/dashboard/page.tsx
 import PageContainer from '@/components/layout/PageContainer';
 import ProductTable from '@/components/admin/ProductTable';
 import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: типобезопасный запрос без not: null ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "умный" запрос данных ---
 async function getProductsForTable() {
-  // 1) Берём productId всех строк-«вариантов»
-  // (без where — забираем всё и фильтруем на JS-стороне, чтобы не упереться в типы Prisma)
-  const variantProductLinks = await prisma.productVariant.findMany({
-    select: { productId: true },
+  // 1. Собираем "черный список" - ID всех товаров, которые являются вариантами
+  // Мы ищем в НАШЕЙ таблице ProductVariant, чтобы найти все moyskladId, которые мы УЖЕ определили как варианты.
+  const variants = await prisma.productVariant.findMany({
+    where: {
+      moySkladId: {
+        not: null,
+      },
+    },
+    select: {
+      moySkladId: true,
+    },
   });
+  const variantMoySkladIds = variants.map((v) => v.moySkladId as string);
 
-  const variantProductIds = variantProductLinks
-    .map((v) => v.productId)
-    .filter((id): id is string => Boolean(id));
-
-  // 2) Запрашиваем только «корневые» товары (не те, что являются отдельными строками-вариантами)
+  // 2. Запрашиваем только те товары, которые НЕ входят в этот список
   const products = await prisma.product.findMany({
     where: {
-      id: { notIn: variantProductIds },
+      moyskladId: {
+        notIn: variantMoySkladIds,
+      },
     },
     orderBy: { createdAt: 'desc' },
     include: {
@@ -33,12 +38,15 @@ async function getProductsForTable() {
         orderBy: { createdAt: 'asc' },
         include: {
           images: { orderBy: { order: 'asc' } },
-          sizes: { include: { size: true } },
+          sizes: {
+            include: {
+              size: true,
+            },
+          },
         },
       },
     },
   });
-
   return products;
 }
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
