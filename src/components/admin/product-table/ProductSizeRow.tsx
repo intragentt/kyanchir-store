@@ -48,10 +48,8 @@ export function ProductSizeRow({
 }: ProductSizeRowProps) {
   const router = useRouter();
 
-  // --- НАЧАЛО БЛОКА РЕФАКТОРИНГА: Централизация состояния ---
   const [editMode, setEditMode] = useState<'none' | 'stock' | 'price'>('none');
   const [isSaving, setIsSaving] = useState(false);
-  // --- КОНЕЦ БЛОКА РЕФАКТОРИНГА ---
 
   const resolvedPrice = sizeInfo.price ?? variantPrice;
   const resolvedOldPrice = sizeInfo.oldPrice ?? variantOldPrice;
@@ -104,49 +102,64 @@ export function ProductSizeRow({
     setDiscountValue(String(newDiscount));
   };
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Улучшаем обработку ошибок ---
   const handlePriceSave = async () => {
-    if (!sizeInfo.moySkladHref) {
-      toast.error('Ошибка: Href размера из МойСклад не найден.');
-      return;
-    }
     let newPrice = parseFloat(priceValue.replace(',', '.'));
     let newOldPrice = parseFloat(oldPriceValue.replace(',', '.'));
+
     if (isNaN(newPrice) || isNaN(newOldPrice)) {
       toast.error('Введите корректные числовые значения для цен.');
       return;
     }
+
     setIsSaving(true);
+    const toastId = toast.loading('Обновляем цены...');
+
     if (newPrice > newOldPrice) {
       newOldPrice = newPrice;
     }
-    const promise = fetch('/api/admin/products/update-size-price', {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        moySkladHref: sizeInfo.moySkladHref,
-        productSizeId: sizeInfo.id,
-        newPrice: Math.round(newPrice * 100),
-        newOldPrice: Math.round(newOldPrice * 100),
-      }),
-    });
-    toast.promise(promise, {
-      loading: 'Обновляем цены...',
-      success: (res) => {
-        if (!res.ok) throw new Error('Ошибка.');
-        router.refresh();
-        setEditMode('none');
-        return 'Цены успешно обновлены!';
-      },
-      error: 'Не удалось обновить цены.',
-    });
+
     try {
-      await promise;
+      const response = await fetch('/api/admin/products/update-size-price', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // moySkladHref больше не нужен нашему новому API, но мы его оставим, чтобы не было ошибок
+          moySkladHref: sizeInfo.moySkladHref,
+          productSizeId: sizeInfo.id,
+          newPrice: Math.round(newPrice * 100),
+          newOldPrice: Math.round(newOldPrice * 100),
+        }),
+      });
+
+      if (!response.ok) {
+        // Получаем текстовое сообщение об ошибке от сервера
+        const errorText = await response.text();
+        // Выводим его в консоль для полной диагностики
+        console.error(
+          'Server responded with an error:',
+          response.status,
+          errorText,
+        );
+        // Бросаем ошибку с этим текстом, чтобы toast ее показал
+        throw new Error(errorText || `Ошибка сервера: ${response.status}`);
+      }
+
+      toast.success('Цены успешно обновлены!', { id: toastId });
+      router.refresh();
+      setEditMode('none');
     } catch (error) {
+      // Теперь toast покажет реальную причину ошибки
+      toast.error(
+        `Не удалось обновить: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+        { id: toastId },
+      );
     } finally {
       setIsSaving(false);
     }
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handlePriceCancel = () => {
     setPriceValue(priceForDisplay ? (priceForDisplay / 100).toString() : '');
@@ -205,7 +218,6 @@ export function ProductSizeRow({
     setStockValue(String(sizeInfo.stock));
   };
 
-  // --- НАЧАЛО БЛОКА РЕФАКТОРИНГА: Мастер-функции сохранения/отмены ---
   const handleSave = () => {
     if (editMode === 'stock') {
       handleStockSave();
@@ -222,7 +234,6 @@ export function ProductSizeRow({
     }
     setEditMode('none');
   };
-  // --- КОНЕЦ БЛОКА РЕФАКТОРИНГА ---
 
   const inputClassName =
     'bg-transparent border-0 border-b border-indigo-400 p-0 text-right text-sm focus:ring-0 disabled:bg-gray-100';
@@ -236,7 +247,6 @@ export function ProductSizeRow({
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         0 шт.
       </td>
-      {/* --- ЯЧЕЙКА "СКЛАД" --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         {editMode === 'stock' ? (
           <div className="flex items-baseline justify-end">
@@ -260,7 +270,6 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      {/* --- ЯЧЕЙКА "ЦЕНА" (СТАРАЯ) --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         {editMode === 'price' ? (
           <div className="flex items-baseline justify-end">
@@ -284,7 +293,6 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      {/* --- ЯЧЕЙКА "СКИДКА %" --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         {editMode === 'price' ? (
           <div className="flex items-baseline justify-end">
@@ -311,7 +319,6 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      {/* --- ЯЧЕЙКА "ИТОГО/ШТ" --- */}
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm font-medium text-gray-800">
         {editMode === 'price' ? (
           <div className="flex items-baseline justify-end">
@@ -337,7 +344,6 @@ export function ProductSizeRow({
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm font-bold text-gray-900">
         {formatPrice(totalValue)} RUB
       </td>
-      {/* --- НАЧАЛО БЛОКА РЕФАКТОРИНГА: Новая колонка "Действия" --- */}
       <td className="w-24 px-6 py-1">
         {editMode !== 'none' && (
           <div className="flex items-center justify-start gap-3">
@@ -364,7 +370,6 @@ export function ProductSizeRow({
           </div>
         )}
       </td>
-      {/* --- КОНЕЦ БЛОКА РЕФАКТОРИНГА --- */}
     </tr>
   );
 }
