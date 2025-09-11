@@ -9,6 +9,8 @@ async function main() {
   // Удаляем в правильном порядке, чтобы избежать ошибок внешних ключей
   await prisma.presetItem.deleteMany();
   await prisma.filterPreset.deleteMany();
+  await prisma.orderItem.deleteMany(); // Добавили очистку OrderItem
+  await prisma.order.deleteMany(); // Добавили очистку Order
   await prisma.productSize.deleteMany();
   await prisma.image.deleteMany();
   await prisma.attribute.deleteMany();
@@ -25,6 +27,7 @@ async function main() {
   await prisma.size.deleteMany();
   await prisma.supportRoute.deleteMany();
   await prisma.status.deleteMany();
+  await prisma.orderStatus.deleteMany(); // Добавили очистку OrderStatus
   await prisma.userRole.deleteMany();
   await prisma.agentRole.deleteMany();
   await prisma.ticketStatus.deleteMany();
@@ -35,35 +38,33 @@ async function main() {
   // --- ШАГ 2: СОЗДАНИЕ ЗАПИСЕЙ В СПРАВОЧНИКАХ ---
   console.log('📚 Создание записей в справочниках...');
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем ВСЕ необходимые статусы ---
   console.log('   - Создание статусов продуктов...');
   const statusDraft = await prisma.status.create({ data: { name: 'DRAFT' } });
   const statusPublished = await prisma.status.create({
     data: { name: 'PUBLISHED' },
   });
-  const statusArchived = await prisma.status.create({
+  await prisma.status.create({
     data: { name: 'ARCHIVED' },
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   // Роли Пользователей
   console.log('   - Создание ролей пользователей...');
   const roleAdmin = await prisma.userRole.create({ data: { name: 'ADMIN' } });
-  const roleUser = await prisma.userRole.create({ data: { name: 'USER' } }); // Добавляем роль USER
+  await prisma.userRole.create({ data: { name: 'CLIENT' } });
 
   // Роли Агентов
-  const agentRoleAdmin = await prisma.agentRole.create({
+  await prisma.agentRole.create({
     data: { name: 'ADMIN' },
   });
 
   // Справочники для системы поддержки
-  const ticketStatusOpen = await prisma.ticketStatus.create({
+  await prisma.ticketStatus.create({
     data: { name: 'OPEN' },
   });
-  const sourceWebForm = await prisma.ticketSource.create({
+  await prisma.ticketSource.create({
     data: { name: 'WEB_FORM' },
   });
-  const senderTypeClient = await prisma.senderType.create({
+  await prisma.senderType.create({
     data: { name: 'CLIENT' },
   });
 
@@ -89,7 +90,8 @@ async function main() {
       description:
         'Это описание для тестового продукта, созданного через seed.',
       statusId: statusPublished.id, // Тестовый продукт будет сразу опубликован
-      sku: 'KYA-SEED-001',
+      // --- ИЗМЕНЕНИЕ: 'sku' заменено на 'article' ---
+      article: 'KYA-SEED-001',
     },
   });
 
@@ -119,3 +121,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+  
