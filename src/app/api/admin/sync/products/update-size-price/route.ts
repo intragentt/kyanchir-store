@@ -7,16 +7,13 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { updateMoySkladPrice } from '@/lib/moysklad-api';
 
-// Определяем, какие данные мы ожидаем получить
 interface RequestBody {
-  moySkladHref: string;
   productSizeId: string;
   newPrice: number | null;
   newOldPrice: number | null;
 }
 
 export async function POST(req: Request) {
-  // 1. Безопасность
   const session = await getServerSession(authOptions);
   if (!session || session.user.role.name !== 'ADMIN') {
     return new NextResponse('Неавторизован', { status: 401 });
@@ -24,19 +21,39 @@ export async function POST(req: Request) {
 
   try {
     const body = (await req.json()) as RequestBody;
-    const { moySkladHref, productSizeId, newPrice, newOldPrice } = body;
+    const { productSizeId, newPrice, newOldPrice } = body;
 
-    // 2. Валидация
-    if (!moySkladHref || !productSizeId) {
-      return new NextResponse('Отсутствуют ID для обновления', {
+    if (!productSizeId) {
+      return new NextResponse('Отсутствует ID размера для обновления', {
         status: 400,
       });
     }
 
-    // 3. Связь с "МойСклад"
-    await updateMoySkladPrice(moySkladHref, newPrice, newOldPrice);
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем актуальный moySkladId ---
 
-    // 4. Синхронизация с нашей БД
+    // 1. Находим ProductSize и его родительский ProductVariant в нашей БД
+    const sizeWithVariant = await prisma.productSize.findUnique({
+      where: { id: productSizeId },
+      include: {
+        productVariant: true,
+      },
+    });
+
+    if (!sizeWithVariant?.productVariant?.moySkladId) {
+      throw new Error(
+        'Не удалось найти связанный товар из МойСклад для этого размера.',
+      );
+    }
+
+    // 2. Извлекаем ID товара в МойСклад из родительского варианта
+    const moySkladProductId = sizeWithVariant.productVariant.moySkladId;
+
+    // 3. Вызываем API-мост с правильным ID товара
+    await updateMoySkladPrice(moySkladProductId, newPrice, newOldPrice);
+
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+    // 4. Синхронизация с нашей БД (остается без изменений)
     await prisma.productSize.update({
       where: { id: productSizeId },
       data: {
@@ -45,10 +62,11 @@ export async function POST(req: Request) {
       },
     });
 
-    // 5. Успешный ответ
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[API] Ошибка при обновлении цены:', error);
-    return new NextResponse('Внутренняя ошибка сервера', { status: 500 });
+    const errorMessage =
+      error instanceof Error ? error.message : 'Внутренняя ошибка сервера';
+    return new NextResponse(errorMessage, { status: 500 });
   }
 }
