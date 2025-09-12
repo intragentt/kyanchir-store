@@ -35,7 +35,6 @@ export async function POST(req: NextRequest) {
     // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика создания НОВОГО ТОВАРА в МС ---
 
     // 1. Формируем имя и артикул для НОВОГО ТОВАРА в Моем складе
-    // Теперь мы создаем товар с размером по умолчанию, чтобы сразу задать остаток.
     const newProductNameInMoySklad = `${parentProduct.name} (${color}, ONE_SIZE)`;
     const newProductArticleInMoySklad = `${parentProduct.article}-V1-SONESIZE`; // Примерная логика
     const categoryMoySkladId = parentProduct.categories[0].moyskladId;
@@ -63,6 +62,8 @@ export async function POST(req: NextRequest) {
         product: { connect: { id: parentProduct.id } },
         color: color,
         price: 0,
+        // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Добавляем недостающий ID ---
+        moySkladId: newMoySkladProduct.id,
         sizes: {
           create: {
             size: { connect: { id: oneSize.id } },
