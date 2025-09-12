@@ -8,7 +8,7 @@ import {
   deleteCategory,
   createTag,
   deleteTag,
-  saveAllClassifications, // Импортируем нашу новую "супер-функцию"
+  saveAllClassifications,
 } from './actions';
 import {
   DragDropContext,
@@ -66,22 +66,31 @@ const AddItemForm = ({
   onCancel,
   isPending,
   parentId = null,
+  needsCode = false, // Новый пропс для определения, нужно ли поле "code"
 }: {
-  onSave: (name: string, parentId: string | null) => void;
+  onSave: (name: string, code: string, parentId: string | null) => void;
   onCancel: () => void;
   isPending: boolean;
   parentId?: string | null;
+  needsCode?: boolean;
 }) => {
   const [name, setName] = useState('');
+  const [code, setCode] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-  const handleSubmit = () => {
-    if (name.trim()) onSave(name.trim(), parentId);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim() && (!needsCode || code.trim())) {
+      onSave(name.trim(), code.trim(), parentId);
+    }
   };
+
   return (
-    <form action={handleSubmit} className="flex items-center gap-2 py-2">
+    <form onSubmit={handleSubmit} className="flex items-center gap-2 py-2">
       <input
         ref={inputRef}
         value={name}
@@ -90,6 +99,15 @@ const AddItemForm = ({
         className="w-full rounded-md border px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500"
         disabled={isPending}
       />
+      {needsCode && (
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="Код (BE, KP)"
+          className="w-1/2 rounded-md border px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500"
+          disabled={isPending}
+        />
+      )}
       <button
         type="submit"
         disabled={isPending}
@@ -214,17 +232,22 @@ export function ClassificationClient({
     setTags(initialTags.sort((a, b) => a.order - b.order));
   }, [initialCategories, initialTags, buildTree]);
 
-  const handleCreateCategory = (name: string, parentId: string | null) =>
+  const handleCreateCategory = (
+    name: string,
+    code: string,
+    parentId: string | null,
+  ) =>
     startTransition(() => {
-      createCategory(name, parentId);
+      createCategory(name, code, parentId);
       setAddingToParent(null);
     });
   const handleDeleteCategory = (id: string) =>
     startTransition(() => {
       deleteCategory(id);
     });
-  const handleCreateTag = (name: string) =>
+  const handleCreateTag = (name: string, code: string) =>
     startTransition(() => {
+      // Assuming createTag doesn't need a code, but keeping signature consistent
       createTag(name);
     });
   const handleDeleteTag = (id: string) =>
@@ -260,14 +283,14 @@ export function ClassificationClient({
   const handleSaveAll = () => {
     const flatten = (items: CategoryWithChildren[]): Category[] =>
       items.flatMap((item) => [
-        { ...item, children: undefined },
+        { ...item, children: undefined } as unknown as Category,
         ...flatten(item.children),
       ]);
     const flatCategories = flatten(categories);
 
     startTransition(() => {
       saveAllClassifications(
-        flatCategories.map((c, i) => ({ ...c, order: i })), // Пересчитываем порядок при сохранении
+        flatCategories.map((c, i) => ({ ...c, order: i })),
         tags.map((t, i) => ({ ...t, order: i })),
       );
       setIsDirty(false);
@@ -286,8 +309,8 @@ export function ClassificationClient({
     <>
       {items.map((cat, index) => (
         <div key={cat.id} className="relative pl-4">
-          <div className="absolute top-0 left-0 h-full w-4 border-l border-gray-200"></div>
-          <div className="absolute top-1/2 left-0 h-1/2 w-4 border-b border-gray-200"></div>
+          <div className="absolute left-0 top-0 h-full w-4 border-l border-gray-200"></div>
+          <div className="absolute left-0 top-1/2 h-1/2 w-4 border-b border-gray-200"></div>
 
           <Draggable key={cat.id} draggableId={cat.id} index={index}>
             {(provided) => (
@@ -338,6 +361,7 @@ export function ClassificationClient({
                 onSave={handleCreateCategory}
                 onCancel={() => setAddingToParent(null)}
                 isPending={isPending}
+                needsCode={true}
               />
             </div>
           )}
@@ -373,6 +397,7 @@ export function ClassificationClient({
                 onSave={handleCreateCategory}
                 onCancel={() => setAddingToParent(null)}
                 isPending={isPending}
+                needsCode={true}
               />
             ) : (
               <button
@@ -437,6 +462,7 @@ export function ClassificationClient({
                                   onSave={handleCreateCategory}
                                   onCancel={() => setAddingToParent(null)}
                                   isPending={isPending}
+                                  needsCode={true}
                                 />
                               </div>
                             )}
@@ -462,7 +488,7 @@ export function ClassificationClient({
           <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
             <div className="mb-2 font-medium">Добавить новую метку</div>
             <AddItemForm
-              onSave={(name) => handleCreateTag(name)}
+              onSave={(name, code) => handleCreateTag(name, code)}
               onCancel={() => {}}
               isPending={isPending}
             />
