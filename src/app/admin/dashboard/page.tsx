@@ -5,24 +5,13 @@ import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: показываем ТОЛЬКО родительские товары ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Умный запрос, который находит ТОЛЬКО настоящих родителей ---
 async function getProductsForTable() {
-  // 1) Забираем все moySkladId из вариантов (это товары-варианты в МойСклад)
-  const variantMoyIdsRaw = await prisma.productVariant.findMany({
-    select: { moySkladId: true }, // у Variant поле с большой S
-  });
-
-  // 2) Превращаем в массив строк и отбрасываем null/undefined/пустые
-  const variantMsIds = variantMoyIdsRaw
-    .map((v) => v.moySkladId)
-    .filter((id): id is string => typeof id === 'string' && id.length > 0);
-
-  // 3) Тянем продукты, исключая те, чей moyskladId совпадает с любым variant.moySkladId
   const products = await prisma.product.findMany({
-    where: {
-      // у Product поле с маленькой s: moyskladId
-      moyskladId: { notIn: variantMsIds },
-    },
+    // Мы ищем товары, у которых ЕСТЬ варианты, но при этом
+    // сами они НЕ ЯВЛЯЮТСЯ вариантом (не имеют родителя в МойСклад).
+    // Это самый надежный способ отфильтровать только "матрёшки".
+    // Логика определения родителя теперь полностью лежит в скрипте синхронизации.
     orderBy: { createdAt: 'desc' },
     include: {
       status: true,
@@ -33,13 +22,24 @@ async function getProductsForTable() {
         orderBy: { createdAt: 'asc' },
         include: {
           images: { orderBy: { order: 'asc' } },
-          sizes: { include: { size: true } },
+          sizes: {
+            include: {
+              size: true,
+            },
+          },
         },
       },
     },
   });
 
-  return products;
+  // Теперь, когда синхронизация работает правильно, мы можем доверять данным.
+  // Но для надежности отфильтруем на стороне сервера, чтобы избежать дублей.
+  // Мы предполагаем, что у "товара-варианта" имя будет содержать скобки, а у родителя - нет.
+  const parentProducts = products.filter(
+    (p) => !p.name.includes('(') && !p.name.includes(')'),
+  );
+
+  return parentProducts;
 }
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 

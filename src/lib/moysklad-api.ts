@@ -54,55 +54,13 @@ export const createMoySkladProduct = async (
   });
 };
 
-let cachedColorCharacteristicMeta: any | null = null;
-const getMoySkladColorCharacteristicMeta = async () => {
-  if (cachedColorCharacteristicMeta) {
-    return cachedColorCharacteristicMeta;
-  }
-  console.log('[API МойСклад] Получение meta-данных характеристики "Цвет"...');
-  const response = await moySkladFetch('entity/characteristic');
-  const colorChar = response.rows.find((char: any) => char.name === 'Цвет');
-  if (!colorChar) {
-    throw new Error('Характеристика "Цвет" не найдена в МойСклад.');
-  }
-  cachedColorCharacteristicMeta = colorChar.meta;
-  return cachedColorCharacteristicMeta;
-};
-export const createMoySkladVariant = async (
-  productMoySkladId: string,
-  variantColorValue: string,
-  variantArticle: string,
-) => {
-  console.log(
-    `[API МойСклад] Создание модификации со значением "${variantColorValue}" для товара ${productMoySkladId}...`,
-  );
-  const colorCharacteristicMeta = await getMoySkladColorCharacteristicMeta();
-  const body = {
-    article: variantArticle,
-    product: {
-      meta: {
-        href: `${MOYSKLAD_API_URL}/entity/product/${productMoySkladId}`,
-        type: 'product',
-        mediaType: 'application/json',
-      },
-    },
-    characteristics: [
-      {
-        characteristic: {
-          meta: colorCharacteristicMeta,
-        },
-        value: variantColorValue,
-      },
-    ],
-  };
-  return await moySkladFetch('entity/variant', {
-    method: 'POST',
-    body: JSON.stringify(body),
-  });
-};
+// --- УДАЛЕНЫ ФУНКЦИИ createMoySkladVariant и getMoySkladColorCharacteristicMeta ---
 
 export const getMoySkladProducts = async () => {
-  return await moySkladFetch('entity/assortment?expand=productFolder,images');
+  // Добавляем expand=product, чтобы получить ссылку на родительский товар для вариантов
+  return await moySkladFetch(
+    'entity/assortment?expand=productFolder,images,product',
+  );
 };
 export const getMoySkladCategories = async () => {
   return await moySkladFetch('entity/productfolder?expand=productFolder');
@@ -217,7 +175,6 @@ export const updateMoySkladPrice = async (
   });
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем удаление на архивацию ---
 export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
   console.log(`[API МойСклад] Архивация ${moySkladIds.length} товаров...`);
 
@@ -225,7 +182,6 @@ export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
     archived: true,
   };
 
-  // Выполняем запросы на архивацию параллельно для всех ID
   const promises = moySkladIds.map((id) =>
     moySkladFetch(`entity/product/${id}`, {
       method: 'PUT',
@@ -235,4 +191,3 @@ export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
 
   return Promise.all(promises);
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---

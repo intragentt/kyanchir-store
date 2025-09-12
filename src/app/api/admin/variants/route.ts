@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-// --- ИЗМЕНЕНИЕ: Используем функцию создания ТОВАРА, а не варианта ---
 import { createMoySkladProduct } from '@/lib/moysklad-api';
 
 export async function POST(req: NextRequest) {
@@ -22,7 +21,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Находим родительский продукт в нашей БД, чтобы получить его данные
     const parentProduct = await prisma.product.findUnique({
       where: { id: productId },
       include: { categories: true },
@@ -34,12 +32,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // --- НОВАЯ ЛОГИКА ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика создания НОВОГО ТОВАРА в МС ---
+
     // 1. Формируем имя и артикул для НОВОГО ТОВАРА в Моем складе
-    const newProductNameInMoySklad = `${parentProduct.name} (${color})`;
-    const newProductArticleInMoySklad = `${
-      parentProduct.article
-    }-${color.toUpperCase()}`;
+    // Теперь мы создаем товар с размером по умолчанию, чтобы сразу задать остаток.
+    const newProductNameInMoySklad = `${parentProduct.name} (${color}, ONE_SIZE)`;
+    const newProductArticleInMoySklad = `${parentProduct.article}-V1-SONESIZE`; // Примерная логика
     const categoryMoySkladId = parentProduct.categories[0].moyskladId;
 
     // 2. Создаем НОВЫЙ ТОВАР в Моем складе
@@ -53,15 +51,33 @@ export async function POST(req: NextRequest) {
       throw new Error('Не удалось создать новый товар в МойСклад');
     }
 
-    // 3. Создаем ВАРИАНТ в нашей БД, связывая его с ID нового товара из МойСклад
+    // 3. Создаем ВАРИАНТ и РАЗМЕР в нашей БД
+    const oneSize = await prisma.size.upsert({
+      where: { value: 'ONE_SIZE' },
+      update: {},
+      create: { value: 'ONE_SIZE' },
+    });
+
     const newVariant = await prisma.productVariant.create({
       data: {
-        productId: parentProduct.id,
+        product: { connect: { id: parentProduct.id } },
         color: color,
-        price: 0, // Цена по умолчанию
-        moySkladId: newMoySkladProduct.id, // <-- ID нового ТОВАРА
+        price: 0,
+        sizes: {
+          create: {
+            size: { connect: { id: oneSize.id } },
+            stock: 0, // Начальный остаток 0, добавляется позже
+            moySkladHref: newMoySkladProduct.meta.href,
+            moySkladType: newMoySkladProduct.meta.type,
+          },
+        },
+      },
+      include: {
+        sizes: true, // Включаем размеры в ответ
       },
     });
+
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json(newVariant, { status: 201 });
   } catch (error) {

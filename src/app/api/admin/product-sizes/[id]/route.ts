@@ -8,7 +8,10 @@ import {
   updateMoySkladVariantStock,
 } from '@/lib/moysklad-api';
 
-const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
+function getUUIDFromHref(href: string): string {
+  const pathPart = href.split('/').pop() || '';
+  return pathPart.split('?')[0];
+}
 
 export async function PATCH(
   req: NextRequest,
@@ -23,15 +26,17 @@ export async function PATCH(
     const productSizeId = params.id;
     const body = await req.json();
 
-    const sizeWithVariant = await prisma.productSize.findUnique({
+    const productSize = await prisma.productSize.findUnique({
       where: { id: productSizeId },
-      include: { productVariant: true },
     });
 
-    if (!sizeWithVariant?.productVariant?.moySkladId) {
-      throw new Error('Связанный товар МойСклад не найден.');
+    if (!productSize || !productSize.moySkladHref) {
+      throw new Error('Запись о размере или ее связь с МойСклад не найдена.');
     }
-    const moySkladProductId = sizeWithVariant.productVariant.moySkladId;
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Берем ID напрямую из ProductSize ---
+    const moySkladProductId = getUUIDFromHref(productSize.moySkladHref);
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     // --- Логика обновления ЦЕНЫ ---
     if (body.price !== undefined || body.oldPrice !== undefined) {
@@ -48,12 +53,12 @@ export async function PATCH(
     // --- Логика обновления ОСТАТКА ---
     if (body.stock !== undefined) {
       const newStock = Number(body.stock);
-      const oldStock = sizeWithVariant.stock;
+      const oldStock = productSize.stock;
 
-      const moySkladHref = `${MOYSKLAD_API_URL}/entity/product/${moySkladProductId}`;
+      // Используем полный Href, который ожидает функция
       await updateMoySkladVariantStock(
-        moySkladHref,
-        'product',
+        productSize.moySkladHref,
+        productSize.moySkladType,
         newStock,
         oldStock,
       );
