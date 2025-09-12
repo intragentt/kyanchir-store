@@ -221,7 +221,7 @@ export const getMoySkladEntityByHref = async (href: string) => {
   return await moySkladFetch(endpoint);
 };
 
-// --- НАЧАЛО НОВОЙ АРХИТЕКТУРЫ ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 
 let sizeCharacteristicMeta: any = null;
 /**
@@ -234,13 +234,19 @@ const getMoySkladSizeCharacteristicMeta = async () => {
   console.log(
     '[API МойСклад] Получение метаданных для характеристики "Размер"...',
   );
-  const response = await moySkladFetch(
-    'entity/characteristic?filter=name=Размер',
+  // ПРАВИЛЬНЫЙ ПУТЬ: Запрашиваем метаданные сущности "модификация"
+  const response = await moySkladFetch('entity/variant/metadata');
+  // Ищем нужную характеристику в массиве characteristics
+  const sizeChar = response.characteristics.find(
+    (char: any) => char.name === 'Размер',
   );
-  if (!response?.rows?.[0]) {
-    throw new Error('Характеристика "Размер" не найдена в МойСклад!');
+
+  if (!sizeChar) {
+    throw new Error(
+      'Характеристика "Размер" не найдена в метаданных МойСклад!',
+    );
   }
-  sizeCharacteristicMeta = response.rows[0].meta;
+  sizeCharacteristicMeta = sizeChar.meta;
   return sizeCharacteristicMeta;
 };
 
@@ -283,5 +289,4 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
-
-// --- КОНЕЦ НОВОЙ АРХИТЕКТУРЫ ---
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
