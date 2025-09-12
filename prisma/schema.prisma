@@ -54,19 +54,19 @@ model Image {
 }
 
 model ProductSize {
-  id               String         @id @default(cuid())
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем @unique, так как Href не уникален для размера ---
+  id               String      @id @default(cuid())
+  article          String?     // <-- ДОБАВЛЕНО: Для хранения финального SKU (...-V1-SM)
   moySkladHref     String?
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-  moySkladType     String         @default("variant")
+  moySkladType     String      @default("variant")
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
   sizeId           String
-  size             Size           @relation(fields: [sizeId], references: [id])
+  size             Size        @relation(fields: [sizeId], references: [id])
   stock            Int
   price            Int?
   oldPrice         Int?
   orderItems       OrderItem[]
+
   @@unique([productVariantId, sizeId])
 }
 
@@ -88,6 +88,7 @@ model Attribute {
 model Category {
   id          String       @id @default(cuid())
   name        String
+  code        String       @unique // <--- Сразу делаем поле обязательным и уникальным
   products    Product[]    @relation("ProductToCategory")
   parentId    String?
   parent      Category?    @relation("SubCategories", fields: [parentId], references: [id], onDelete: SetNull)

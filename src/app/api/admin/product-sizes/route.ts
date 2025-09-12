@@ -1,88 +1,98 @@
 // Местоположение: /src/app/api/admin/product-sizes/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
+import { generateVariantSku, generateSizeSku } from '@/lib/sku-generator';
 import { updateMoySkladVariantStock } from '@/lib/moysklad-api';
-
-const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role.name !== 'ADMIN') {
-    return new NextResponse('Неавторизован', { status: 401 });
+    return new NextResponse('Неавторизованный доступ', { status: 401 });
   }
 
   try {
     const body = await req.json();
-    const { productVariantId, sizeId, stock } = body;
+    const { productVariantId, sizeId, initialStock } = body;
 
-    if (!productVariantId || !sizeId || stock === undefined || stock < 0) {
-      return new NextResponse('Некорректные данные запроса', { status: 400 });
+    if (!productVariantId || !sizeId || initialStock === undefined) {
+      return new NextResponse('Отсутствуют обязательные поля', { status: 400 });
     }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем "ONE_SIZE" при добавлении реального размера ---
-    const oneSizeToDelete = await prisma.productSize.findFirst({
-      where: {
-        productVariantId: productVariantId,
-        size: {
-          value: 'ONE_SIZE',
-        },
-        stock: 0,
-      },
-    });
-
-    if (oneSizeToDelete) {
-      await prisma.productSize.delete({
-        where: { id: oneSizeToDelete.id },
+    const stock = Number(initialStock);
+    if (isNaN(stock) || stock < 0) {
+      return new NextResponse('Некорректное значение остатка', {
+        status: 400,
       });
-      console.log(
-        `[API] Автоматически удален ONE_SIZE для варианта ${productVariantId}`,
-      );
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     const variant = await prisma.productVariant.findUnique({
       where: { id: productVariantId },
+      include: {
+        product: {
+          include: {
+            variants: true,
+          },
+        },
+        sizes: true,
+      },
     });
-    if (!variant || !variant.moySkladId) {
-      throw new Error('Вариант не найден или не синхронизирован с МойСклад');
+
+    const size = await prisma.size.findUnique({ where: { id: sizeId } });
+
+    if (!variant || !variant.product.article || !size) {
+      throw new Error('Не найден вариант, родительский товар или размер');
+    }
+    if (!variant.sizes[0]?.moySkladHref || !variant.sizes[0]?.moySkladType) {
+      throw new Error('Вариант не синхронизирован с МойСклад');
     }
 
-    const productSize = await prisma.productSize.upsert({
-      where: {
-        productVariantId_sizeId: {
-          productVariantId,
-          sizeId,
-        },
-      },
-      update: {
-        stock: {
-          increment: stock,
-        },
-      },
-      create: {
-        productVariantId,
-        sizeId,
-        stock,
-        moySkladType: 'product', // Предполагаем, что всегда товар
-        moySkladHref: `${MOYSKLAD_API_URL}/entity/product/${variant.moySkladId}`, // Формируем Href
+    const { moySkladHref, moySkladType } = variant.sizes[0];
+
+    const variantIndex = variant.product.variants.findIndex(
+      (v) => v.id === variant.id,
+    );
+    const variantArticle = generateVariantSku(
+      variant.product.article,
+      variantIndex,
+    );
+    const sizeArticle = generateSizeSku(variantArticle, size.value);
+
+    if (stock > 0) {
+      // --- НАЧАЛО ИЗМЕНЕНИЯ: Передаем аргументы по отдельности, а не объектом ---
+      await updateMoySkladVariantStock(
+        moySkladHref,
+        moySkladType,
+        stock, // newStock
+        0, // oldStock
+      );
+      // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+    }
+
+    const newProductSize = await prisma.productSize.create({
+      data: {
+        productVariantId: variant.id,
+        sizeId: size.id,
+        stock: stock,
+        article: sizeArticle,
+        moySkladHref: moySkladHref,
+        moySkladType: moySkladType,
       },
     });
 
-    const moySkladHref = `${MOYSKLAD_API_URL}/entity/product/${variant.moySkladId}`;
-    const oldStock = productSize.stock - stock;
-
-    await updateMoySkladVariantStock(
-      moySkladHref,
-      'product',
-      productSize.stock,
-      oldStock,
-    );
-
-    return NextResponse.json(productSize, { status: 201 });
+    return NextResponse.json(newProductSize, { status: 201 });
   } catch (error) {
     console.error('Ошибка при добавлении размера:', error);
+    if (error instanceof Error && error.message.includes('Unique constraint')) {
+      return new NextResponse(
+        'Такой размер для этого варианта уже существует',
+        {
+          status: 409,
+        },
+      );
+    }
     const errorMessage =
       error instanceof Error ? error.message : 'Внутренняя ошибка сервера';
     return new NextResponse(errorMessage, { status: 500 });

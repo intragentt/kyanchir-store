@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { createMoySkladProduct } from '@/lib/moysklad-api';
+import { generateVariantSku } from '@/lib/sku-generator'; // <-- 1. Импортируем наш новый генератор
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -21,25 +22,30 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // --- НАЧАЛО КЛЮЧЕВЫХ ИЗМЕНЕНИЙ ---
+
+    // 2. Находим родительский товар и сразу включаем его варианты для подсчета
     const parentProduct = await prisma.product.findUnique({
       where: { id: productId },
-      include: { categories: true },
+      include: { categories: true, variants: true }, // <-- Включаем variants
     });
 
-    if (!parentProduct || !parentProduct.categories[0]?.moyskladId) {
-      throw new Error(
-        'Родительский товар или его категория не найдены/не синхронизированы',
-      );
+    if (!parentProduct || !parentProduct.article) {
+      throw new Error('Родительский товар или его артикул не найдены');
+    }
+    if (!parentProduct.categories[0]?.moyskladId) {
+      throw new Error('Категория родительского товара не синхронизирована');
     }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика создания НОВОГО ТОВАРА в МС ---
-
-    // 1. Формируем имя и артикул для НОВОГО ТОВАРА в Моем складе
-    const newProductNameInMoySklad = `${parentProduct.name} (${color}, ONE_SIZE)`;
-    const newProductArticleInMoySklad = `${parentProduct.article}-V1-SONESIZE`; // Примерная логика
+    // 3. Генерируем имя и артикул для НОВОГО ТОВАРА в Моем Складе
+    const newProductNameInMoySklad = `${parentProduct.name} (${color})`; // <-- Убираем лишний размер
+    const newProductArticleInMoySklad = generateVariantSku(
+      parentProduct.article,
+      parentProduct.variants.length, // <-- Передаем кол-во существующих вариантов
+    );
     const categoryMoySkladId = parentProduct.categories[0].moyskladId;
 
-    // 2. Создаем НОВЫЙ ТОВАР в Моем складе
+    // 4. Создаем НОВЫЙ ТОВАР в Моем Складе
     const newMoySkladProduct = await createMoySkladProduct(
       newProductNameInMoySklad,
       newProductArticleInMoySklad,
@@ -50,7 +56,7 @@ export async function POST(req: NextRequest) {
       throw new Error('Не удалось создать новый товар в МойСклад');
     }
 
-    // 3. Создаем ВАРИАНТ и РАЗМЕР в нашей БД
+    // 5. Создаем ВАРИАНТ и РАЗМЕР в нашей БД
     const oneSize = await prisma.size.upsert({
       where: { value: 'ONE_SIZE' },
       update: {},
@@ -62,23 +68,22 @@ export async function POST(req: NextRequest) {
         product: { connect: { id: parentProduct.id } },
         color: color,
         price: 0,
-        // --- КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Добавляем недостающий ID ---
         moySkladId: newMoySkladProduct.id,
         sizes: {
           create: {
             size: { connect: { id: oneSize.id } },
-            stock: 0, // Начальный остаток 0, добавляется позже
+            stock: 0,
             moySkladHref: newMoySkladProduct.meta.href,
             moySkladType: newMoySkladProduct.meta.type,
           },
         },
       },
       include: {
-        sizes: true, // Включаем размеры в ответ
+        sizes: true,
       },
     });
 
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    // --- КОНЕЦ КЛЮЧЕВЫХ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json(newVariant, { status: 201 });
   } catch (error) {

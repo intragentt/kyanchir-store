@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { createMoySkladProduct } from '@/lib/moysklad-api';
+import { generateProductSku } from '@/lib/sku-generator'; // <-- 1. Импортируем наш новый генератор
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -15,18 +16,18 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { name, description, categoryId, statusId } = body;
-    let { article } = body;
+    // let { article } = body; // <-- 2. УДАЛЯЕМ старую переменную
 
     if (!name || !categoryId || !statusId) {
       return new NextResponse('Отсутствуют обязательные поля', { status: 400 });
     }
-    if (!article) {
-      article = `KYA-${Date.now()}`;
-    }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Интеграция с МойСклад ---
+    // --- НАЧАЛО КЛЮЧЕВЫХ ИЗМЕНЕНИЙ ---
 
-    // 1. Находим категорию в нашей БД, чтобы получить ее moyskladId
+    // 3. Генерируем правильный артикул перед всеми операциями
+    const article = await generateProductSku(prisma, categoryId);
+
+    // 4. Находим категорию в нашей БД (теперь только для moyskladId)
     const category = await prisma.category.findUnique({
       where: { id: categoryId },
     });
@@ -38,30 +39,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Создаем продукт СНАЧАЛА в МойСклад
+    // 5. Создаем продукт СНАЧАЛА в МойСклад с новым, правильным артикулом
     const newMoySkladProduct = await createMoySkladProduct(
       name,
-      article,
+      article, // <-- Передаем сгенерированный артикул
       category.moyskladId,
     );
     if (!newMoySkladProduct || !newMoySkladProduct.id) {
       throw new Error('Не удалось создать продукт в МойСклад');
     }
 
-    // 3. Создаем продукт в нашей БД, сохраняя связь
+    // 6. Создаем продукт в нашей БД, сохраняя связь
     const newProduct = await prisma.product.create({
       data: {
         name,
-        article,
+        article, // <-- Сохраняем сгенерированный артикул
         description,
         statusId,
-        moyskladId: newMoySkladProduct.id, // <-- Сохраняем ID из МойСклад
+        moyskladId: newMoySkladProduct.id,
         categories: {
           connect: { id: categoryId },
         },
       },
     });
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    // --- КОНЕЦ КЛЮЧЕВЫХ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json(newProduct, { status: 201 });
   } catch (error) {
