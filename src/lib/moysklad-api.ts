@@ -221,8 +221,6 @@ export const getMoySkladEntityByHref = async (href: string) => {
   return await moySkladFetch(endpoint);
 };
 
-// --- НАЧАЛО ИСПРАВЛЕНИЙ ---
-
 let sizeCharacteristicCache: { meta: any; values: Map<string, any> } | null =
   null;
 const getMoySkladSizeCharacteristicData = async (): Promise<{
@@ -248,10 +246,10 @@ const getMoySkladSizeCharacteristicData = async (): Promise<{
   console.log(
     '[API МойСклад] Получение всех значений для характеристики "Размер"...',
   );
-  const valuesResponse = await moySkladFetch(
-    `entity/characteristic/${sizeChar.id}`,
-  );
-  // Указываем TypeScript точные типы для Map
+  // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ---
+  // Используем ПРАВИЛЬНЫЙ Href из метаданных, а не строим путь вручную
+  const valuesResponse = await getMoySkladEntityByHref(sizeChar.meta.href);
+  // --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
   const valuesMap = new Map<string, any>(
     valuesResponse.values.map((v: any) => [v.value, v]),
   );
@@ -305,4 +303,3 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ ИСПРАВЛЕНИЙ ---
