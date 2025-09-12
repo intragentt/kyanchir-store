@@ -56,7 +56,6 @@ export async function POST() {
     let updatedCount = 0;
     const errors: string[] = [];
 
-    // Создаем кэш для родительских товаров, чтобы не запрашивать их по 100 раз
     const parentProductCache = new Map<string, any>();
 
     for (const msProduct of productsToFix) {
@@ -78,12 +77,10 @@ export async function POST() {
             );
           }
 
-          // Мы предполагаем, что у модификации есть только один вариант и один размер
-          // Это соответствует нашей новой архитектуре
           const baseVariantArticle = generateVariantSku(
             parentProduct.article,
             0,
-          ); // V1
+          );
           const sizeChar =
             msProduct.characteristics?.find((c: any) => c.name === 'Размер')
               ?.value || 'ONE_SIZE';
@@ -102,7 +99,13 @@ export async function POST() {
           newArticle = await generateProductSku(prisma, ourCategory.id);
         }
 
-        await updateMoySkladArticle(msProduct.id, newArticle);
+        // Передаем ID, новый артикул и ТИП ('product' или 'variant')
+        await updateMoySkladArticle(
+          msProduct.id,
+          newArticle,
+          msProduct.meta.type,
+        );
+
         updatedCount++;
       } catch (error) {
         const errorMessage =

@@ -199,13 +199,14 @@ export const getMoySkladProductsAndVariants = async () => {
 };
 
 export const updateMoySkladArticle = async (
-  moySkladProductId: string,
+  moySkladId: string,
   newArticle: string,
+  type: 'product' | 'variant',
 ) => {
   console.log(
-    `[API МойСклад] Обновление артикула для ${moySkladProductId} на "${newArticle}"`,
+    `[API МойСклад] Обновление артикула для ${type} ${moySkladId} на "${newArticle}"`,
   );
-  const endpoint = `entity/product/${moySkladProductId}`;
+  const endpoint = `entity/${type}/${moySkladId}`;
   const body = {
     article: newArticle,
   };
