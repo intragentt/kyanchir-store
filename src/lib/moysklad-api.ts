@@ -214,3 +214,8 @@ export const updateMoySkladArticle = async (
     body: JSON.stringify(body),
   });
 };
+
+export const getMoySkladEntityByHref = async (href: string) => {
+  const endpoint = href.replace(MOYSKLAD_API_URL + '/', '');
+  return await moySkladFetch(endpoint);
+};
