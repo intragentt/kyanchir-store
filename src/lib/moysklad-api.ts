@@ -220,3 +220,68 @@ export const getMoySkladEntityByHref = async (href: string) => {
   const endpoint = href.replace(MOYSKLAD_API_URL + '/', '');
   return await moySkladFetch(endpoint);
 };
+
+// --- НАЧАЛО НОВОЙ АРХИТЕКТУРЫ ---
+
+let sizeCharacteristicMeta: any = null;
+/**
+ * Находит и кэширует метаданные для характеристики "Размер".
+ */
+const getMoySkladSizeCharacteristicMeta = async () => {
+  if (sizeCharacteristicMeta) {
+    return sizeCharacteristicMeta;
+  }
+  console.log(
+    '[API МойСклад] Получение метаданных для характеристики "Размер"...',
+  );
+  const response = await moySkladFetch(
+    'entity/characteristic?filter=name=Размер',
+  );
+  if (!response?.rows?.[0]) {
+    throw new Error('Характеристика "Размер" не найдена в МойСклад!');
+  }
+  sizeCharacteristicMeta = response.rows[0].meta;
+  return sizeCharacteristicMeta;
+};
+
+/**
+ * Создает в МойСклад новую МОДИФИКАЦИЮ (variant) для существующего товара.
+ * @param parentProductId - ID родительского товара в МойСклад.
+ * @param article - Артикул новой модификации.
+ * @param sizeValue - Значение размера (например, "S", "M", "L").
+ */
+export const createMoySkladVariant = async (
+  parentProductId: string,
+  article: string,
+  sizeValue: string,
+) => {
+  console.log(
+    `[API МойСклад] Создание модификации для товара ${parentProductId} с размером ${sizeValue}...`,
+  );
+
+  const sizeMeta = await getMoySkladSizeCharacteristicMeta();
+
+  const body = {
+    article,
+    product: {
+      meta: {
+        href: `${MOYSKLAD_API_URL}/entity/product/${parentProductId}`,
+        type: 'product',
+        mediaType: 'application/json',
+      },
+    },
+    characteristics: [
+      {
+        meta: sizeMeta,
+        value: sizeValue,
+      },
+    ],
+  };
+
+  return await moySkladFetch('entity/variant', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+};
+
+// --- КОНЕЦ НОВОЙ АРХИТЕКТУРЫ ---
