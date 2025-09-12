@@ -246,13 +246,13 @@ const getMoySkladSizeCharacteristicData = async (): Promise<{
   console.log(
     '[API МойСклад] Получение всех значений для характеристики "Размер"...',
   );
-  // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ ---
-  // Используем ПРАВИЛЬНЫЙ Href из метаданных, а не строим путь вручную
   const valuesResponse = await getMoySkladEntityByHref(sizeChar.meta.href);
-  // --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
+
+  // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: Используем `rows` вместо `values` ---
   const valuesMap = new Map<string, any>(
-    valuesResponse.values.map((v: any) => [v.value, v]),
+    valuesResponse.rows.map((v: any) => [v.value, v]),
   );
+  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
   sizeCharacteristicCache = {
     meta: sizeChar.meta,
