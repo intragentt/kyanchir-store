@@ -221,41 +221,48 @@ export const getMoySkladEntityByHref = async (href: string) => {
   return await moySkladFetch(endpoint);
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// --- НАЧАЛО ИСПРАВЛЕНИЙ ---
 
-let sizeCharacteristicMeta: any = null;
-/**
- * Находит и кэширует метаданные для характеристики "Размер".
- */
-const getMoySkladSizeCharacteristicMeta = async () => {
-  if (sizeCharacteristicMeta) {
-    return sizeCharacteristicMeta;
+let sizeCharacteristicCache: { meta: any; values: Map<string, any> } | null =
+  null;
+const getMoySkladSizeCharacteristicData = async (): Promise<{
+  meta: any;
+  values: Map<string, any>;
+}> => {
+  if (sizeCharacteristicCache) {
+    return sizeCharacteristicCache;
   }
   console.log(
     '[API МойСклад] Получение метаданных для характеристики "Размер"...',
   );
-  // ПРАВИЛЬНЫЙ ПУТЬ: Запрашиваем метаданные сущности "модификация"
   const response = await moySkladFetch('entity/variant/metadata');
-  // Ищем нужную характеристику в массиве characteristics
   const sizeChar = response.characteristics.find(
     (char: any) => char.name === 'Размер',
   );
-
   if (!sizeChar) {
     throw new Error(
       'Характеристика "Размер" не найдена в метаданных МойСклад!',
     );
   }
-  sizeCharacteristicMeta = sizeChar.meta;
-  return sizeCharacteristicMeta;
+
+  console.log(
+    '[API МойСклад] Получение всех значений для характеристики "Размер"...',
+  );
+  const valuesResponse = await moySkladFetch(
+    `entity/characteristic/${sizeChar.id}`,
+  );
+  // Указываем TypeScript точные типы для Map
+  const valuesMap = new Map<string, any>(
+    valuesResponse.values.map((v: any) => [v.value, v]),
+  );
+
+  sizeCharacteristicCache = {
+    meta: sizeChar.meta,
+    values: valuesMap,
+  };
+  return sizeCharacteristicCache;
 };
 
-/**
- * Создает в МойСклад новую МОДИФИКАЦИЮ (variant) для существующего товара.
- * @param parentProductId - ID родительского товара в МойСклад.
- * @param article - Артикул новой модификации.
- * @param sizeValue - Значение размера (например, "S", "M", "L").
- */
 export const createMoySkladVariant = async (
   parentProductId: string,
   article: string,
@@ -265,7 +272,14 @@ export const createMoySkladVariant = async (
     `[API МойСклад] Создание модификации для товара ${parentProductId} с размером ${sizeValue}...`,
   );
 
-  const sizeMeta = await getMoySkladSizeCharacteristicMeta();
+  const { meta, values } = await getMoySkladSizeCharacteristicData();
+  const sizeValueData = values.get(sizeValue);
+
+  if (!sizeValueData) {
+    throw new Error(
+      `Значение размера "${sizeValue}" не найдено в МойСклад. Добавьте его в справочник.`,
+    );
+  }
 
   const body = {
     article,
@@ -278,8 +292,10 @@ export const createMoySkladVariant = async (
     },
     characteristics: [
       {
-        meta: sizeMeta,
-        value: sizeValue,
+        meta: meta,
+        id: sizeValueData.id,
+        name: sizeValueData.name,
+        value: sizeValueData.value,
       },
     ],
   };
@@ -289,4 +305,4 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+// --- КОНЕЦ ИСПРАВЛЕНИЙ ---
