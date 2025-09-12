@@ -12,19 +12,18 @@ function getUUIDFromHref(href: string): string {
   return pathPart.split('?')[0];
 }
 
-// Утилита для парсинга имен, как ты и предлагал
+// Умный парсер, основанный на твоей логике
 function parseProductName(name: string): {
   parentName: string;
   variantName: string;
   sizeName: string;
 } {
-  // Пример: "Комплект двойка (Белый, S)" -> { parentName: 'Комплект двойка', variantName: 'Белый', sizeName: 'S' }
   const sizeMatch = name.match(/, (S|M|L|XL|XS|XXL|ONE SIZE)\)$/i);
   const sizeName = sizeMatch
     ? sizeMatch[1].toUpperCase().replace(' ', '_')
     : 'ONE_SIZE';
-  const nameWithoutSize = sizeMatch
-    ? name.replace(sizeMatch[0] + ')', '').trim()
+  let nameWithoutSize = sizeMatch
+    ? name.substring(0, sizeMatch.index).trim()
     : name;
 
   const colorMatch = nameWithoutSize.match(/\(([^)]+)\)$/);
@@ -37,7 +36,7 @@ function parseProductName(name: string): {
 }
 
 async function runSync() {
-  console.log('--- ЗАПУСК СИНХРОНИЗАЦИИ ПО АРТИКУЛАМ v1 ---');
+  console.log('--- ЗАПУСК ФИНАЛЬНОЙ ПЕРЕСБОРКИ СИНХРОНИЗАЦИИ v11 ---');
 
   // 1. ПОДГОТОВКА
   console.log('1/4: Получение данных...');
@@ -62,23 +61,26 @@ async function runSync() {
     stockMap.set(assortmentId, currentStock + (item.stock || 0));
   });
 
-  const moySkladItems: any[] = moySkladResponse.rows || [];
-
   // 2. ГРУППИРОВКА В ПАМЯТИ
-  console.log('2/4: Группировка товаров по родителям...');
-  const productGroups = new Map<string, any[]>();
-  for (const item of moySkladItems) {
-    const { parentName } = parseProductName(item.name);
+  console.log('2/4: Группировка товаров по родителям, вариантам и размерам...');
+  const productGroups = new Map<string, Map<string, any[]>>();
+  for (const item of moySkladResponse.rows) {
+    const { parentName, variantName } = parseProductName(item.name);
     if (!productGroups.has(parentName)) {
-      productGroups.set(parentName, []);
+      productGroups.set(parentName, new Map<string, any[]>());
     }
-    productGroups.get(parentName)!.push(item);
+    const variantsMap = productGroups.get(parentName)!;
+    if (!variantsMap.has(variantName)) {
+      variantsMap.set(variantName, []);
+    }
+    variantsMap.get(variantName)!.push(item);
   }
 
-  // 3. СИНХРОНИЗАЦИЯ
-  console.log('3/4: Синхронизация данных с БД...');
-  for (const [parentName, msItems] of productGroups.entries()) {
-    const representativeItem = msItems[0];
+  // 3. СИНХРОНИЗАЦИЯ С БД
+  console.log('3/4: Синхронизация с БД...');
+  for (const [parentName, variantsMap] of productGroups.entries()) {
+    const firstVariantItems = Array.from(variantsMap.values())[0];
+    const representativeItem = firstVariantItems[0];
     const categoryMoySkladId = representativeItem.productFolder
       ? getUUIDFromHref(representativeItem.productFolder.meta.href)
       : null;
@@ -86,37 +88,19 @@ async function runSync() {
       ? categoryMap.get(categoryMoySkladId)
       : undefined;
 
-    // Создаем родительский Product
     const product = await prisma.product.upsert({
       where: { name: parentName },
-      update: {
-        categories: ourCategoryId
-          ? { set: [{ id: ourCategoryId }] }
-          : undefined,
-      },
+      update: {},
       create: {
         name: parentName,
         article:
           representativeItem.article?.split('-')[0] || `prod-${Date.now()}`,
         statusId: draftStatus.id,
-        moyskladId: representativeItem.product?.meta
-          ? getUUIDFromHref(representativeItem.product.meta.href)
-          : representativeItem.id,
         categories: ourCategoryId
           ? { connect: { id: ourCategoryId } }
           : undefined,
       },
     });
-
-    // Группируем варианты по цветам
-    const variantsMap = new Map<string, any[]>();
-    for (const item of msItems) {
-      const { variantName } = parseProductName(item.name);
-      if (!variantsMap.has(variantName)) {
-        variantsMap.set(variantName, []);
-      }
-      variantsMap.get(variantName)!.push(item);
-    }
 
     for (const [variantName, sizeItems] of variantsMap.entries()) {
       const repSizeItem = sizeItems[0];
@@ -160,7 +144,6 @@ async function runSync() {
           where: { moySkladHref: item.meta.href },
           update: {
             stock: stockMap.get(item.id) || 0,
-            productVariantId: productVariant.id,
           },
           create: {
             productVariant: { connect: { id: productVariant.id } },
