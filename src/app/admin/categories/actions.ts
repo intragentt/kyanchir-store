@@ -7,14 +7,28 @@ import { revalidatePath } from 'next/cache';
 const pathToRevalidate = '/admin/categories';
 
 // --- CATEGORY ACTIONS ---
-export async function createCategory(name: string, parentId: string | null) {
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем 'code' в аргументы и в данные ---
+export async function createCategory(
+  name: string,
+  code: string, // <-- Добавлен аргумент
+  parentId: string | null,
+) {
   if (!name || name.trim() === '')
     return { error: 'Название не может быть пустым.' };
+  // Добавлена проверка для code
+  if (!code || code.trim() === '')
+    return { error: 'Код не может быть пустым.' };
+
   await prisma.category.create({
-    data: { name: name.trim(), ...(parentId && { parentId }) },
+    data: {
+      name: name.trim(),
+      code: code.trim(), // <-- Добавлено поле в данные
+      ...(parentId && { parentId }),
+    },
   });
   revalidatePath(pathToRevalidate);
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export async function updateCategory(
   id: string,
