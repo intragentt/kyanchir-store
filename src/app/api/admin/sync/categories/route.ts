@@ -1,11 +1,10 @@
-// /src/app/api/admin/sync/categories/route.ts
+// Местоположение: /src/app/api/admin/sync/categories/route.ts
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getMoySkladCategories } from '@/lib/moysklad-api';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// Мы не импортируем UserRole, так как он не нужен для сравнения значений
 
 interface MoySkladCategory {
   id: string;
@@ -20,11 +19,7 @@ function getUUIDFromHref(href: string): string {
 export async function POST() {
   const session = await getServerSession(authOptions);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: ИСПРАВЛЯЕМ СРАВНЕНИЕ ---
-  // TypeScript подсказал, что session.user.role - это ОБЪЕКТ.
-  // Поэтому мы должны сравнивать его свойство .name со строкой.
   if (!session?.user || session.user.role?.name !== 'ADMIN') {
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     return new NextResponse(JSON.stringify({ error: 'Доступ запрещен' }), {
       status: 403,
     });
@@ -51,7 +46,15 @@ export async function POST() {
         prisma.category.upsert({
           where: { moyskladId: category.id },
           update: { name: category.name },
-          create: { name: category.name, moyskladId: category.id },
+          // --- НАЧАЛО ИЗМЕНЕНИЯ ---
+          create: {
+            name: category.name,
+            moyskladId: category.id,
+            // Добавляем временный код, чтобы new-категория прошла валидацию.
+            // Используем ID из МойСклад, чтобы гарантировать уникальность.
+            code: `TEMP-${category.id}`,
+          },
+          // --- КОНЕЦ ИЗМЕНЕНИЯ ---
         }),
       ),
     );
