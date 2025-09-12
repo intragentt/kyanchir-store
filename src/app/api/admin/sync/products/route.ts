@@ -22,12 +22,10 @@ export async function POST() {
   }
 
   try {
-    console.log('[SYNC PRODUCTS] Начало синхронизации товаров...');
+    console.log('[SYNC PRODUCTS] Начало синхронизации товаров v2...');
 
-    // 1. ПОДГОТОВКА ДАННЫХ
-    console.log(
-      '[SYNC PRODUCTS] Шаг 1/3: Получение данных из МойСклад и нашей БД...',
-    );
+    // ... (Шаг 1: ПОДГОТОВКА ДАННЫХ - без изменений)
+    console.log('[SYNC PRODUCTS] Шаг 1/3: Получение данных...');
     const [
       moySkladResponse,
       stockResponse,
@@ -49,7 +47,6 @@ export async function POST() {
     const categoryMap = new Map(
       allOurCategories.map((cat) => [cat.moyskladId, cat.id]),
     );
-    const sizeMap = new Map(allOurSizes.map((size) => [size.value, size.id]));
     const stockMap = new Map<string, number>(
       stockResponse.rows.map((item: any) => [
         getUUIDFromHref(item.meta.href),
@@ -57,7 +54,6 @@ export async function POST() {
       ]),
     );
 
-    // 2. ГЛАВНЫЙ ЦИКЛ СИНХРОНИЗАЦИИ
     console.log(
       `[SYNC PRODUCTS] Шаг 2/3: Обработка ${moySkladItems.length} товаров...`,
     );
@@ -73,12 +69,22 @@ export async function POST() {
         ? categoryMap.get(categoryMoySkladId)
         : undefined;
 
+      // --- НАЧАЛО КЛЮЧЕВОГО ИЗМЕНЕНИЯ ---
+      // Мы больше не создаем родителя с временным артикулом.
+      // Вместо этого, мы будем ссылаться на него по имени и создавать, если его нет.
+      // Артикул будет храниться только у ProductSize.
       const ourParentProduct = await prisma.product.upsert({
         where: { name: baseProductName },
-        update: {},
+        update: {
+          // При обновлении можно обновить категорию, если она изменилась
+          categories: ourCategoryId
+            ? { set: [{ id: ourCategoryId }] }
+            : undefined,
+        },
         create: {
           name: baseProductName,
-          article: 'TEMP-SYNC',
+          // Артикул родителя теперь не так важен, главным будет артикул размера
+          article: msProduct.article || `TEMP-${msProduct.id}`,
           statusId: draftStatus.id,
           categories: ourCategoryId
             ? { connect: { id: ourCategoryId } }
@@ -119,7 +125,7 @@ export async function POST() {
           stock: stockMap.get(msProduct.id) || 0,
           moySkladHref: msProduct.meta.href,
           moySkladType: msProduct.meta.type,
-          article: msProduct.article,
+          article: msProduct.article, // <-- ГЛАВНОЕ: Берем настоящий артикул из МойСклад
         },
         create: {
           productVariantId: ourVariant.id,
@@ -127,9 +133,10 @@ export async function POST() {
           stock: stockMap.get(msProduct.id) || 0,
           moySkladHref: msProduct.meta.href,
           moySkladType: msProduct.meta.type,
-          article: msProduct.article,
+          article: msProduct.article, // <-- ГЛАВНОЕ: Берем настоящий артикул из МойСклад
         },
       });
+      // --- КОНЕЦ КЛЮЧЕВОГО ИЗМЕНЕНИЯ ---
     }
 
     console.log('[SYNC PRODUCTS] Шаг 3/3: Синхронизация завершена.');
