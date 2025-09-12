@@ -1,10 +1,10 @@
-// Местоположение: src/app/api/admin/products/create/route.ts
+// Местоположение: /src/app/api/admin/products/create/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { createMoySkladProduct } from '@/lib/moysklad-api';
-import { generateProductSku } from '@/lib/sku-generator'; // <-- 1. Импортируем наш новый генератор
+import { generateProductSku } from '@/lib/sku-generator';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { name, description, categoryId, statusId } = body;
-    // let { article } = body; // <-- 2. УДАЛЯЕМ старую переменную
 
     if (!name || !categoryId || !statusId) {
       return new NextResponse('Отсутствуют обязательные поля', { status: 400 });
@@ -24,14 +23,13 @@ export async function POST(req: NextRequest) {
 
     // --- НАЧАЛО КЛЮЧЕВЫХ ИЗМЕНЕНИЙ ---
 
-    // 3. Генерируем правильный артикул перед всеми операциями
+    // 1. Генерируем базовый артикул
     const article = await generateProductSku(prisma, categoryId);
 
-    // 4. Находим категорию в нашей БД (теперь только для moyskladId)
+    // 2. Находим категорию для ее moyskladId
     const category = await prisma.category.findUnique({
       where: { id: categoryId },
     });
-
     if (!category || !category.moyskladId) {
       return new NextResponse(
         'Выбранная категория не синхронизирована с МойСклад',
@@ -39,26 +37,50 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5. Создаем продукт СНАЧАЛА в МойСклад с новым, правильным артикулом
+    // 3. Создаем в МойСклад ОДИН товар, который будет нашим "Основным" вариантом
     const newMoySkladProduct = await createMoySkladProduct(
-      name,
-      article, // <-- Передаем сгенерированный артикул
+      name, // Простое имя, без "(Основной)"
+      article,
       category.moyskladId,
     );
     if (!newMoySkladProduct || !newMoySkladProduct.id) {
       throw new Error('Не удалось создать продукт в МойСклад');
     }
 
-    // 6. Создаем продукт в нашей БД, сохраняя связь
+    // 4. Находим или создаем размер "ONE_SIZE"
+    const oneSize = await prisma.size.upsert({
+      where: { value: 'ONE_SIZE' },
+      update: {},
+      create: { value: 'ONE_SIZE' },
+    });
+
+    // 5. Создаем ВСЮ СТРУКТУРУ в нашей БД ОДНОЙ ТРАНЗАКЦИЕЙ
     const newProduct = await prisma.product.create({
       data: {
         name,
-        article, // <-- Сохраняем сгенерированный артикул
+        article,
         description,
         statusId,
         moyskladId: newMoySkladProduct.id,
         categories: {
           connect: { id: categoryId },
+        },
+        // Вложенное создание варианта и размера
+        variants: {
+          create: {
+            color: 'Основной',
+            price: 0,
+            moySkladId: newMoySkladProduct.id, // ID из МойСклад
+            sizes: {
+              create: {
+                sizeId: oneSize.id,
+                stock: 0, // Начальный остаток 0
+                moySkladHref: newMoySkladProduct.meta.href,
+                moySkladType: newMoySkladProduct.meta.type,
+                article: article, // Базовый артикул для размера ONE_SIZE
+              },
+            },
+          },
         },
       },
     });
