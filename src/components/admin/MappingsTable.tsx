@@ -1,7 +1,7 @@
 // Местоположение: /src/components/admin/MappingsTable.tsx
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CategoryCodeMapping } from '@prisma/client';
 import toast, { Toaster } from 'react-hot-toast';
@@ -9,98 +9,7 @@ import {
   createMapping,
   deleteMapping,
   updateMapping,
-} from '@/app/admin/mappings/actions'; // <-- Импортируем updateMapping
-
-// --- НАЧАЛО НОВОГО КОМПОНЕНТА: MappingRow ---
-const MappingRow = ({ mapping }: { mapping: CategoryCodeMapping }) => {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [isEditing, setIsEditing] = useState(false);
-  const [categoryName, setCategoryName] = useState(mapping.categoryName);
-  const [assignedCode, setAssignedCode] = useState(mapping.assignedCode);
-
-  const handleSave = () => {
-    if (
-      categoryName === mapping.categoryName &&
-      assignedCode === mapping.assignedCode
-    ) {
-      setIsEditing(false);
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await updateMapping(mapping.id, {
-        categoryName,
-        assignedCode,
-      });
-      if (result?.error) {
-        toast.error(result.error);
-        // Возвращаем старые значения в случае ошибки
-        setCategoryName(mapping.categoryName);
-        setAssignedCode(mapping.assignedCode);
-      } else {
-        toast.success('Правило обновлено!');
-        router.refresh();
-      }
-      setIsEditing(false);
-    });
-  };
-
-  const handleDelete = () => {
-    startTransition(async () => {
-      await deleteMapping(mapping.id);
-      toast.success('Правило удалено.');
-      router.refresh();
-    });
-  };
-
-  return (
-    <tr onDoubleClick={() => setIsEditing(true)}>
-      {isEditing ? (
-        <>
-          <td className="px-6 py-4">
-            <input
-              value={categoryName}
-              onChange={(e) => setCategoryName(e.target.value)}
-              onBlur={handleSave}
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-              className="w-full rounded-md border-gray-300 shadow-sm"
-              autoFocus
-            />
-          </td>
-          <td className="px-6 py-4">
-            <input
-              value={assignedCode}
-              onChange={(e) => setAssignedCode(e.target.value.toUpperCase())}
-              onBlur={handleSave}
-              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-              className="w-full rounded-md border-gray-300 shadow-sm"
-            />
-          </td>
-        </>
-      ) : (
-        <>
-          <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-            {mapping.categoryName}
-          </td>
-          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-            {mapping.assignedCode}
-          </td>
-        </>
-      )}
-      <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-        <button
-          onClick={handleDelete}
-          disabled={isPending}
-          className="text-red-600 hover:text-red-900 disabled:opacity-50"
-        >
-          Удалить
-        </button>
-      </td>
-    </tr>
-  );
-};
-// --- КОНЕЦ НОВОГО КОМПОНЕНТА ---
+} from '@/app/admin/mappings/actions';
 
 interface MappingsTableProps {
   mappings: CategoryCodeMapping[];
@@ -111,6 +20,41 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
   const [isPending, startTransition] = useTransition();
   const [categoryName, setCategoryName] = useState('');
   const [assignedCode, setAssignedCode] = useState('');
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Единый центр управления ---
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCode, setEditCode] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editingId && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingId]);
+
+  const handleEdit = (mapping: CategoryCodeMapping) => {
+    setEditingId(mapping.id);
+    setEditName(mapping.categoryName);
+    setEditCode(mapping.assignedCode);
+  };
+
+  const handleSave = (id: string) => {
+    startTransition(async () => {
+      const result = await updateMapping(id, {
+        categoryName: editName,
+        assignedCode: editCode,
+      });
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success('Правило обновлено!');
+        router.refresh();
+      }
+      setEditingId(null);
+    });
+  };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleAddMapping = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +73,14 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
         setAssignedCode('');
         router.refresh();
       }
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      await deleteMapping(id);
+      toast.success('Правило удалено.');
+      router.refresh();
     });
   };
 
@@ -186,9 +138,65 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
-            {mappings.map((mapping) => (
-              <MappingRow key={mapping.id} mapping={mapping} />
-            ))}
+            {mappings.map((mapping) =>
+              editingId === mapping.id ? (
+                // --- РЕЖИМ РЕДАКТИРОВАНИЯ ---
+                <tr key={mapping.id}>
+                  <td className="px-6 py-4">
+                    <input
+                      ref={inputRef}
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onBlur={() => handleSave(mapping.id)}
+                      onKeyDown={(e) =>
+                        e.key === 'Enter' && handleSave(mapping.id)
+                      }
+                      className="w-full rounded-md border-gray-300 shadow-sm"
+                    />
+                  </td>
+                  <td className="px-6 py-4">
+                    <input
+                      value={editCode}
+                      onChange={(e) =>
+                        setEditCode(e.target.value.toUpperCase())
+                      }
+                      onBlur={() => handleSave(mapping.id)}
+                      onKeyDown={(e) =>
+                        e.key === 'Enter' && handleSave(mapping.id)
+                      }
+                      className="w-full rounded-md border-gray-300 shadow-sm"
+                    />
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <button
+                      onClick={() => setEditingId(null)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      Отмена
+                    </button>
+                  </td>
+                </tr>
+              ) : (
+                // --- ОБЫЧНЫЙ РЕЖИМ ---
+                <tr key={mapping.id} onDoubleClick={() => handleEdit(mapping)}>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                    {mapping.categoryName}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                    {mapping.assignedCode}
+                  </td>
+                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                    <button
+                      onClick={() => handleDelete(mapping.id)}
+                      disabled={isPending}
+                      className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                    >
+                      Удалить
+                    </button>
+                  </td>
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>
