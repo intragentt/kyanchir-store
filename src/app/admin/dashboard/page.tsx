@@ -5,11 +5,7 @@ import prisma from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "умный" запрос данных ---
 async function getProductsForTable() {
-  // Наша новая синхронизация гарантирует, что в таблице Product лежат ТОЛЬКО родительские товары.
-  // Но на всякий случай, мы оставляем простую проверку, чтобы отсечь товары, чьи имена
-  // были созданы вручную как варианты (например, "Пижама (Синий)")
   const products = await prisma.product.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
@@ -31,16 +27,17 @@ async function getProductsForTable() {
     },
   });
 
-  // Фильтруем те товары, которые случайно были созданы как варианты
-  // (например, если синхронизация была прервана или запущена со старым кодом)
-  // Это делает UI более устойчивым к ошибкам данных.
+  // --- НАЧАЛО ИЗМЕНЕНИЯ: Делаем код "пуленепробиваемым" ---
+  // Фильтруем не только по имени, но и проверяем, что у товара есть категория.
+  // Это предотвратит падение всего интерфейса из-за одного "товара-сироты".
   const parentProducts = products.filter(
-    (p) => !p.name.includes('(') && !p.name.includes(')'),
+    (p) =>
+      !p.name.includes('(') && !p.name.includes(')') && p.categories.length > 0,
   );
+  // --- КОНЕЦ ИЗМЕНЕНИЯ ---
 
   return parentProducts;
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export type ProductForTable = Awaited<
   ReturnType<typeof getProductsForTable>

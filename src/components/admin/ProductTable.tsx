@@ -47,8 +47,6 @@ const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <path d="M7 8a1 1 0 11-2 0 1 1 0 012 0z" />
   </svg>
 );
-
-// --- НАЧАЛО НОВОГО КОДА: Иконка для кнопки сброса ---
 const ResetIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -58,7 +56,15 @@ const ResetIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
-// --- КОНЕЦ НОВОГО КОДА ---
+const CheckBadgeIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg {...props} viewBox="0 0 20 20" fill="currentColor">
+    <path
+      fillRule="evenodd"
+      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
 
 interface ProductTableProps {
   products: ProductForTable[];
@@ -75,7 +81,8 @@ export default function ProductTable({
 }: ProductTableProps) {
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isResetting, setIsResetting] = useState(false); // <-- Новое состояние
+  const [isResetting, setIsResetting] = useState(false);
+  const [isBackfilling, setIsBackfilling] = useState(false);
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -89,7 +96,6 @@ export default function ProductTable({
     setIsSyncing(false);
   };
 
-  // --- НАЧАЛО НОВОГО КОДА: Функция для сброса ---
   const handleReset = async () => {
     const confirmation = window.confirm(
       'ВЫ УВЕРЕНЫ?\nЭто действие полностью удалит ВСЕ товары, варианты и размеры с сайта Kyanchir.\nДанные в "МойСклад" затронуты НЕ будут.\n\nЭто действие необратимо.',
@@ -126,17 +132,52 @@ export default function ProductTable({
       setIsResetting(false);
     }
   };
-  // --- КОНЕЦ НОВОГО КОДА ---
+
+  const handleBackfillSkus = async () => {
+    setIsBackfilling(true);
+    const toastId = toast.loading('Проверка артикулов в МойСклад...');
+
+    try {
+      const response = await fetch('/api/admin/utils/backfill-skus', {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ошибка при проверке артикулов');
+      }
+
+      if (data.successfullyUpdated > 0) {
+        toast.success(
+          `Успешно обновлено ${data.successfullyUpdated} артикулов! Рекомендуется повторная синхронизация.`,
+          { id: toastId, duration: 5000 },
+        );
+      } else {
+        toast.success('Все артикулы в порядке!', { id: toastId });
+      }
+
+      if (data.errors && data.errors.length > 0) {
+        console.error('Ошибки при проверке:', data.errors);
+        toast.error('Часть артикулов не удалось обновить. См. консоль.');
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Неизвестная ошибка',
+        { id: toastId },
+      );
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
 
   return (
     <div className="w-full">
       <Toaster position="top-center" />
       <div className="mb-4 flex items-center justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          {/* ... (кнопки Синхронизировать, CSV, Категории без изменений) ... */}
           <button
             onClick={handleSync}
-            disabled={isSyncing || isResetting}
+            disabled={isSyncing || isResetting || isBackfilling}
             className="flex items-center gap-x-2 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <SyncIcon
@@ -145,10 +186,9 @@ export default function ProductTable({
             {isSyncing ? 'Синхронизация...' : 'Синхронизировать склад'}
           </button>
 
-          {/* --- НАЧАЛО НОВОГО КОДА: Новая "опасная" кнопка --- */}
           <button
             onClick={handleReset}
-            disabled={isResetting || isSyncing}
+            disabled={isResetting || isSyncing || isBackfilling}
             className="flex items-center gap-x-2 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ResetIcon
@@ -156,7 +196,30 @@ export default function ProductTable({
             />
             {isResetting ? 'Очистка...' : 'Сбросить склад Kyanchir'}
           </button>
-          {/* --- КОНЕЦ НОВОГО КОДА --- */}
+
+          <button
+            onClick={handleBackfillSkus}
+            disabled={isBackfilling || isSyncing || isResetting}
+            className="flex items-center gap-x-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CheckBadgeIcon
+              className={`h-4 w-4 ${isBackfilling ? 'animate-spin' : ''}`}
+            />
+            {isBackfilling ? 'Проверка...' : 'Проверить артикулы'}
+          </button>
+
+          <button className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+            <UploadIcon className="h-4 w-4" /> Загрузить CSV
+          </button>
+          <button className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50">
+            <DownloadIcon className="h-4 w-4" /> Выгрузить CSV
+          </button>
+          <Link
+            href="/admin/categories"
+            className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+          >
+            <TagIcon className="h-4 w-4" /> Управление категориями
+          </Link>
         </div>
         <Link
           href="/admin/products/new"
@@ -167,7 +230,48 @@ export default function ProductTable({
       </div>
 
       <div className="overflow-x-auto">
-        {/* ... (остальной код таблицы без изменений) ... */}
+        <div className="inline-block min-w-full align-middle">
+          <div className="overflow-hidden border-b border-gray-200">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    className="relative w-24 px-1 py-3 text-center"
+                  ></th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Товар
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Тип
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Статус
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Бронь
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Склад
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Сумма
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {products.map((product) => (
+                  <ProductTableRow
+                    key={product.id}
+                    product={product}
+                    allCategories={allCategories}
+                    allTags={allTags}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
