@@ -94,20 +94,22 @@ export async function POST() {
           },
         });
 
-        // --- НАЧАЛО НОВОЙ ЛОГИКИ: УМНАЯ ГРУППИРОВКА ---
         if (msProduct.variants && msProduct.variants.length > 0) {
-          // Шаг 1: Группируем все модификации по цвету
           const colorsMap = new Map<string, any[]>();
 
           for (const msVariant of msProduct.variants) {
             if (msVariant.archived) continue;
 
-            const colorCharacteristic = (msVariant.characteristics || []).find(
-              (c: any) => c.name.toLowerCase().startsWith('цвет'),
-            );
-            const colorName = colorCharacteristic
-              ? colorCharacteristic.value
-              : 'Основной';
+            // --- НАЧАЛО ИСПРАВЛЕНИЯ ЛОГИКИ ЦВЕТА ---
+            const colorCharacteristics = (msVariant.characteristics || [])
+              .filter((c: any) => c.name.toLowerCase().startsWith('цвет'))
+              .sort((a: any, b: any) => a.name.localeCompare(b.name)); // Сортируем, чтобы "Цвет-1" был раньше "Цвет-2"
+
+            const colorName =
+              colorCharacteristics.length > 0
+                ? colorCharacteristics.map((c: any) => c.value).join(' / ')
+                : 'Основной';
+            // --- КОНЕЦ ИСПРАВЛЕНИЯ ЛОГИКИ ЦВЕТА ---
 
             if (!colorsMap.has(colorName)) {
               colorsMap.set(colorName, []);
@@ -115,9 +117,7 @@ export async function POST() {
             colorsMap.get(colorName)!.push(msVariant);
           }
 
-          // Шаг 2: Проходимся по сгруппированным цветам
           for (const [colorName, variantsInColor] of colorsMap.entries()) {
-            // Создаем ОДИН вариант на каждый цвет
             const productVariant = await tx.productVariant.upsert({
               where: {
                 productId_color: {
@@ -137,11 +137,12 @@ export async function POST() {
               },
             });
 
-            // Шаг 3: Для каждого цвета создаем его размеры
             for (const msVariant of variantsInColor) {
+              // --- НАЧАЛО ИСПРАВЛЕНИЯ ЛОГИКИ РАЗМЕРА ---
               const sizeCharacteristic = (msVariant.characteristics || []).find(
-                (c: any) => c.name === 'Размер',
+                (c: any) => c.name === 'Размер одежды', // Ищем правильное название
               );
+              // --- КОНЕЦ ИСПРАВЛЕНИЯ ЛОГИКИ РАЗМЕРА ---
               if (!sizeCharacteristic) continue;
 
               const sizeValue = sizeCharacteristic.value;
@@ -162,7 +163,7 @@ export async function POST() {
                   archived: msVariant.archived,
                 },
                 create: {
-                  productVariantId: productVariant.id, // <-- Привязка к ОДНОМУ варианту
+                  productVariantId: productVariant.id,
                   sizeId: sizeId,
                   moyskladId: msVariant.id,
                   moySkladHref: msVariant.meta.href,
@@ -175,7 +176,6 @@ export async function POST() {
             }
           }
         }
-        // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
       }
     });
 
