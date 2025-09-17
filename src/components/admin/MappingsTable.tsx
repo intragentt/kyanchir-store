@@ -11,127 +11,6 @@ import {
   updateMapping,
 } from '@/app/admin/mappings/actions';
 
-function MappingRow({ mapping }: { mapping: CategoryCodeMapping }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState(mapping.categoryName);
-  const [code, setCode] = useState(mapping.assignedCode);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isEditing) {
-      inputRef.current?.focus();
-    }
-  }, [isEditing]);
-
-  const handleSave = () => {
-    if (name === mapping.categoryName && code === mapping.assignedCode) {
-      setIsEditing(false);
-      return;
-    }
-    startTransition(async () => {
-      const result = await updateMapping(mapping.id, {
-        categoryName: name,
-        assignedCode: code,
-      });
-      if (result?.error) {
-        toast.error(result.error);
-        setName(mapping.categoryName);
-        setCode(mapping.assignedCode);
-      } else {
-        toast.success('Правило обновлено!');
-        router.refresh();
-      }
-      setIsEditing(false);
-    });
-  };
-
-  const handleDelete = () => {
-    startTransition(async () => {
-      await deleteMapping(mapping.id);
-      toast.success('Правило удалено.');
-      router.refresh();
-    });
-  };
-
-  const handleCancel = () => {
-    setName(mapping.categoryName);
-    setCode(mapping.assignedCode);
-    setIsEditing(false);
-  };
-
-  return (
-    <tr>
-      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={handleSave}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            className="w-full rounded-md border-gray-300 shadow-sm"
-            disabled={isPending}
-          />
-        ) : (
-          name
-        )}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-        {isEditing ? (
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            onBlur={handleSave}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            className="w-full rounded-md border-gray-300 shadow-sm"
-            disabled={isPending}
-          />
-        ) : (
-          code
-        )}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-        {isEditing ? (
-          <div className="flex items-center justify-end gap-x-4">
-            <button
-              onClick={handleSave}
-              disabled={isPending}
-              className="font-semibold text-indigo-600 hover:text-indigo-800"
-            >
-              Сохранить
-            </button>
-            <button
-              onClick={handleCancel}
-              disabled={isPending}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              Отмена
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center justify-end gap-x-4">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="font-semibold text-indigo-600 hover:text-indigo-800"
-            >
-              Изменить
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={isPending}
-              className="text-red-600 hover:text-red-900 disabled:opacity-50"
-            >
-              Удалить
-            </button>
-          </div>
-        )}
-      </td>
-    </tr>
-  );
-}
-
 interface MappingsTableProps {
   mappings: CategoryCodeMapping[];
 }
@@ -142,13 +21,63 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
   const [categoryName, setCategoryName] = useState('');
   const [assignedCode, setAssignedCode] = useState('');
 
+  // --- НАЧАЛО НОВОЙ АРХИТЕКТУРЫ: Единый "Пульт Управления" ---
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCode, setEditCode] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Автофокус на инпут при переключении в режим редактирования
+    if (editingId && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingId]);
+
+  const handleStartEdit = (mapping: CategoryCodeMapping) => {
+    setEditingId(mapping.id);
+    setEditName(mapping.categoryName);
+    setEditCode(mapping.assignedCode);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+  };
+
+  const handleSaveEdit = (id: string) => {
+    // Если данные не изменились, просто выходим из режима редактирования
+    const originalMapping = mappings.find((m) => m.id === id);
+    if (
+      originalMapping &&
+      originalMapping.categoryName === editName &&
+      originalMapping.assignedCode === editCode
+    ) {
+      setEditingId(null);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await updateMapping(id, {
+        categoryName: editName,
+        assignedCode: editCode,
+      });
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success('Правило обновлено!');
+        router.refresh();
+      }
+      setEditingId(null);
+    });
+  };
+  // --- КОНЕЦ НОВОЙ АРХИТЕКТУРЫ ---
+
   const handleAddMapping = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!categoryName.trim() || !assignedCode.trim()) {
       toast.error('Название и код должны быть заполнены.');
       return;
     }
-
     startTransition(async () => {
       const result = await createMapping(categoryName, assignedCode);
       if (result?.error) {
@@ -162,6 +91,14 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
     });
   };
 
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      await deleteMapping(id);
+      toast.success('Правило удалено.');
+      router.refresh();
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Toaster position="top-center" />
@@ -172,7 +109,6 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
         Нажмите "Изменить", чтобы редактировать правило.
       </p>
 
-      {/* --- НАЧАЛО ИСПРАВЛЕНИЯ: Возвращаем форму на место --- */}
       <form
         onSubmit={handleAddMapping}
         className="rounded-lg border bg-white p-4 shadow-sm"
@@ -202,7 +138,6 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
           </button>
         </div>
       </form>
-      {/* --- КОНЕЦ ИСПРАВЛЕНИЯ --- */}
 
       <div className="overflow-hidden border-b border-gray-200 shadow sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
@@ -214,12 +149,87 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
               <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500">
                 Присваиваемый Код
               </th>
-              <th className="relative px-6 py-3"></th>
+              <th className="relative w-48 px-6 py-3"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
             {mappings.map((mapping) => (
-              <MappingRow key={mapping.id} mapping={mapping} />
+              <tr key={mapping.id}>
+                {editingId === mapping.id ? (
+                  <>
+                    <td className="px-6 py-4">
+                      <input
+                        ref={inputRef}
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && handleSaveEdit(mapping.id)
+                        }
+                        className="w-full rounded-md border-gray-300 shadow-sm"
+                        disabled={isPending}
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <input
+                        value={editCode}
+                        onChange={(e) =>
+                          setEditCode(e.target.value.toUpperCase())
+                        }
+                        onKeyDown={(e) =>
+                          e.key === 'Enter' && handleSaveEdit(mapping.id)
+                        }
+                        className="w-full rounded-md border-gray-300 shadow-sm"
+                        disabled={isPending}
+                      />
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-x-4">
+                        <button
+                          onClick={() => handleSaveEdit(mapping.id)}
+                          disabled={isPending}
+                          className="font-semibold text-indigo-600 hover:text-indigo-800"
+                        >
+                          Сохранить
+                        </button>
+                        <button
+                          onClick={handleCancelEdit}
+                          disabled={isPending}
+                          className="text-gray-500 hover:text-gray-700"
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                      {mapping.categoryName}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                      {mapping.assignedCode}
+                    </td>
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-x-4">
+                        <button
+                          onClick={() => handleStartEdit(mapping)}
+                          disabled={isPending}
+                          className="font-semibold text-indigo-600 hover:text-indigo-800"
+                        >
+                          Изменить
+                        </button>
+                        <button
+                          onClick={() => handleDelete(mapping.id)}
+                          disabled={isPending}
+                          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                        >
+                          Удалить
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                )}
+              </tr>
             ))}
           </tbody>
         </table>
