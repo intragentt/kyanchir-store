@@ -94,6 +94,7 @@ export async function POST() {
           },
         });
 
+        // --- ЛОГИКА ДЛЯ СЛОЖНЫХ ТОВАРОВ (С МОДИФИКАЦИЯМИ) ---
         if (msProduct.variants && msProduct.variants.length > 0) {
           const colorsToVariantsMap = new Map<string, any[]>();
 
@@ -162,7 +163,6 @@ export async function POST() {
                   archived: msVariant.archived,
                   moyskladId: msVariant.id,
                   moySkladHref: msVariant.meta.href,
-                  moySkladType: msVariant.meta.type,
                 },
                 create: {
                   productVariantId: productVariant.id,
@@ -178,6 +178,67 @@ export async function POST() {
             }
           }
         }
+        // --- НАЧАЛО ЛОГИКИ ДЛЯ ПРОСТЫХ ТОВАРОВ (БЕЗ МОДИФИКАЦИЙ) ---
+        else {
+          // Создаем служебный вариант "Основной"
+          const productVariant = await tx.productVariant.upsert({
+            where: {
+              productId_color: {
+                productId: parentProduct.id,
+                color: 'Основной',
+              },
+            },
+            update: {
+              price: (msProduct.salePrices?.[0]?.value || 0) / 100,
+              oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
+            },
+            create: {
+              productId: parentProduct.id,
+              color: 'Основной',
+              price: (msProduct.salePrices?.[0]?.value || 0) / 100,
+              oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
+            },
+          });
+
+          // Создаем служебный размер "ONE SIZE"
+          const sizeValue = 'ONE SIZE';
+          let sizeId = sizeMap.get(sizeValue);
+          if (!sizeId) {
+            const newSize = await tx.size.create({
+              data: { value: sizeValue },
+            });
+            sizeId = newSize.id;
+            sizeMap.set(sizeValue, sizeId);
+          }
+
+          // Создаем единственную запись о размере, которая ссылается на сам родительский товар в МойСклад
+          await tx.productSize.upsert({
+            where: {
+              productVariantId_sizeId: {
+                productVariantId: productVariant.id,
+                sizeId: sizeId,
+              },
+            },
+            update: {
+              stock: stockMap.get(msProduct.id) || 0,
+              article: msProduct.article,
+              archived: msProduct.archived,
+              moyskladId: msProduct.id,
+              moySkladHref: msProduct.meta.href,
+            },
+            create: {
+              productVariantId: productVariant.id,
+              sizeId: sizeId,
+              moyskladId: msProduct.id,
+              moySkladHref: msProduct.meta.href,
+              moySkladType: msProduct.meta.type,
+              stock: stockMap.get(msProduct.id) || 0,
+              article: msProduct.article,
+              archived: msProduct.archived,
+            },
+          });
+        }
+        // --- КОНЕЦ ЛОГИКИ ---
       }
     });
 
