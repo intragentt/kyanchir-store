@@ -94,25 +94,19 @@ export async function POST() {
           },
         });
 
-        // --- НАЧАЛО ВЕЛИКОГО РАСПУТЫВАНИЯ ---
+        // --- НАЧАЛО ФИНАЛЬНОЙ ФИЛОСОФИИ ---
         if (msProduct.variants && msProduct.variants.length > 0) {
-          // Этап 1: "Распутывание". Создаем контейнер, где ключ - это ЦВЕТ, а значение - массив МОДИФИКАЦИЙ (размеров).
           const colorsToVariantsMap = new Map<string, any[]>();
 
           for (const msVariant of msProduct.variants) {
             if (msVariant.archived) continue;
-
-            const colorCharacteristics = (msVariant.characteristics || [])
-              .filter((c: any) => c.name.toLowerCase().startsWith('цвет'))
-              .sort((a: any, b: any) => a.name.localeCompare(b.name));
-
-            // Если у модификации вообще нет цветов, пропускаем ее.
+            const colorCharacteristics = (
+              msVariant.characteristics || []
+            ).filter((c: any) => c.name.toLowerCase().startsWith('цвет'));
             if (colorCharacteristics.length === 0) continue;
 
-            // Для КАЖДОГО цвета, указанного в модификации...
             for (const colorChar of colorCharacteristics) {
               const colorName = colorChar.value;
-              // ...добавляем эту модификацию (размер) в список для этого цвета.
               if (!colorsToVariantsMap.has(colorName)) {
                 colorsToVariantsMap.set(colorName, []);
               }
@@ -120,12 +114,10 @@ export async function POST() {
             }
           }
 
-          // Этап 2: "Сборка". Проходимся по нашему чистому, отсортированному контейнеру.
           for (const [
             colorName,
             variantsInColor,
           ] of colorsToVariantsMap.entries()) {
-            // Создаем ОДИН вариант (уровень 2) на каждый уникальный цвет.
             const productVariant = await tx.productVariant.upsert({
               where: {
                 productId_color: {
@@ -145,7 +137,6 @@ export async function POST() {
               },
             });
 
-            // Для этого цвета, создаем все его размеры (уровень 3).
             for (const msVariant of variantsInColor) {
               const sizeCharacteristic = (msVariant.characteristics || []).find(
                 (c: any) => c.name === 'Размер одежды',
@@ -162,12 +153,21 @@ export async function POST() {
                 sizeMap.set(sizeValue, sizeId);
               }
 
+              // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: УНИКАЛЬНОСТЬ ПО ВАРИАНТУ+РАЗМЕРУ ---
               await tx.productSize.upsert({
-                where: { moyskladId: msVariant.id },
+                where: {
+                  productVariantId_sizeId: {
+                    productVariantId: productVariant.id,
+                    sizeId: sizeId,
+                  },
+                },
                 update: {
                   stock: stockMap.get(msVariant.id) || 0,
                   article: msVariant.article,
                   archived: msVariant.archived,
+                  moyskladId: msVariant.id,
+                  moySkladHref: msVariant.meta.href,
+                  moySkladType: msVariant.meta.type,
                 },
                 create: {
                   productVariantId: productVariant.id,
@@ -183,7 +183,7 @@ export async function POST() {
             }
           }
         }
-        // --- КОНЕЦ ВЕЛИКОГО РАСПУТЫВАНИЯ ---
+        // --- КОНЕЦ ФИНАЛЬНОЙ ФИЛОСОФИИ ---
       }
     });
 
