@@ -1,16 +1,61 @@
 // /src/lib/moysklad-api.ts
 
-const MOYSKLAD_API_TOKEN = process.env.MOYSKLAD_API_TOKEN;
+import prisma from '@/lib/prisma'; // <-- 1. Импортируем Prisma
+
 const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
-if (!MOYSKLAD_API_TOKEN) {
-  throw new Error('Переменная окружения MOYSKLAD_API_TOKEN не определена!');
-}
+// --- НАЧАЛО НОВОЙ АРХИТЕКТУРЫ "ГИБРИДНОГО КЛЮЧА" ---
+
+// Кэш для хранения ключа в памяти, чтобы не делать запрос к БД каждый раз
+let apiKeyCache: string | null = null;
+
+/**
+ * Получает API-ключ МойСклад.
+ * Приоритет: Кэш -> База Данных -> .env файл.
+ */
+const getMoySkladApiKey = async () => {
+  if (apiKeyCache) {
+    return apiKeyCache;
+  }
+
+  console.log('[API-Bridge] Ключ не в кэше, ищем в БД...');
+  const setting = await prisma.systemSetting.findUnique({
+    where: { key: 'MOYSKLAD_API_KEY' },
+  });
+
+  // Если ключ есть в БД, используем его. Иначе - запасной из .env
+  const key = setting?.value || process.env.MOYSKLAD_API_TOKEN;
+
+  if (key) {
+    apiKeyCache = key; // Сохраняем в кэш для следующих запросов
+  }
+
+  return key;
+};
+
+/**
+ * Очищает кэш API-ключа. Вызывается после обновления ключа в админке.
+ */
+export const clearApiKeyCache = () => {
+  apiKeyCache = null;
+  console.log('[API-Bridge] Кэш API-ключа очищен.');
+};
+
+// --- КОНЕЦ НОВОЙ АРХИТЕКТУРЫ ---
 
 const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
+  // Получаем ключ динамически при каждом запросе
+  const apiKey = await getMoySkladApiKey();
+
+  if (!apiKey) {
+    throw new Error(
+      'API-ключ для МойСклад не найден ни в базе данных, ни в переменных окружения.',
+    );
+  }
+
   const url = `${MOYSKLAD_API_URL}/${endpoint}`;
   const headers = new Headers(options.headers || {});
-  headers.set('Authorization', `Bearer ${MOYSKLAD_API_TOKEN}`);
+  headers.set('Authorization', `Bearer ${apiKey}`);
   headers.set('Content-Type', 'application/json');
   headers.set('Accept-Encoding', 'gzip');
   const config: RequestInit = { ...options, headers };
@@ -29,13 +74,14 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   }
 };
 
+// ... (ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ)
+
 export const createMoySkladProduct = async (
   name: string,
   article: string,
   categoryMoySkladId: string,
 ) => {
   console.log(`[API МойСклад] Создание товара "${name}"...`);
-
   const body = {
     name,
     article,
@@ -47,7 +93,6 @@ export const createMoySkladProduct = async (
       },
     },
   };
-
   return await moySkladFetch('entity/product', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -123,7 +168,6 @@ const getMoySkladPriceTypes = async () => {
   if (!salePrice) {
     throw new Error('Тип цены "Цена продажи" не найден в МойСклад.');
   }
-
   cachedPriceTypes = {
     salePriceMeta: salePrice.meta,
     discountPriceMeta: discountPrice ? discountPrice.meta : null,
@@ -137,15 +181,10 @@ export const updateMoySkladPrice = async (
   oldPrice: number | null,
 ) => {
   const { salePriceMeta, discountPriceMeta } = await getMoySkladPriceTypes();
-
   const salePrices = [];
   const currentPrice = price || 0;
-
   if (oldPrice && oldPrice > currentPrice) {
-    salePrices.push({
-      value: oldPrice,
-      priceType: { meta: salePriceMeta },
-    });
+    salePrices.push({ value: oldPrice, priceType: { meta: salePriceMeta } });
     if (discountPriceMeta) {
       salePrices.push({
         value: currentPrice,
@@ -158,13 +197,10 @@ export const updateMoySkladPrice = async (
       priceType: { meta: salePriceMeta },
     });
   }
-
   const body = { salePrices };
-
   console.log(
     `[API МойСклад] Обновление цен для товара ${moySkladProductId}...`,
   );
-
   const endpoint = `entity/product/${moySkladProductId}`;
   return await moySkladFetch(endpoint, {
     method: 'PUT',
@@ -174,18 +210,13 @@ export const updateMoySkladPrice = async (
 
 export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
   console.log(`[API МойСклад] Архивация ${moySkladIds.length} товаров...`);
-
-  const body = {
-    archived: true,
-  };
-
+  const body = { archived: true };
   const promises = moySkladIds.map((id) =>
     moySkladFetch(`entity/product/${id}`, {
       method: 'PUT',
       body: JSON.stringify(body),
     }),
   );
-
   return Promise.all(promises);
 };
 
@@ -207,9 +238,7 @@ export const updateMoySkladArticle = async (
     `[API МойСклад] Обновление артикула для ${type} ${moySkladId} на "${newArticle}"`,
   );
   const endpoint = `entity/${type}/${moySkladId}`;
-  const body = {
-    article: newArticle,
-  };
+  const body = { article: newArticle };
   return await moySkladFetch(endpoint, {
     method: 'PUT',
     body: JSON.stringify(body),
@@ -242,22 +271,14 @@ const getMoySkladSizeCharacteristicData = async (): Promise<{
       'Характеристика "Размер" не найдена в метаданных МойСклад!',
     );
   }
-
   console.log(
     '[API МойСклад] Получение всех значений для характеристики "Размер"...',
   );
   const valuesResponse = await getMoySkladEntityByHref(sizeChar.meta.href);
-
-  // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ: Используем `rows` вместо `values` ---
   const valuesMap = new Map<string, any>(
     valuesResponse.rows.map((v: any) => [v.value, v]),
   );
-  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
-
-  sizeCharacteristicCache = {
-    meta: sizeChar.meta,
-    values: valuesMap,
-  };
+  sizeCharacteristicCache = { meta: sizeChar.meta, values: valuesMap };
   return sizeCharacteristicCache;
 };
 
@@ -269,16 +290,13 @@ export const createMoySkladVariant = async (
   console.log(
     `[API МойСклад] Создание модификации для товара ${parentProductId} с размером ${sizeValue}...`,
   );
-
   const { meta, values } = await getMoySkladSizeCharacteristicData();
   const sizeValueData = values.get(sizeValue);
-
   if (!sizeValueData) {
     throw new Error(
       `Значение размера "${sizeValue}" не найдено в МойСклад. Добавьте его в справочник.`,
     );
   }
-
   const body = {
     article,
     product: {
@@ -297,7 +315,6 @@ export const createMoySkladVariant = async (
       },
     ],
   };
-
   return await moySkladFetch('entity/variant', {
     method: 'POST',
     body: JSON.stringify(body),

@@ -1,3 +1,4 @@
+// Местоположение: prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -54,7 +55,7 @@ model Image {
 
 model ProductSize {
   id               String      @id @default(cuid())
-  article          String?     // <-- ДОБАВЛЕНО: Для хранения финального SKU (...-V1-SM)
+  article          String?
   moySkladHref     String?
   moySkladType     String      @default("variant")
   productVariantId String
@@ -87,7 +88,7 @@ model Attribute {
 model Category {
   id          String       @id @default(cuid())
   name        String
-  code        String       @unique // <--- Сразу делаем поле обязательным и уникальным
+  code        String       @unique
   products    Product[]    @relation("ProductToCategory")
   parentId    String?
   parent      Category?    @relation("SubCategories", fields: [parentId], references: [id], onDelete: SetNull)
@@ -327,24 +328,28 @@ model SupportMessage {
   createdAt    DateTime      @default(now())
 }
 
-// --- НАЧАЛО НОВЫХ МОДЕЛЕЙ ДЛЯ "СЛОВАРЯ" ---
-
-// Эта модель хранит уникальное правило-код (e.g., "BE", "KP2")
 model CodeRule {
   id           String            @id @default(cuid())
   assignedCode String            @unique
-  synonyms     CategorySynonym[] // Одному правилу может соответствовать много синонимов
+  synonyms     CategorySynonym[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 }
 
-// Эта модель хранит синонимы, которые ссылаются на правило-код.
 model CategorySynonym {
-  id     String   @id @default(cuid())
-  name   String   @unique // Название из МойСклад (e.g., "Нижнее белье")
-  ruleId String
-  rule   CodeRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-
+  id        String   @id @default(cuid())
+  name      String   @unique
+  ruleId    String
+  rule      CodeRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }
-// --- КОНЕЦ НОВЫХ МОДЕЛЕЙ ---
+
+// --- НАЧАЛО НОВОЙ МОДЕЛИ ДЛЯ СИСТЕМНЫХ НАСТРОЕК ---
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique // e.g., "MOYSKLAD_API_KEY"
+  value     String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+// --- КОНЕЦ НОВОЙ МОДЕЛИ ---
