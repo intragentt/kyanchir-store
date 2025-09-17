@@ -24,13 +24,13 @@ export async function POST() {
   }
 
   try {
-    console.log('[SYNC PRODUCTS] Начало полной синхронизации товаров...');
-
     console.log(
-      '[SYNC PRODUCTS] Шаг 1/3: Получение данных из МойСклад и нашей БД...',
+      '[SYNC PRODUCTS] Начало полной синхронизации товаров (Гранд-Редизайн)...',
     );
+
+    console.log('[SYNC PRODUCTS] Шаг 1/3: Получение данных...');
     const [
-      productsWithVariants,
+      allMoySkladProducts, // Получаем все как есть
       stockResponse,
       allOurCategories,
       allOurSizes,
@@ -43,11 +43,9 @@ export async function POST() {
       prisma.status.findFirst({ where: { name: 'DRAFT' } }),
     ]);
 
-    if (!draftStatus) {
-      throw new Error('Базовый статус "DRAFT" не найден в базе данных.');
-    }
+    if (!draftStatus) throw new Error('Статус "DRAFT" не найден.');
 
-    console.log('[SYNC PRODUCTS] Шаг 2/3: Подготовка кэшей и карт...');
+    console.log('[SYNC PRODUCTS] Шаг 2/3: Подготовка кэшей и группировка...');
     const categoryMap = new Map(
       allOurCategories.map((cat) => [cat.moyskladId, cat.id]),
     );
@@ -59,82 +57,85 @@ export async function POST() {
     );
     const sizeMap = new Map(allOurSizes.map((s) => [s.value, s.id]));
 
+    // --- НАЧАЛО ГРАНДИОЗНОГО РЕДИЗАЙНА: СОРТИРОВКА ПО БАЗОВОМУ ИМЕНИ ---
+    const productGroups = new Map<string, any[]>();
+
+    for (const msProduct of allMoySkladProducts) {
+      if (msProduct.archived) continue;
+
+      const nameMatch = msProduct.name.match(/(.+)\s\((.+)\)/);
+      const baseName = nameMatch ? nameMatch[1].trim() : msProduct.name;
+
+      if (!productGroups.has(baseName)) {
+        productGroups.set(baseName, []);
+      }
+      productGroups.get(baseName)!.push(msProduct);
+    }
+    // --- КОНЕЦ СОРТИРОВКИ ---
+
     console.log(
-      `[SYNC PRODUCTS] Шаг 3/3: Обработка ${productsWithVariants.length} родительских товаров...`,
+      `[SYNC PRODUCTS] Шаг 3/3: Обработка ${productGroups.size} сгруппированных товаров...`,
     );
 
     await prisma.$transaction(async (tx) => {
-      for (const msProduct of productsWithVariants) {
-        const categoryMoySkladId = msProduct.productFolder
-          ? getUUIDFromHref(msProduct.productFolder.meta.href)
-          : null;
-        const ourCategoryId = categoryMoySkladId
-          ? categoryMap.get(categoryMoySkladId)
-          : undefined;
-
+      // Проходимся по "папкам" ("Пижама", "Комплект двойка" и т.д.)
+      for (const [baseName, msProductsInGroup] of productGroups.entries()) {
+        // Создаем ОДИН родительский товар-контейнер (Уровень 1)
         const parentProduct = await tx.product.upsert({
-          where: { moyskladId: msProduct.id },
-          update: {
-            name: msProduct.name,
-            article: msProduct.article,
-            archived: msProduct.archived,
-            categories: ourCategoryId
-              ? { set: [{ id: ourCategoryId }] }
-              : { set: [] },
-          },
+          where: { name: baseName },
+          update: { name: baseName },
           create: {
-            name: msProduct.name,
-            article: msProduct.article || `TEMP-${msProduct.id}`,
-            moyskladId: msProduct.id,
+            name: baseName,
             statusId: draftStatus.id,
-            archived: msProduct.archived,
-            categories: ourCategoryId
-              ? { connect: { id: ourCategoryId } }
+            // Артикул и категорию берем от первого товара в группе
+            article:
+              msProductsInGroup[0].article || `TEMP-${msProductsInGroup[0].id}`,
+            moyskladId: null, // Родительский товар - виртуальный
+            categories: msProductsInGroup[0].productFolder
+              ? {
+                  connect: {
+                    id: categoryMap.get(
+                      getUUIDFromHref(
+                        msProductsInGroup[0].productFolder.meta.href,
+                      ),
+                    ),
+                  },
+                }
               : undefined,
           },
         });
 
-        // --- ЛОГИКА ДЛЯ СЛОЖНЫХ ТОВАРОВ (С МОДИФИКАЦИЯМИ) ---
-        if (msProduct.variants && msProduct.variants.length > 0) {
-          const colorsToVariantsMap = new Map<string, any[]>();
+        // Проходимся по реальным товарам из МС внутри группы ("Пижама (Белый)", "Пижама (Розовый)")
+        for (const msProduct of msProductsInGroup) {
+          const nameMatch = msProduct.name.match(/(.+)\s\((.+)\)/);
+          const colorName = nameMatch ? nameMatch[2].trim() : 'Основной';
 
-          for (const msVariant of msProduct.variants) {
-            if (msVariant.archived) continue;
-            const colorCharacteristics = (
-              msVariant.characteristics || []
-            ).filter((c: any) => c.name.toLowerCase().startsWith('цвет'));
-            if (colorCharacteristics.length === 0) continue;
-
-            for (const colorChar of colorCharacteristics) {
-              const colorName = colorChar.value;
-              if (!colorsToVariantsMap.has(colorName)) {
-                colorsToVariantsMap.set(colorName, []);
-              }
-              colorsToVariantsMap.get(colorName)!.push(msVariant);
-            }
-          }
-
-          for (const [
-            colorName,
-            variantsInColor,
-          ] of colorsToVariantsMap.entries()) {
-            const productVariant = await tx.productVariant.upsert({
-              where: {
-                productId_color: {
-                  productId: parentProduct.id,
-                  color: colorName,
-                },
-              },
-              update: {},
-              create: {
+          // Создаем для каждого из них ВАРИАНТ (Уровень 2)
+          const productVariant = await tx.productVariant.upsert({
+            where: {
+              productId_color: {
                 productId: parentProduct.id,
                 color: colorName,
-                price: (msProduct.salePrices?.[0]?.value || 0) / 100,
-                oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
               },
-            });
+            },
+            update: {
+              price: (msProduct.salePrices?.[0]?.value || 0) / 100,
+              oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
+              moySkladId: msProduct.id, // Связываем вариант с конкретным товаром в МС
+            },
+            create: {
+              productId: parentProduct.id,
+              color: colorName,
+              price: (msProduct.salePrices?.[0]?.value || 0) / 100,
+              oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
+              moySkladId: msProduct.id,
+            },
+          });
 
-            for (const msVariant of variantsInColor) {
+          // Проверяем, есть ли у этого товара-варианта модификации (размеры)
+          if (msProduct.variants && msProduct.variants.length > 0) {
+            // Если да - создаем РАЗМЕРЫ (Уровень 3) из модификаций
+            for (const msVariant of msProduct.variants) {
               const sizeCharacteristic = (msVariant.characteristics || []).find(
                 (c: any) => c.name === 'Размер одежды',
               );
@@ -154,99 +155,68 @@ export async function POST() {
                 where: {
                   productVariantId_sizeId: {
                     productVariantId: productVariant.id,
-                    sizeId: sizeId,
+                    sizeId,
                   },
                 },
                 update: {
                   stock: stockMap.get(msVariant.id) || 0,
                   article: msVariant.article,
-                  archived: msVariant.archived,
                   moyskladId: msVariant.id,
                   moySkladHref: msVariant.meta.href,
                 },
                 create: {
                   productVariantId: productVariant.id,
-                  sizeId: sizeId,
-                  moyskladId: msVariant.id,
-                  moySkladHref: msVariant.meta.href,
-                  moySkladType: msVariant.meta.type,
+                  sizeId,
                   stock: stockMap.get(msVariant.id) || 0,
                   article: msVariant.article,
-                  archived: msVariant.archived,
+                  moyskladId: msVariant.id,
+                  moySkladHref: msVariant.meta.href,
+                  moySkladType: 'variant',
                 },
               });
             }
-          }
-        }
-        // --- НАЧАЛО ЛОГИКИ ДЛЯ ПРОСТЫХ ТОВАРОВ (БЕЗ МОДИФИКАЦИЙ) ---
-        else {
-          // Создаем служебный вариант "Основной"
-          const productVariant = await tx.productVariant.upsert({
-            where: {
-              productId_color: {
-                productId: parentProduct.id,
-                color: 'Основной',
+          } else {
+            // Если нет - сам товар-вариант является РАЗМЕРОМ "ONE SIZE" (Уровень 3)
+            const sizeValue = 'ONE SIZE';
+            let sizeId = sizeMap.get(sizeValue);
+            if (!sizeId) {
+              const newSize = await tx.size.create({
+                data: { value: sizeValue },
+              });
+              sizeId = newSize.id;
+              sizeMap.set(sizeValue, sizeId);
+            }
+
+            await tx.productSize.upsert({
+              where: {
+                productVariantId_sizeId: {
+                  productVariantId: productVariant.id,
+                  sizeId,
+                },
               },
-            },
-            update: {
-              price: (msProduct.salePrices?.[0]?.value || 0) / 100,
-              oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
-            },
-            create: {
-              productId: parentProduct.id,
-              color: 'Основной',
-              price: (msProduct.salePrices?.[0]?.value || 0) / 100,
-              oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
-            },
-          });
-
-          // Создаем служебный размер "ONE SIZE"
-          const sizeValue = 'ONE SIZE';
-          let sizeId = sizeMap.get(sizeValue);
-          if (!sizeId) {
-            const newSize = await tx.size.create({
-              data: { value: sizeValue },
-            });
-            sizeId = newSize.id;
-            sizeMap.set(sizeValue, sizeId);
-          }
-
-          // Создаем единственную запись о размере, которая ссылается на сам родительский товар в МойСклад
-          await tx.productSize.upsert({
-            where: {
-              productVariantId_sizeId: {
+              update: {
+                stock: stockMap.get(msProduct.id) || 0,
+                article: msProduct.article,
+                moyskladId: msProduct.id, // Источник данных - сам товар
+                moySkladHref: msProduct.meta.href,
+              },
+              create: {
                 productVariantId: productVariant.id,
-                sizeId: sizeId,
+                sizeId,
+                stock: stockMap.get(msProduct.id) || 0,
+                article: msProduct.article,
+                moyskladId: msProduct.id,
+                moySkladHref: msProduct.meta.href,
+                moySkladType: 'product', // Тип - товар, а не модификация
               },
-            },
-            update: {
-              stock: stockMap.get(msProduct.id) || 0,
-              article: msProduct.article,
-              archived: msProduct.archived,
-              moyskladId: msProduct.id,
-              moySkladHref: msProduct.meta.href,
-            },
-            create: {
-              productVariantId: productVariant.id,
-              sizeId: sizeId,
-              moyskladId: msProduct.id,
-              moySkladHref: msProduct.meta.href,
-              moySkladType: msProduct.meta.type,
-              stock: stockMap.get(msProduct.id) || 0,
-              article: msProduct.article,
-              archived: msProduct.archived,
-            },
-          });
+            });
+          }
         }
-        // --- КОНЕЦ ЛОГИКИ ---
       }
     });
 
     console.log('[SYNC PRODUCTS] Синхронизация успешно завершена.');
-    return NextResponse.json({
-      message: 'Синхронизация товаров успешно завершена.',
-      totalProducts: productsWithVariants.length,
-    });
+    return NextResponse.json({ message: 'Синхронизация успешно завершена.' });
   } catch (error) {
     if (error instanceof AuthError) {
       return new NextResponse(JSON.stringify({ error: error.message }), {
