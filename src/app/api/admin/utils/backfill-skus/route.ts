@@ -8,9 +8,15 @@ import {
   getMoySkladProductsAndVariants,
   getMoySkladEntityByHref,
 } from '@/lib/moysklad-api';
-import { generateSizeSku, generateVariantSku } from '@/lib/sku-generator';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем "УМНЫЙ" генератор ---
+import {
+  generateProductSku,
+  generateSizeSku,
+  generateVariantSku,
+} from '@/lib/sku-generator';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import { format } from 'date-fns';
 
-// --- НАЧАЛО НОВЫХ ТИПОВ ДЛЯ ПЛАНА ---
 export interface SkuConflict {
   moySkladId: string;
   moySkladType: 'product' | 'variant';
@@ -36,7 +42,6 @@ export interface SkuResolutionPlan {
   okCount: number;
   errors: string[];
 }
-// --- КОНЕЦ НОВЫХ ТИПОВ ---
 
 function getUUIDFromHref(href: string): string {
   return href.split('/').pop() || '';
@@ -74,7 +79,6 @@ export async function POST() {
       okCount: 0,
       errors: [],
     };
-
     const parentProductCache = new Map<string, any>();
 
     for (const msProduct of moySkladItems) {
@@ -82,7 +86,7 @@ export async function POST() {
         const currentArticle = msProduct.article || '';
         let expectedArticle: string;
 
-        // --- ШАГ 1: Определяем "правильный" артикул на основе ТЕКУЩЕЙ категории ---
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая логика определения "правильного" артикула ---
         if (msProduct.meta.type === 'variant') {
           const parentHref = msProduct.product.meta.href;
           let parentProduct = parentProductCache.get(parentHref);
@@ -103,6 +107,7 @@ export async function POST() {
               ?.value || 'ONE_SIZE';
           expectedArticle = generateSizeSku(baseVariantArticle, sizeChar);
         } else {
+          // Для обычных товаров
           const categoryMoySkladId = msProduct.productFolder
             ? getUUIDFromHref(msProduct.productFolder.meta.href)
             : null;
@@ -113,17 +118,26 @@ export async function POST() {
               `Категория "${msProduct.productFolder.name}" не найдена в нашей БД`,
             );
 
-          const baseSku = `KYN-${ourCategory.code}`;
-          const ourProduct = await prisma.product.findFirst({
-            where: { moyskladId: msProduct.id },
-          });
-          const productCode = ourProduct
-            ? ourProduct.id.slice(-4).toUpperCase()
-            : 'XXXX';
-          expectedArticle = `${baseSku}-${productCode}`;
-        }
+          // 1. Генерируем "правильный" префикс
+          const datePart = format(new Date(), 'MMyy');
+          const expectedPrefix = `KYN-${ourCategory.code}-${datePart}`;
 
-        // --- ШАГ 2: Анализируем ситуацию ---
+          // 2. Проверяем, соответствует ли текущий артикул маске
+          if (
+            currentArticle.startsWith(expectedPrefix) &&
+            currentArticle.length > expectedPrefix.length + 1
+          ) {
+            // Артикул уже правильный, ничего не делаем
+            plan.okCount++;
+            continue;
+          }
+
+          // 3. Если артикул пустой или не соответствует маске - генерируем НОВЫЙ "умным" генератором
+          // Это единственное место, где вызывается транзакционный генератор
+          expectedArticle = await generateProductSku(prisma, ourCategory.id);
+        }
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
         if (!currentArticle) {
           plan.toCreate.push({
             moySkladId: msProduct.id,
@@ -134,12 +148,6 @@ export async function POST() {
           continue;
         }
 
-        if (currentArticle.toUpperCase() === expectedArticle.toUpperCase()) {
-          plan.okCount++;
-          continue;
-        }
-
-        // --- ШАГ 3: Если дошли сюда - это КОНФЛИКТ ---
         const codeFromArticle = currentArticle.split('-')[1];
         const expectedCategoryFromArticle =
           categoryMapByCode.get(codeFromArticle) || null;
