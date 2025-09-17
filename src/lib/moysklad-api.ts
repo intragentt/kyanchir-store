@@ -340,28 +340,22 @@ export const getProductsWithVariants = async () => {
   );
   const products = productsResponse.rows;
 
-  // --- НАЧАЛО ЛОГИРОВАНИЯ ---
-  console.log(`[API-Bridge] Найдено ${products.length} родительских товаров.`);
-  if (products.length > 0) {
-    console.log(
-      '[API-Bridge] Структура первого товара:',
-      JSON.stringify(products[0], null, 2),
-    );
-  }
   console.log(
-    '[API-Bridge] Этап 2: Попытка получить модификации для каждого...',
+    `[API-Bridge] Найдено ${products.length} родительских товаров. Этап 2: Получение их модификаций...`,
   );
-  // --- КОНЕЦ ЛОГИРОВАНИЯ ---
 
   const variantPromises = products.map((product: any) => {
     if (product.variantsCount > 0) {
-      const variantsUrl = `entity/assortment?filter=assortment=${product.meta.href}&expand=characteristics`;
+      // --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
+      // Единственно верная комбинация, подтвержденная документацией и логами.
+      // Эндпоинт: `entity/variant`
+      // Фильтр: `product` + `href` родителя
+      const variantsUrl = `entity/variant?filter=product=${product.meta.href}&expand=characteristics`;
+      // --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
 
-      // --- НАЧАЛО ЛОГИРОВАНИЯ ---
       console.log(
-        `[API-Bridge] Для товара "${product.name}" (variants: ${product.variantsCount}) генерируем URL: ${variantsUrl}`,
+        `[API-Bridge] Для товара "${product.name}" генерируем URL: ${variantsUrl}`,
       );
-      // --- КОНЕЦ ЛОГИРОВАНИЯ ---
 
       return moySkladFetch(variantsUrl).then((variantResponse) => ({
         ...product,
