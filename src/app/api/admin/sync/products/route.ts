@@ -94,22 +94,21 @@ export async function POST() {
           },
         });
 
+        // --- НАЧАЛО ФИНАЛЬНОЙ ЛОГИКИ СБОРКИ ---
         if (msProduct.variants && msProduct.variants.length > 0) {
           const colorsMap = new Map<string, any[]>();
 
           for (const msVariant of msProduct.variants) {
             if (msVariant.archived) continue;
 
-            // --- НАЧАЛО ИСПРАВЛЕНИЯ ЛОГИКИ ЦВЕТА ---
             const colorCharacteristics = (msVariant.characteristics || [])
               .filter((c: any) => c.name.toLowerCase().startsWith('цвет'))
-              .sort((a: any, b: any) => a.name.localeCompare(b.name)); // Сортируем, чтобы "Цвет-1" был раньше "Цвет-2"
+              .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
             const colorName =
               colorCharacteristics.length > 0
                 ? colorCharacteristics.map((c: any) => c.value).join(' / ')
                 : 'Основной';
-            // --- КОНЕЦ ИСПРАВЛЕНИЯ ЛОГИКИ ЦВЕТА ---
 
             if (!colorsMap.has(colorName)) {
               colorsMap.set(colorName, []);
@@ -138,11 +137,9 @@ export async function POST() {
             });
 
             for (const msVariant of variantsInColor) {
-              // --- НАЧАЛО ИСПРАВЛЕНИЯ ЛОГИКИ РАЗМЕРА ---
               const sizeCharacteristic = (msVariant.characteristics || []).find(
-                (c: any) => c.name === 'Размер одежды', // Ищем правильное название
+                (c: any) => c.name === 'Размер одежды',
               );
-              // --- КОНЕЦ ИСПРАВЛЕНИЯ ЛОГИКИ РАЗМЕРА ---
               if (!sizeCharacteristic) continue;
 
               const sizeValue = sizeCharacteristic.value;
@@ -176,6 +173,7 @@ export async function POST() {
             }
           }
         }
+        // --- КОНЕЦ ФИНАЛЬНОЙ ЛОГИКИ СБОРКИ ---
       }
     });
 
