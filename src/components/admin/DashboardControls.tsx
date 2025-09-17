@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
-// Иконки
 const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -55,54 +54,135 @@ export default function DashboardControls() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
-
-  // --- НАЧАЛО НОВОГО КОДА: Стейты для API-ключа ---
   const [showKeyManager, setShowKeyManager] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
-  // --- КОНЕЦ НОВОГО КОДА ---
+  const [isTestingKey, setIsTestingKey] = useState(false);
 
   const handleSync = async () => {
-    /* ... код без изменений ... */
+    setIsSyncing(true);
+    toast.loading('Синхронизация со складом...', { id: 'sync' });
+    await fetch('/api/admin/sync/categories', { method: 'POST' });
+    await fetch('/api/admin/sync/products', { method: 'POST' });
+    toast.success('Синхронизация завершена!', { id: 'sync' });
+    router.refresh();
+    setIsSyncing(false);
   };
   const handleReset = async () => {
-    /* ... код без изменений ... */
-  };
-  const handleBackfillSkus = async () => {
-    /* ... код без изменений ... */
-  };
-
-  // --- НАЧАЛО НОВОГО КОДА: Логика сохранения ключа ---
-  const handleSaveApiKey = async () => {
-    if (!apiKey.trim()) {
-      toast.error('API-ключ не может быть пустым.');
-      return;
-    }
-    setIsSavingKey(true);
-    const toastId = toast.loading('Сохранение ключа...');
+    const conf = window.confirm(
+      'ВЫ УВЕРЕНЫ?\nЭто действие полностью удалит ВСЕ товары с сайта Kyanchir.\nДанные в "МойСклад" затронуты НЕ будут.\n\nЭто действие необратимо.',
+    );
+    if (!conf) return;
+    setIsResetting(true);
+    const toastId = toast.loading('Очистка склада Kyanchir...');
     try {
-      const response = await fetch('/api/admin/settings/moysklad-key', {
+      const response = await fetch('/api/admin/sync/reset-products', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey }),
       });
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || 'Ошибка при сохранении');
-      }
-      toast.success(data.message, { id: toastId });
-      setShowKeyManager(false);
-      setApiKey('');
+      if (!response.ok) throw new Error(data.error || 'Ошибка при сбросе');
+      toast.success(
+        `Склад очищен! Удалено ${data.deletedProductsCount} товаров.`,
+        { id: toastId },
+      );
+      router.refresh();
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Неизвестная ошибка',
         { id: toastId },
       );
     } finally {
+      setIsResetting(false);
+    }
+  };
+  const handleBackfillSkus = async () => {
+    setIsBackfilling(true);
+    const toastId = toast.loading('Проверка артикулов в МойСклад...');
+    try {
+      const response = await fetch('/api/admin/utils/backfill-skus', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Ошибка при проверке');
+      if (data.successfullyUpdated > 0) {
+        toast.success(
+          `Успешно обновлено ${data.successfullyUpdated} артикулов!`,
+          { id: toastId, duration: 5000 },
+        );
+      } else {
+        toast.success('Все артикулы в порядке!', { id: toastId });
+      }
+      if (data.errors?.length > 0) {
+        console.error('Ошибки при проверке:', data.errors);
+        toast.error('Часть артикулов не удалось обновить. См. консоль.');
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Неизвестная ошибка',
+        { id: toastId },
+      );
+    } finally {
+      setIsBackfilling(false);
+    }
+  };
+
+  const testApiKey = async (keyToTest: string) => {
+    const response = await fetch('/api/admin/settings/test-moysklad-key', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiKey: keyToTest }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Ошибка теста');
+    return data;
+  };
+
+  const handleTestApiKey = async () => {
+    if (!apiKey.trim()) {
+      toast.error('Сначала введите ключ.');
+      return;
+    }
+    setIsTestingKey(true);
+    try {
+      const result = await testApiKey(apiKey);
+      toast.success(result.message);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ошибка');
+    } finally {
+      setIsTestingKey(false);
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!apiKey.trim()) {
+      toast.error('Ключ не может быть пустым.');
+      return;
+    }
+    setIsSavingKey(true);
+    const toastId = toast.loading('Тестирование ключа...');
+    try {
+      await testApiKey(apiKey);
+      toast.loading('Ключ верный. Сохранение...', { id: toastId });
+      const saveResponse = await fetch('/api/admin/settings/moysklad-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey }),
+      });
+      const saveData = await saveResponse.json();
+      if (!saveResponse.ok)
+        throw new Error(saveData.error || 'Ошибка сохранения');
+      toast.success(saveData.message, { id: toastId });
+      setShowKeyManager(false);
+      setApiKey('');
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Не удалось сохранить ключ.',
+        { id: toastId },
+      );
+    } finally {
       setIsSavingKey(false);
     }
   };
-  // --- КОНЕЦ НОВОГО КОДА ---
 
   return (
     <div className="mb-4 space-y-2">
@@ -148,8 +228,6 @@ export default function DashboardControls() {
             {' '}
             <TagIcon className="h-4 w-4" /> Управление категориями{' '}
           </Link>
-
-          {/* --- НАЧАЛО НОВОГО КОДА: Кнопка управления ключом --- */}
           <button
             onClick={() => setShowKeyManager(!showKeyManager)}
             className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
@@ -157,7 +235,6 @@ export default function DashboardControls() {
             {' '}
             <KeyIcon className="h-4 w-4" /> API-ключ МойСклад{' '}
           </button>
-          {/* --- КОНЕЦ НОВОГО КОДА --- */}
         </div>
         <Link
           href="/admin/products/new"
@@ -167,8 +244,6 @@ export default function DashboardControls() {
           + Создать товар{' '}
         </Link>
       </div>
-
-      {/* --- НАЧАЛО НОВОГО КОДА: Форма для ввода ключа --- */}
       {showKeyManager && (
         <div className="rounded-lg border bg-gray-50 p-3">
           <label
@@ -185,19 +260,27 @@ export default function DashboardControls() {
               onChange={(e) => setApiKey(e.target.value)}
               className="block w-full rounded-md border-gray-300 text-sm shadow-sm"
               placeholder="Вставьте сюда новый токен..."
-              disabled={isSavingKey}
+              disabled={isSavingKey || isTestingKey}
             />
             <button
+              onClick={handleTestApiKey}
+              disabled={isSavingKey || isTestingKey}
+              className="rounded-md border bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+            >
+              {' '}
+              {isTestingKey ? '...' : 'Тест'}{' '}
+            </button>
+            <button
               onClick={handleSaveApiKey}
-              disabled={isSavingKey}
+              disabled={isSavingKey || isTestingKey}
               className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
             >
-              {isSavingKey ? '...' : 'Сохранить'}
+              {' '}
+              {isSavingKey ? '...' : 'Сохранить'}{' '}
             </button>
           </div>
         </div>
       )}
-      {/* --- КОНЕЦ НОВОГО КОДА --- */}
     </div>
   );
 }
