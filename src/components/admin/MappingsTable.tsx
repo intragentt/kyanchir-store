@@ -5,7 +5,102 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CategoryCodeMapping } from '@prisma/client';
 import toast, { Toaster } from 'react-hot-toast';
-import { createMapping, deleteMapping } from '@/app/admin/mappings/actions';
+import {
+  createMapping,
+  deleteMapping,
+  updateMapping,
+} from '@/app/admin/mappings/actions'; // <-- Импортируем updateMapping
+
+// --- НАЧАЛО НОВОГО КОМПОНЕНТА: MappingRow ---
+const MappingRow = ({ mapping }: { mapping: CategoryCodeMapping }) => {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [isEditing, setIsEditing] = useState(false);
+  const [categoryName, setCategoryName] = useState(mapping.categoryName);
+  const [assignedCode, setAssignedCode] = useState(mapping.assignedCode);
+
+  const handleSave = () => {
+    if (
+      categoryName === mapping.categoryName &&
+      assignedCode === mapping.assignedCode
+    ) {
+      setIsEditing(false);
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await updateMapping(mapping.id, {
+        categoryName,
+        assignedCode,
+      });
+      if (result?.error) {
+        toast.error(result.error);
+        // Возвращаем старые значения в случае ошибки
+        setCategoryName(mapping.categoryName);
+        setAssignedCode(mapping.assignedCode);
+      } else {
+        toast.success('Правило обновлено!');
+        router.refresh();
+      }
+      setIsEditing(false);
+    });
+  };
+
+  const handleDelete = () => {
+    startTransition(async () => {
+      await deleteMapping(mapping.id);
+      toast.success('Правило удалено.');
+      router.refresh();
+    });
+  };
+
+  return (
+    <tr onDoubleClick={() => setIsEditing(true)}>
+      {isEditing ? (
+        <>
+          <td className="px-6 py-4">
+            <input
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              onBlur={handleSave}
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              className="w-full rounded-md border-gray-300 shadow-sm"
+              autoFocus
+            />
+          </td>
+          <td className="px-6 py-4">
+            <input
+              value={assignedCode}
+              onChange={(e) => setAssignedCode(e.target.value.toUpperCase())}
+              onBlur={handleSave}
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              className="w-full rounded-md border-gray-300 shadow-sm"
+            />
+          </td>
+        </>
+      ) : (
+        <>
+          <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+            {mapping.categoryName}
+          </td>
+          <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+            {mapping.assignedCode}
+          </td>
+        </>
+      )}
+      <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+        <button
+          onClick={handleDelete}
+          disabled={isPending}
+          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+        >
+          Удалить
+        </button>
+      </td>
+    </tr>
+  );
+};
+// --- КОНЕЦ НОВОГО КОМПОНЕНТА ---
 
 interface MappingsTableProps {
   mappings: CategoryCodeMapping[];
@@ -37,22 +132,16 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
     });
   };
 
-  const handleDelete = (id: string) => {
-    startTransition(async () => {
-      await deleteMapping(id);
-      toast.success('Правило удалено.');
-      router.refresh();
-    });
-  };
-
   return (
     <div className="space-y-6">
       <Toaster position="top-center" />
       <h1 className="text-2xl font-bold text-gray-800">
         Словарь Кодов Категорий
       </h1>
+      <p className="text-sm text-gray-500">
+        Кликните дважды на строку, чтобы редактировать правило.
+      </p>
 
-      {/* Форма добавления */}
       <form
         onSubmit={handleAddMapping}
         className="rounded-lg border bg-white p-4 shadow-sm"
@@ -83,7 +172,6 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
         </div>
       </form>
 
-      {/* Таблица существующих правил */}
       <div className="overflow-hidden border-b border-gray-200 shadow sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -99,23 +187,7 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
             {mappings.map((mapping) => (
-              <tr key={mapping.id}>
-                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-                  {mapping.categoryName}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {mapping.assignedCode}
-                </td>
-                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                  <button
-                    onClick={() => handleDelete(mapping.id)}
-                    disabled={isPending}
-                    className="text-red-600 hover:text-red-900 disabled:opacity-50"
-                  >
-                    Удалить
-                  </button>
-                </td>
-              </tr>
+              <MappingRow key={mapping.id} mapping={mapping} />
             ))}
           </tbody>
         </table>
