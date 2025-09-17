@@ -7,37 +7,43 @@ import { revalidatePath } from 'next/cache';
 const pathToRevalidate = '/admin/categories';
 
 // --- CATEGORY ACTIONS ---
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем 'code' в аргументы и в данные ---
 export async function createCategory(
   name: string,
-  code: string, // <-- Добавлен аргумент
+  code: string,
   parentId: string | null,
 ) {
   if (!name || name.trim() === '')
     return { error: 'Название не может быть пустым.' };
-  // Добавлена проверка для code
   if (!code || code.trim() === '')
     return { error: 'Код не может быть пустым.' };
 
   await prisma.category.create({
     data: {
       name: name.trim(),
-      code: code.trim(), // <-- Добавлено поле в данные
+      code: code.trim().toUpperCase(),
       ...(parentId && { parentId }),
     },
   });
   revalidatePath(pathToRevalidate);
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export async function updateCategory(
   id: string,
-  data: { name?: string; color?: string },
+  data: { name?: string; color?: string; code?: string },
 ) {
   if (data.name !== undefined && data.name.trim() === '') {
     return { error: 'Название не может быть пустым.' };
   }
-  await prisma.category.update({ where: { id }, data });
+  if (data.code !== undefined && data.code.trim() === '') {
+    return { error: 'Код не может быть пустым.' };
+  }
+
+  const dataToUpdate = { ...data };
+  if (dataToUpdate.code) {
+    dataToUpdate.code = dataToUpdate.code.toUpperCase();
+  }
+
+  await prisma.category.update({ where: { id }, data: dataToUpdate });
   revalidatePath(pathToRevalidate);
 }
 
@@ -81,6 +87,7 @@ export async function saveAllClassifications(
   categories: {
     id: string;
     name: string;
+    code: string;
     color: string | null;
     parentId: string | null;
     order: number;
@@ -96,6 +103,7 @@ export async function saveAllClassifications(
           color: cat.color,
           parentId: cat.parentId,
           order: cat.order,
+          code: cat.code.toUpperCase(),
         },
       }),
     ),
