@@ -59,7 +59,6 @@ export default function DashboardControls() {
   const handleSaveApiKey = async (apiKey: string): Promise<boolean> => {
     const toastId = toast.loading('Тестирование и сохранение ключа...');
     try {
-      // Тестируем
       const testResponse = await fetch(
         '/api/admin/settings/test-moysklad-key',
         {
@@ -72,8 +71,6 @@ export default function DashboardControls() {
         const data = await testResponse.json();
         throw new Error(data.error || 'Ключ не прошел проверку');
       }
-
-      // Сохраняем
       const saveResponse = await fetch('/api/admin/settings/moysklad-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -82,7 +79,6 @@ export default function DashboardControls() {
       const saveData = await saveResponse.json();
       if (!saveResponse.ok)
         throw new Error(saveData.error || 'Ошибка сохранения');
-
       toast.success(saveData.message, { id: toastId });
       return true;
     } catch (error) {
@@ -277,7 +273,6 @@ export default function DashboardControls() {
         onSave={async (newKey) => {
           const success = await handleSaveApiKey(newKey);
           if (success) {
-            // Если ключ успешно сохранен, автоматически повторяем синхронизацию
             handleSync();
           }
           return success;

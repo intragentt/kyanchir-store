@@ -8,6 +8,7 @@ import {
   getMoySkladProductsAndVariants,
   getMoySkladStock,
 } from '@/lib/moysklad-api';
+import { AuthError } from '@/lib/moysklad-api'; // <-- 1. Импортируем AuthError
 
 function getUUIDFromHref(href: string): string {
   return href.split('/').pop() || '';
@@ -24,7 +25,6 @@ export async function POST() {
   try {
     console.log('[SYNC PRODUCTS] Начало синхронизации товаров v2...');
 
-    // ... (Шаг 1: ПОДГОТОВКА ДАННЫХ - без изменений)
     console.log('[SYNC PRODUCTS] Шаг 1/3: Получение данных...');
     const [
       moySkladResponse,
@@ -69,21 +69,15 @@ export async function POST() {
         ? categoryMap.get(categoryMoySkladId)
         : undefined;
 
-      // --- НАЧАЛО КЛЮЧЕВОГО ИЗМЕНЕНИЯ ---
-      // Мы больше не создаем родителя с временным артикулом.
-      // Вместо этого, мы будем ссылаться на него по имени и создавать, если его нет.
-      // Артикул будет храниться только у ProductSize.
       const ourParentProduct = await prisma.product.upsert({
         where: { name: baseProductName },
         update: {
-          // При обновлении можно обновить категорию, если она изменилась
           categories: ourCategoryId
             ? { set: [{ id: ourCategoryId }] }
             : undefined,
         },
         create: {
           name: baseProductName,
-          // Артикул родителя теперь не так важен, главным будет артикул размера
           article: msProduct.article || `TEMP-${msProduct.id}`,
           statusId: draftStatus.id,
           categories: ourCategoryId
@@ -125,7 +119,7 @@ export async function POST() {
           stock: stockMap.get(msProduct.id) || 0,
           moySkladHref: msProduct.meta.href,
           moySkladType: msProduct.meta.type,
-          article: msProduct.article, // <-- ГЛАВНОЕ: Берем настоящий артикул из МойСклад
+          article: msProduct.article,
         },
         create: {
           productVariantId: ourVariant.id,
@@ -133,10 +127,9 @@ export async function POST() {
           stock: stockMap.get(msProduct.id) || 0,
           moySkladHref: msProduct.meta.href,
           moySkladType: msProduct.meta.type,
-          article: msProduct.article, // <-- ГЛАВНОЕ: Берем настоящий артикул из МойСклад
+          article: msProduct.article,
         },
       });
-      // --- КОНЕЦ КЛЮЧЕВОГО ИЗМЕНЕНИЯ ---
     }
 
     console.log('[SYNC PRODUCTS] Шаг 3/3: Синхронизация завершена.');
@@ -145,6 +138,13 @@ export async function POST() {
       totalMoySklad: moySkladItems.length,
     });
   } catch (error) {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: "Умный" обработчик ошибок ---
+    if (error instanceof AuthError) {
+      return new NextResponse(JSON.stringify({ error: error.message }), {
+        status: 401,
+      });
+    }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error('[PRODUCTS SYNC ERROR]:', errorMessage);
     return new NextResponse(
