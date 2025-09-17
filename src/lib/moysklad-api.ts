@@ -6,14 +6,12 @@ const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
 let apiKeyCache: string | null = null;
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем специальный класс для ошибки авторизации ---
 export class AuthError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'AuthError';
   }
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const getMoySkladApiKey = async () => {
   if (apiKeyCache) return apiKeyCache;
@@ -46,26 +44,25 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   try {
     const response = await fetch(url, config);
     if (!response.ok) {
-      // --- НАЧАЛО ИЗМЕНЕНИЙ: Проверяем статус ответа ---
       const status = response.status;
       const errorBody = await response.text();
       console.error(`Ошибка API МойСклад [${status}]: ${errorBody}`);
-      // Если это ошибка авторизации, выбрасываем нашу специальную ошибку
       if (status === 401) {
         throw new AuthError(
           'Ошибка авторизации в МойСклад. Проверьте API-ключ.',
         );
       }
       throw new Error(`Ошибка API МойСклад: ${status} - ${errorBody}`);
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     }
     if (response.status === 204) return null;
     return await response.json();
   } catch (error) {
     console.error('Ошибка при выполнении запроса к МойСклад:', error);
-    throw error; // Просто "пробрасываем" ошибку дальше (будет либо AuthError, либо обычная)
+    throw error;
   }
 };
+
+// ... (весь остальной код до getProductsWithVariants без изменений) ...
 
 export const createMoySkladProduct = async (
   name: string,
@@ -338,11 +335,6 @@ export const updateMoySkladProductFolder = async (
   });
 };
 
-// --- НАЧАЛО НОВОЙ ФУНКЦИИ ---
-/**
- * Получает все товары и для каждого из них подгружает его вложенные модификации (варианты).
- * @returns {Promise<any[]>} Массив товаров, где каждый товар содержит поле `variants` со списком его модификаций.
- */
 export const getProductsWithVariants = async () => {
   console.log('[API-Bridge] Этап 1: Получение всех родительских товаров...');
   const productsResponse = await moySkladFetch(
@@ -356,7 +348,11 @@ export const getProductsWithVariants = async () => {
 
   const variantPromises = products.map((product: any) => {
     if (product.variantsCount > 0) {
-      const variantsUrl = `entity/product/${product.id}/variants?expand=characteristics`;
+      // --- НАЧАЛО ИЗМЕНЕНИЯ ---
+      // Неправильный эндпоинт: `entity/product/${product.id}/variants`
+      // Правильный эндпоинт: `entity/variant` с фильтром по ID товара
+      const variantsUrl = `entity/variant?filter=product.id=${product.id}&expand=characteristics`;
+      // --- КОНЕЦ ИЗМЕНЕНИЯ ---
       return moySkladFetch(variantsUrl).then((variantResponse) => ({
         ...product,
         variants: variantResponse.rows || [],
@@ -372,4 +368,3 @@ export const getProductsWithVariants = async () => {
 
   return productsWithVariants;
 };
-// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
