@@ -79,7 +79,7 @@ const config: Config = {
     },
   },
   plugins: [
-    require('@tailwindcss/line-clamp'),
+    // require('@tailwindcss/line-clamp'), // <-- УДАЛЕНО: Теперь это встроено в Tailwind
     require('@tailwindcss/forms'),
     plugin(function ({ addUtilities, theme }) {
       // --- НАЧАЛО ИЗМЕНЕНИЙ: Явно указываем тип для newUtilities ---

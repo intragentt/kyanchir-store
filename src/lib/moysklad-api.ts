@@ -62,8 +62,6 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   }
 };
 
-// ... (весь остальной код до getProductsWithVariants без изменений) ...
-
 export const createMoySkladProduct = async (
   name: string,
   article: string,
@@ -349,9 +347,9 @@ export const getProductsWithVariants = async () => {
   const variantPromises = products.map((product: any) => {
     if (product.variantsCount > 0) {
       // --- НАЧАЛО ИЗМЕНЕНИЯ ---
-      // Неправильный эндпоинт: `entity/product/${product.id}/variants`
-      // Правильный эндпоинт: `entity/variant` с фильтром по ID товара
-      const variantsUrl = `entity/variant?filter=product.id=${product.id}&expand=characteristics`;
+      // Неправильный фильтр: `product.id=${product.id}`
+      // Правильный фильтр: `product=${product.meta.href}`. Ссылаемся на полную мета-информацию.
+      const variantsUrl = `entity/variant?filter=product=${product.meta.href}&expand=characteristics`;
       // --- КОНЕЦ ИЗМЕНЕНИЯ ---
       return moySkladFetch(variantsUrl).then((variantResponse) => ({
         ...product,
