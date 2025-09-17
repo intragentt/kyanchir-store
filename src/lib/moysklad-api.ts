@@ -346,14 +346,7 @@ export const getProductsWithVariants = async () => {
 
   const variantPromises = products.map((product: any) => {
     if (product.variantsCount > 0) {
-      // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ, ОСНОВАННОЕ НА ВНЕШНЕМ ПОИСКЕ ---
       const variantsUrl = `entity/variant?filter=productid=${product.id}&expand=characteristics`;
-      // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
-
-      console.log(
-        `[API-Bridge] Для товара "${product.name}" генерируем URL: ${variantsUrl}`,
-      );
-
       return moySkladFetch(variantsUrl).then((variantResponse) => ({
         ...product,
         variants: variantResponse.rows || [],
@@ -369,3 +362,22 @@ export const getProductsWithVariants = async () => {
 
   return productsWithVariants;
 };
+
+// --- НАЧАЛО НОВОЙ ФУНКЦИИ ---
+export const bulkUpdateMoySkladArticles = async (
+  updates: { meta: any; article: string }[],
+) => {
+  console.log(
+    `[API МойСклад] Пакетное обновление ${updates.length} артикулов...`,
+  );
+  const body = updates.map((u) => ({
+    meta: u.meta,
+    article: u.article,
+  }));
+
+  return await moySkladFetch('entity/assortment', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+};
+// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
