@@ -11,13 +11,11 @@ import {
   updateMapping,
 } from '@/app/admin/mappings/actions';
 
-// --- НАЧАЛО НОВОГО, УМНОГО КОМПОНЕНТА СТРОКИ ---
 function MappingRow({ mapping }: { mapping: CategoryCodeMapping }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
 
-  // Локальные состояния для полей ввода
   const [name, setName] = useState(mapping.categoryName);
   const [code, setCode] = useState(mapping.assignedCode);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -29,12 +27,10 @@ function MappingRow({ mapping }: { mapping: CategoryCodeMapping }) {
   }, [isEditing]);
 
   const handleSave = () => {
-    // Не отправляем запрос, если ничего не изменилось
     if (name === mapping.categoryName && code === mapping.assignedCode) {
       setIsEditing(false);
       return;
     }
-
     startTransition(async () => {
       const result = await updateMapping(mapping.id, {
         categoryName: name,
@@ -42,12 +38,11 @@ function MappingRow({ mapping }: { mapping: CategoryCodeMapping }) {
       });
       if (result?.error) {
         toast.error(result.error);
-        // Возвращаем старые значения в случае ошибки
         setName(mapping.categoryName);
         setCode(mapping.assignedCode);
       } else {
         toast.success('Правило обновлено!');
-        router.refresh(); // Обновляем данные на всей странице
+        router.refresh();
       }
       setIsEditing(false);
     });
@@ -61,73 +56,85 @@ function MappingRow({ mapping }: { mapping: CategoryCodeMapping }) {
     });
   };
 
-  if (isEditing) {
-    return (
-      <tr>
-        <td className="px-6 py-4">
+  const handleCancel = () => {
+    setName(mapping.categoryName);
+    setCode(mapping.assignedCode);
+    setIsEditing(false);
+  };
+
+  return (
+    <tr>
+      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+        {isEditing ? (
           <input
             ref={inputRef}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            onBlur={handleSave}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="w-full rounded-md border-gray-300 shadow-sm"
             disabled={isPending}
           />
-        </td>
-        <td className="px-6 py-4">
+        ) : (
+          name
+        )}
+      </td>
+      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+        {isEditing ? (
           <input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            onBlur={handleSave}
-            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-            className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className="w-full rounded-md border-gray-300 shadow-sm"
             disabled={isPending}
           />
-        </td>
-        <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-          <button
-            onClick={() => setIsEditing(false)}
-            disabled={isPending}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            Отмена
-          </button>
-        </td>
-      </tr>
-    );
-  }
-
-  return (
-    <tr
-      onDoubleClick={() => setIsEditing(true)}
-      className="cursor-pointer hover:bg-gray-50"
-    >
-      <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-        {mapping.categoryName}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-        {mapping.assignedCode}
+        ) : (
+          code
+        )}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-        <button
-          onClick={handleDelete}
-          disabled={isPending}
-          className="text-red-600 hover:text-red-900 disabled:opacity-50"
-        >
-          Удалить
-        </button>
+        {isEditing ? (
+          <div className="flex items-center justify-end gap-x-4">
+            <button
+              onClick={handleSave}
+              disabled={isPending}
+              className="font-semibold text-indigo-600 hover:text-indigo-800"
+            >
+              Сохранить
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isPending}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Отмена
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-x-4">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="font-semibold text-indigo-600 hover:text-indigo-800"
+            >
+              Изменить
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isPending}
+              className="text-red-600 hover:text-red-900 disabled:opacity-50"
+            >
+              Удалить
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   );
 }
-// --- КОНЕЦ КОМПОНЕНТА СТРОКИ ---
 
-interface MappingsTableProps {
+// ... (остальной код MappingsTable без изменений)
+export default function MappingsTable({
+  mappings,
+}: {
   mappings: CategoryCodeMapping[];
-}
-
-export default function MappingsTable({ mappings }: MappingsTableProps) {
+}) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [categoryName, setCategoryName] = useState('');
@@ -160,7 +167,7 @@ export default function MappingsTable({ mappings }: MappingsTableProps) {
         Словарь Кодов Категорий
       </h1>
       <p className="text-sm text-gray-500">
-        Кликните дважды на строку, чтобы редактировать правило.
+        Кликните "Изменить", чтобы редактировать правило.
       </p>
 
       <form
