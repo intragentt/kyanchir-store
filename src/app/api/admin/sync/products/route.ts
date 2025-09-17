@@ -94,64 +94,88 @@ export async function POST() {
           },
         });
 
+        // --- НАЧАЛО НОВОЙ ЛОГИКИ: УМНАЯ ГРУППИРОВКА ---
         if (msProduct.variants && msProduct.variants.length > 0) {
-          for (const msVariant of msProduct.variants) {
-            const characteristics = msVariant.characteristics || [];
-            const sizeCharacteristic = characteristics.find(
-              (c: any) => c.name === 'Размер',
-            );
-            if (!sizeCharacteristic) continue;
+          // Шаг 1: Группируем все модификации по цвету
+          const colorsMap = new Map<string, any[]>();
 
-            const colorCharacteristic = characteristics.find(
-              (c: any) => c.name === 'Цвет',
+          for (const msVariant of msProduct.variants) {
+            if (msVariant.archived) continue;
+
+            const colorCharacteristic = (msVariant.characteristics || []).find(
+              (c: any) => c.name.toLowerCase().startsWith('цвет'),
             );
-            const color = colorCharacteristic
+            const colorName = colorCharacteristic
               ? colorCharacteristic.value
               : 'Основной';
 
+            if (!colorsMap.has(colorName)) {
+              colorsMap.set(colorName, []);
+            }
+            colorsMap.get(colorName)!.push(msVariant);
+          }
+
+          // Шаг 2: Проходимся по сгруппированным цветам
+          for (const [colorName, variantsInColor] of colorsMap.entries()) {
+            // Создаем ОДИН вариант на каждый цвет
             const productVariant = await tx.productVariant.upsert({
               where: {
-                productId_color: { productId: parentProduct.id, color: color },
+                productId_color: {
+                  productId: parentProduct.id,
+                  color: colorName,
+                },
               },
-              update: {},
+              update: {
+                price: (msProduct.salePrices?.[0]?.value || 0) / 100,
+                oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
+              },
               create: {
                 productId: parentProduct.id,
-                color: color,
+                color: colorName,
                 price: (msProduct.salePrices?.[0]?.value || 0) / 100,
                 oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
               },
             });
 
-            const sizeValue = sizeCharacteristic.value;
-            let sizeId = sizeMap.get(sizeValue);
-            if (!sizeId) {
-              const newSize = await tx.size.create({
-                data: { value: sizeValue },
-              });
-              sizeId = newSize.id;
-              sizeMap.set(sizeValue, sizeId);
-            }
+            // Шаг 3: Для каждого цвета создаем его размеры
+            for (const msVariant of variantsInColor) {
+              const sizeCharacteristic = (msVariant.characteristics || []).find(
+                (c: any) => c.name === 'Размер',
+              );
+              if (!sizeCharacteristic) continue;
 
-            await tx.productSize.upsert({
-              where: { moyskladId: msVariant.id },
-              update: {
-                stock: stockMap.get(msVariant.id) || 0,
-                article: msVariant.article,
-                archived: msVariant.archived,
-              },
-              create: {
-                productVariantId: productVariant.id,
-                sizeId: sizeId,
-                moyskladId: msVariant.id,
-                moySkladHref: msVariant.meta.href,
-                moySkladType: msVariant.meta.type,
-                stock: stockMap.get(msVariant.id) || 0,
-                article: msVariant.article,
-                archived: msVariant.archived,
-              },
-            });
+              const sizeValue = sizeCharacteristic.value;
+              let sizeId = sizeMap.get(sizeValue);
+              if (!sizeId) {
+                const newSize = await tx.size.create({
+                  data: { value: sizeValue },
+                });
+                sizeId = newSize.id;
+                sizeMap.set(sizeValue, sizeId);
+              }
+
+              await tx.productSize.upsert({
+                where: { moyskladId: msVariant.id },
+                update: {
+                  stock: stockMap.get(msVariant.id) || 0,
+                  article: msVariant.article,
+                  archived: msVariant.archived,
+                },
+                create: {
+                  productVariantId: productVariant.id, // <-- Привязка к ОДНОМУ варианту
+                  sizeId: sizeId,
+                  moyskladId: msVariant.id,
+                  moySkladHref: msVariant.meta.href,
+                  moySkladType: msVariant.meta.type,
+                  stock: stockMap.get(msVariant.id) || 0,
+                  article: msVariant.article,
+                  archived: msVariant.archived,
+                },
+              });
+            }
           }
         }
+        // --- КОНЕЦ НОВОЙ ЛОГИКИ ---
       }
     });
 
