@@ -1,0 +1,125 @@
+// Местоположение: /src/components/admin/MappingsTable.tsx
+'use client';
+
+import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import type { CategoryCodeMapping } from '@prisma/client';
+import toast, { Toaster } from 'react-hot-toast';
+import { createMapping, deleteMapping } from '@/app/admin/mappings/actions';
+
+interface MappingsTableProps {
+  mappings: CategoryCodeMapping[];
+}
+
+export default function MappingsTable({ mappings }: MappingsTableProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [categoryName, setCategoryName] = useState('');
+  const [assignedCode, setAssignedCode] = useState('');
+
+  const handleAddMapping = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!categoryName.trim() || !assignedCode.trim()) {
+      toast.error('Название и код должны быть заполнены.');
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await createMapping(categoryName, assignedCode);
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success('Правило добавлено!');
+        setCategoryName('');
+        setAssignedCode('');
+        router.refresh();
+      }
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    startTransition(async () => {
+      await deleteMapping(id);
+      toast.success('Правило удалено.');
+      router.refresh();
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <Toaster position="top-center" />
+      <h1 className="text-2xl font-bold text-gray-800">
+        Словарь Кодов Категорий
+      </h1>
+
+      {/* Форма добавления */}
+      <form
+        onSubmit={handleAddMapping}
+        className="rounded-lg border bg-white p-4 shadow-sm"
+      >
+        <h2 className="mb-4 text-lg font-semibold">Добавить новое правило</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <input
+            value={categoryName}
+            onChange={(e) => setCategoryName(e.target.value)}
+            placeholder="Название категории (как в МойСклад)"
+            className="rounded-md border-gray-300 shadow-sm"
+            disabled={isPending}
+          />
+          <input
+            value={assignedCode}
+            onChange={(e) => setAssignedCode(e.target.value.toUpperCase())}
+            placeholder="Присваиваемый код (напр., BE, KP2)"
+            className="rounded-md border-gray-300 shadow-sm"
+            disabled={isPending}
+          />
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-md bg-indigo-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {isPending ? 'Добавление...' : '+ Добавить'}
+          </button>
+        </div>
+      </form>
+
+      {/* Таблица существующих правил */}
+      <div className="overflow-hidden border-b border-gray-200 shadow sm:rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                Название категории в МойСклад
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium uppercase text-gray-500">
+                Присваиваемый Код
+              </th>
+              <th className="relative px-6 py-3"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 bg-white">
+            {mappings.map((mapping) => (
+              <tr key={mapping.id}>
+                <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
+                  {mapping.categoryName}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                  {mapping.assignedCode}
+                </td>
+                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
+                  <button
+                    onClick={() => handleDelete(mapping.id)}
+                    disabled={isPending}
+                    className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                  >
+                    Удалить
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
