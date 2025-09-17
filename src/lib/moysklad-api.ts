@@ -346,11 +346,11 @@ export const getProductsWithVariants = async () => {
 
   const variantPromises = products.map((product: any) => {
     if (product.variantsCount > 0) {
-      // --- НАЧАЛО ИЗМЕНЕНИЯ ---
-      // Неправильный фильтр: `product.id=${product.id}`
-      // Правильный фильтр: `product=${product.meta.href}`. Ссылаемся на полную мета-информацию.
-      const variantsUrl = `entity/variant?filter=product=${product.meta.href}&expand=characteristics`;
-      // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+      // --- НАЧАЛО ФИНАЛЬНОГО ИЗМЕНЕНИЯ ---
+      // Правильный эндпоинт: `entity/assortment`, так как модификации являются частью "ассортимента".
+      // Правильный фильтр: `assortment=${product.meta.href}`.
+      const variantsUrl = `entity/assortment?filter=assortment=${product.meta.href}&expand=characteristics`;
+      // --- КОНЕЦ ФИНАЛЬНОГО ИЗМЕНЕНИЯ ---
       return moySkladFetch(variantsUrl).then((variantResponse) => ({
         ...product,
         variants: variantResponse.rows || [],
