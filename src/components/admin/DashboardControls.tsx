@@ -5,7 +5,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+// --- НАЧАЛО НОВЫХ ИМПОРТОВ ---
+import ConflictResolutionModal, {
+  UserResolutions,
+} from './ConflictResolutionModal';
+import type { SkuResolutionPlan } from '@/app/api/admin/utils/backfill-skus/route';
+// --- КОНЕЦ НОВЫХ ИМПОРТОВ ---
 
+// --- Иконки (без изменений) ---
 const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -53,15 +60,20 @@ export default function DashboardControls() {
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
-  const [isBackfilling, setIsBackfilling] = useState(false);
+  const [isCheckingSkus, setIsCheckingSkus] = useState(false); // <--- Переименовано для ясности
+  const [isExecutingPlan, setIsExecutingPlan] = useState(false);
   const [showKeyManager, setShowKeyManager] = useState(false);
   const [apiKey, setApiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
   const [isTestingKey, setIsTestingKey] = useState(false);
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+  const [skuResolutionPlan, setSkuResolutionPlan] =
+    useState<SkuResolutionPlan | null>(null);
 
+  // --- Старые обработчики (без изменений) ---
   const handleSync = async () => {
     setIsSyncing(true);
-    toast.loading('Синхронизация со складом...', { id: 'sync' });
+    toast.loading('Синхронизация...', { id: 'sync' });
     await fetch('/api/admin/sync/categories', { method: 'POST' });
     await fetch('/api/admin/sync/products', { method: 'POST' });
     toast.success('Синхронизация завершена!', { id: 'sync' });
@@ -69,22 +81,78 @@ export default function DashboardControls() {
     setIsSyncing(false);
   };
   const handleReset = async () => {
-    const conf = window.confirm(
-      'ВЫ УВЕРЕНЫ?\nЭто действие полностью удалит ВСЕ товары с сайта Kyanchir.\nДанные в "МойСклад" затронуты НЕ будут.\n\nЭто действие необратимо.',
-    );
+    const conf = window.confirm('ВЫ УВЕРЕНЫ? ...');
     if (!conf) return;
     setIsResetting(true);
-    const toastId = toast.loading('Очистка склада Kyanchir...');
+    const toastId = toast.loading('Очистка склада...');
     try {
       const response = await fetch('/api/admin/sync/reset-products', {
         method: 'POST',
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Ошибка при сбросе');
+      if (!response.ok) throw new Error(data.error);
       toast.success(
         `Склад очищен! Удалено ${data.deletedProductsCount} товаров.`,
         { id: toastId },
       );
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Ошибка', {
+        id: toastId,
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Переписанный обработчик ---
+  const handleCheckSkus = async () => {
+    setIsCheckingSkus(true);
+    const toastId = toast.loading('Ревизия артикулов в МойСклад...');
+    try {
+      const response = await fetch('/api/admin/utils/backfill-skus', {
+        method: 'POST',
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Ошибка при ревизии');
+
+      const plan = data.plan as SkuResolutionPlan;
+      if (plan.conflicts.length === 0 && plan.toCreate.length === 0) {
+        toast.success('Все артикулы в полном порядке!', { id: toastId });
+      } else {
+        setSkuResolutionPlan(plan);
+        setIsConflictModalOpen(true);
+        toast.dismiss(toastId); // Скрываем "загрузочный" тост, т.к. открываем модалку
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Неизвестная ошибка',
+        { id: toastId },
+      );
+    } finally {
+      setIsCheckingSkus(false);
+    }
+  };
+
+  const handleConfirmResolution = async (resolutions: UserResolutions) => {
+    setIsExecutingPlan(true);
+    const toastId = toast.loading('Применение решений...');
+    try {
+      const response = await fetch('/api/admin/utils/execute-sku-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: skuResolutionPlan, resolutions }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || 'Ошибка при выполнении плана');
+
+      toast.success(
+        `План выполнен! Исправлено: ${data.articlesFixed}, Перемещено: ${data.categoriesReverted}, Создано: ${data.articlesCreated}.`,
+        { id: toastId, duration: 6000 },
+      );
+      setIsConflictModalOpen(false);
+      setSkuResolutionPlan(null);
       router.refresh();
     } catch (error) {
       toast.error(
@@ -92,51 +160,21 @@ export default function DashboardControls() {
         { id: toastId },
       );
     } finally {
-      setIsResetting(false);
+      setIsExecutingPlan(false);
     }
   };
-  const handleBackfillSkus = async () => {
-    setIsBackfilling(true);
-    const toastId = toast.loading('Проверка артикулов в МойСклад...');
-    try {
-      const response = await fetch('/api/admin/utils/backfill-skus', {
-        method: 'POST',
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Ошибка при проверке');
-      if (data.successfullyUpdated > 0) {
-        toast.success(
-          `Успешно обновлено ${data.successfullyUpdated} артикулов!`,
-          { id: toastId, duration: 5000 },
-        );
-      } else {
-        toast.success('Все артикулы в порядке!', { id: toastId });
-      }
-      if (data.errors?.length > 0) {
-        console.error('Ошибки при проверке:', data.errors);
-        toast.error('Часть артикулов не удалось обновить. См. консоль.');
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Неизвестная ошибка',
-        { id: toastId },
-      );
-    } finally {
-      setIsBackfilling(false);
-    }
-  };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const testApiKey = async (keyToTest: string) => {
-    const response = await fetch('/api/admin/settings/test-moysklad-key', {
+    const res = await fetch('/api/admin/settings/test-moysklad-key', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiKey: keyToTest }),
     });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || 'Ошибка теста');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
     return data;
   };
-
   const handleTestApiKey = async () => {
     if (!apiKey.trim()) {
       toast.error('Сначала введите ключ.');
@@ -152,7 +190,6 @@ export default function DashboardControls() {
       setIsTestingKey(false);
     }
   };
-
   const handleSaveApiKey = async () => {
     if (!apiKey.trim()) {
       toast.error('Ключ не может быть пустым.');
@@ -163,124 +200,136 @@ export default function DashboardControls() {
     try {
       await testApiKey(apiKey);
       toast.loading('Ключ верный. Сохранение...', { id: toastId });
-      const saveResponse = await fetch('/api/admin/settings/moysklad-key', {
+      const saveRes = await fetch('/api/admin/settings/moysklad-key', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey }),
       });
-      const saveData = await saveResponse.json();
-      if (!saveResponse.ok)
-        throw new Error(saveData.error || 'Ошибка сохранения');
+      const saveData = await saveRes.json();
+      if (!saveRes.ok) throw new Error(saveData.error);
       toast.success(saveData.message, { id: toastId });
       setShowKeyManager(false);
       setApiKey('');
     } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Не удалось сохранить ключ.',
-        { id: toastId },
-      );
+      toast.error(error instanceof Error ? error.message : 'Ошибка', {
+        id: toastId,
+      });
     } finally {
       setIsSavingKey(false);
     }
   };
 
+  const anyActionInProgress =
+    isSyncing || isResetting || isCheckingSkus || isExecutingPlan;
+
   return (
-    <div className="mb-4 space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={handleSync}
-            disabled={isSyncing || isResetting || isBackfilling}
-            className="flex items-center gap-x-2 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {' '}
-            <SyncIcon
-              className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
-            />{' '}
-            {isSyncing ? 'Синхронизация...' : 'Синхронизировать склад'}{' '}
-          </button>
-          <button
-            onClick={handleReset}
-            disabled={isResetting || isSyncing || isBackfilling}
-            className="flex items-center gap-x-2 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {' '}
-            <ResetIcon
-              className={`h-4 w-4 ${isResetting ? 'animate-spin' : ''}`}
-            />{' '}
-            {isResetting ? 'Очистка...' : 'Сбросить склад Kyanchir'}{' '}
-          </button>
-          <button
-            onClick={handleBackfillSkus}
-            disabled={isBackfilling || isSyncing || isResetting}
-            className="flex items-center gap-x-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {' '}
-            <CheckBadgeIcon
-              className={`h-4 w-4 ${isBackfilling ? 'animate-spin' : ''}`}
-            />{' '}
-            {isBackfilling ? 'Проверка...' : 'Проверить артикулы'}{' '}
-          </button>
-          <Link
-            href="/admin/categories"
-            className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-          >
-            {' '}
-            <TagIcon className="h-4 w-4" /> Управление категориями{' '}
-          </Link>
-          <button
-            onClick={() => setShowKeyManager(!showKeyManager)}
-            className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
-          >
-            {' '}
-            <KeyIcon className="h-4 w-4" /> API-ключ МойСклад{' '}
-          </button>
-        </div>
-        <Link
-          href="/admin/products/new"
-          className="rounded-lg bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-opacity-90"
-        >
-          {' '}
-          + Создать товар{' '}
-        </Link>
-      </div>
-      {showKeyManager && (
-        <div className="rounded-lg border bg-gray-50 p-3">
-          <label
-            htmlFor="api-key"
-            className="block text-xs font-medium text-gray-700"
-          >
-            Новый API-ключ "МойСклад"
-          </label>
-          <div className="mt-1 flex items-center gap-2">
-            <input
-              type="password"
-              id="api-key"
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="block w-full rounded-md border-gray-300 text-sm shadow-sm"
-              placeholder="Вставьте сюда новый токен..."
-              disabled={isSavingKey || isTestingKey}
-            />
+    <>
+      <div className="mb-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={handleTestApiKey}
-              disabled={isSavingKey || isTestingKey}
-              className="rounded-md border bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+              onClick={handleSync}
+              disabled={anyActionInProgress}
+              className="flex items-center gap-x-2 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {' '}
-              {isTestingKey ? '...' : 'Тест'}{' '}
+              <SyncIcon
+                className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
+              />{' '}
+              {isSyncing ? 'Синхронизация...' : 'Синхронизировать склад'}{' '}
             </button>
             <button
-              onClick={handleSaveApiKey}
-              disabled={isSavingKey || isTestingKey}
-              className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+              onClick={handleReset}
+              disabled={anyActionInProgress}
+              className="flex items-center gap-x-2 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {' '}
-              {isSavingKey ? '...' : 'Сохранить'}{' '}
+              <ResetIcon
+                className={`h-4 w-4 ${isResetting ? 'animate-spin' : ''}`}
+              />{' '}
+              {isResetting ? 'Очистка...' : 'Сбросить склад Kyanchir'}{' '}
+            </button>
+            <button
+              onClick={handleCheckSkus}
+              disabled={anyActionInProgress}
+              className="flex items-center gap-x-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {' '}
+              <CheckBadgeIcon
+                className={`h-4 w-4 ${isCheckingSkus ? 'animate-spin' : ''}`}
+              />{' '}
+              {isCheckingSkus ? 'Ревизия...' : 'Проверить артикулы'}{' '}
+            </button>
+            <Link
+              href="/admin/categories"
+              className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+            >
+              {' '}
+              <TagIcon className="h-4 w-4" /> Управление категориями{' '}
+            </Link>
+            <button
+              onClick={() => setShowKeyManager(!showKeyManager)}
+              className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+            >
+              {' '}
+              <KeyIcon className="h-4 w-4" /> API-ключ МойСклад{' '}
             </button>
           </div>
+          <Link
+            href="/admin/products/new"
+            className="rounded-lg bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-opacity-90"
+          >
+            {' '}
+            + Создать товар{' '}
+          </Link>
         </div>
-      )}
-    </div>
+        {showKeyManager && (
+          <div className="rounded-lg border bg-gray-50 p-3">
+            {' '}
+            <label
+              htmlFor="api-key"
+              className="block text-xs font-medium text-gray-700"
+            >
+              Новый API-ключ "МойСклад"
+            </label>{' '}
+            <div className="mt-1 flex items-center gap-2">
+              {' '}
+              <input
+                type="password"
+                id="api-key"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="block w-full rounded-md border-gray-300 text-sm shadow-sm"
+                placeholder="Вставьте сюда новый токен..."
+                disabled={isSavingKey || isTestingKey}
+              />{' '}
+              <button
+                onClick={handleTestApiKey}
+                disabled={isSavingKey || isTestingKey}
+                className="rounded-md border bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+              >
+                {' '}
+                {isTestingKey ? '...' : 'Тест'}{' '}
+              </button>{' '}
+              <button
+                onClick={handleSaveApiKey}
+                disabled={isSavingKey || isTestingKey}
+                className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+              >
+                {' '}
+                {isSavingKey ? '...' : 'Сохранить'}{' '}
+              </button>{' '}
+            </div>{' '}
+          </div>
+        )}
+      </div>
+      <ConflictResolutionModal
+        isOpen={isConflictModalOpen}
+        onClose={() => setIsConflictModalOpen(false)}
+        onConfirm={handleConfirmResolution}
+        plan={skuResolutionPlan}
+        isExecuting={isExecutingPlan}
+      />
+    </>
   );
 }

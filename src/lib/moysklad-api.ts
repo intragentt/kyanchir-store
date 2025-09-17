@@ -1,58 +1,38 @@
 // /src/lib/moysklad-api.ts
 
-import prisma from '@/lib/prisma'; // <-- 1. Импортируем Prisma
+import prisma from '@/lib/prisma';
 
 const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
-// --- НАЧАЛО НОВОЙ АРХИТЕКТУРЫ "ГИБРИДНОГО КЛЮЧА" ---
-
-// Кэш для хранения ключа в памяти, чтобы не делать запрос к БД каждый раз
 let apiKeyCache: string | null = null;
 
-/**
- * Получает API-ключ МойСклад.
- * Приоритет: Кэш -> База Данных -> .env файл.
- */
 const getMoySkladApiKey = async () => {
   if (apiKeyCache) {
     return apiKeyCache;
   }
-
   console.log('[API-Bridge] Ключ не в кэше, ищем в БД...');
   const setting = await prisma.systemSetting.findUnique({
     where: { key: 'MOYSKLAD_API_KEY' },
   });
-
-  // Если ключ есть в БД, используем его. Иначе - запасной из .env
   const key = setting?.value || process.env.MOYSKLAD_API_TOKEN;
-
   if (key) {
-    apiKeyCache = key; // Сохраняем в кэш для следующих запросов
+    apiKeyCache = key;
   }
-
   return key;
 };
 
-/**
- * Очищает кэш API-ключа. Вызывается после обновления ключа в админке.
- */
 export const clearApiKeyCache = () => {
   apiKeyCache = null;
   console.log('[API-Bridge] Кэш API-ключа очищен.');
 };
 
-// --- КОНЕЦ НОВОЙ АРХИТЕКТУРЫ ---
-
 const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
-  // Получаем ключ динамически при каждом запросе
   const apiKey = await getMoySkladApiKey();
-
   if (!apiKey) {
     throw new Error(
       'API-ключ для МойСклад не найден ни в базе данных, ни в переменных окружения.',
     );
   }
-
   const url = `${MOYSKLAD_API_URL}/${endpoint}`;
   const headers = new Headers(options.headers || {});
   headers.set('Authorization', `Bearer ${apiKey}`);
@@ -73,8 +53,6 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
     throw error;
   }
 };
-
-// ... (ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ ОСТАЮТСЯ БЕЗ ИЗМЕНЕНИЙ)
 
 export const createMoySkladProduct = async (
   name: string,
@@ -104,9 +82,11 @@ export const getMoySkladProducts = async () => {
     'entity/assortment?expand=productFolder,images,product',
   );
 };
+
 export const getMoySkladCategories = async () => {
   return await moySkladFetch('entity/productfolder?expand=productFolder');
 };
+
 export const getMoySkladStock = async () => {
   const data = await moySkladFetch('report/stock/all?stockMode=all');
   return data;
@@ -320,3 +300,33 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
+
+// --- НАЧАЛО НОВОЙ ФУНКЦИИ ---
+/**
+ * Перемещает товар в другую категорию (productFolder) в МойСклад.
+ * @param moySkladProductId - ID товара, который нужно переместить.
+ * @param newCategoryMoySkladId - ID новой категории.
+ */
+export const updateMoySkladProductFolder = async (
+  moySkladProductId: string,
+  newCategoryMoySkladId: string,
+) => {
+  console.log(
+    `[API МойСклад] Перемещение товара ${moySkladProductId} в категорию ${newCategoryMoySkladId}...`,
+  );
+  const endpoint = `entity/product/${moySkladProductId}`;
+  const body = {
+    productFolder: {
+      meta: {
+        href: `${MOYSKLAD_API_URL}/entity/productfolder/${newCategoryMoySkladId}`,
+        type: 'productfolder',
+        mediaType: 'application/json',
+      },
+    },
+  };
+  return await moySkladFetch(endpoint, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+};
+// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
