@@ -1,65 +1,67 @@
 // Местоположение: src/lib/sku-generator.ts
 
 import { PrismaClient } from '@prisma/client';
+import { format } from 'date-fns';
 
 /**
- * Генерирует артикул для нового продукта на основе категории, подкатегории, даты и порядкового номера.
- * @param prisma - Экземпляр PrismaClient.
- * @param subcategoryId - ID подкатегории, к которой принадлежит товар.
- * @returns {Promise<string>} - Сгенерированный артикул (например, 'KYN-BE-KP-2509-001').
+ * Генерирует уникальный, "вечный" артикул для нового продукта.
+ * Формат: KYN-[CATCODE]-[MMYY]-[XXXX]
+ * @param prisma - Экземпляр PrismaClient для выполнения транзакции.
+ * @param categoryId - ID категории товара.
+ * @returns {Promise<string>} - Сгенерированный артикул (например, 'KYN-KP2-0925-0001').
  */
 export async function generateProductSku(
   prisma: PrismaClient,
-  subcategoryId: string,
+  categoryId: string,
 ): Promise<string> {
-  // 1. Получаем коды категории и подкатегории
-  const subcategory = await prisma.category.findUnique({
-    where: { id: subcategoryId },
-    include: { parent: true },
+  // 1. Получаем код категории
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId },
   });
 
-  if (!subcategory || !subcategory.parent) {
-    throw new Error(
-      'Для генерации артикула товар должен принадлежать подкатегории, у которой есть родительская категория.',
-    );
+  if (!category) {
+    throw new Error('Категория для генерации артикула не найдена.');
   }
 
-  const catCode = subcategory.parent.code.toUpperCase();
-  const subCatCode = subcategory.code.toUpperCase();
-  const categoryPart = `${catCode}-${subCatCode}`;
+  const catCode = category.code.toUpperCase();
 
-  // 2. Формируем часть с датой (ГГММ)
-  const now = new Date();
-  const year = now.getFullYear().toString().slice(-2);
-  const month = (now.getMonth() + 1).toString().padStart(2, '0');
-  const datePart = `${year}${month}`;
+  // 2. Формируем префикс с датой (ММГГ)
+  const datePart = format(new Date(), 'MMyy'); // e.g., 0925
+  const prefix = `KYN-${catCode}-${datePart}`;
 
-  // 3. Вычисляем порядковый номер
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-  const productsInMonth = await prisma.product.count({
-    where: {
-      createdAt: {
-        gte: startOfMonth,
-        lt: nextMonth,
+  // 3. В рамках транзакции получаем следующий номер в последовательности
+  const nextNumber = await prisma.$transaction(async (tx) => {
+    // Находим или создаем счетчик для нашего префикса.
+    // upsert - атомарная операция, безопасная для одновременных запросов.
+    const sequence = await tx.skuSequence.upsert({
+      where: { prefix: prefix },
+      // Если счетчика нет, создаем его со значением 1.
+      create: {
+        prefix: prefix,
+        lastNumber: 1,
       },
-    },
+      // Если есть, увеличиваем на 1.
+      update: {
+        lastNumber: {
+          increment: 1,
+        },
+      },
+    });
+    return sequence.lastNumber;
   });
 
-  const sequenceNumber = (productsInMonth + 1).toString().padStart(3, '0');
+  // 4. Форматируем номер до 4 знаков (e.g., 1 -> '0001')
+  const sequencePart = nextNumber.toString().padStart(4, '0');
 
-  // 4. Собираем финальный артикул
-  const article = `KYN-${categoryPart}-${datePart}-${sequenceNumber}`;
-
-  return article;
+  // 5. Собираем и возвращаем финальный артикул
+  return `${prefix}-${sequencePart}`;
 }
 
 /**
  * Генерирует артикул для варианта продукта.
  * @param parentArticle - Артикул родительского продукта.
  * @param existingVariantCount - Количество уже существующих вариантов у этого продукта.
- * @returns {string} - Сгенерированный артикул (например, 'KYN-BE-KP-2509-001-V1').
+ * @returns {string} - Сгенерированный артикул (например, '...-V1').
  */
 export function generateVariantSku(
   parentArticle: string,
@@ -79,7 +81,6 @@ export function generateSizeSku(
   variantArticle: string,
   sizeValue: string,
 ): string {
-  // Преобразуем 'M' в 'SM', 'L' в 'SL', 'ONE_SIZE' в 'SONESIZE' и т.д.
   const sizeCode = `S${sizeValue.replace(/_/g, '')}`.toUpperCase();
   return `${variantArticle}-${sizeCode}`;
 }

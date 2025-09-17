@@ -344,12 +344,17 @@ model CategorySynonym {
   createdAt DateTime @default(now())
 }
 
-// --- НАЧАЛО НОВОЙ МОДЕЛИ ДЛЯ СИСТЕМНЫХ НАСТРОЕК ---
 model SystemSetting {
   id        String   @id @default(cuid())
-  key       String   @unique // e.g., "MOYSKLAD_API_KEY"
+  key       String   @unique
   value     String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// --- НАЧАЛО НОВОЙ МОДЕЛИ ДЛЯ СЧЕТЧИКА АРТИКУЛОВ ---
+model SkuSequence {
+  prefix     String @id @unique // e.g., "KYN-KP2-0925"
+  lastNumber Int    @default(0)
 }
 // --- КОНЕЦ НОВОЙ МОДЕЛИ ---
