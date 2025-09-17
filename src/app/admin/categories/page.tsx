@@ -6,10 +6,16 @@ import { ClassificationClient } from './ClassificationClient';
 export const dynamic = 'force-dynamic';
 
 export default async function CategoriesPage() {
-  const categories = await prisma.category.findMany({
-    orderBy: { name: 'asc' },
-  });
-  const tags = await prisma.tag.findMany({ orderBy: { name: 'asc' } });
+  // Загружаем все три типа данных параллельно для эффективности
+  const [categories, tags, codeRules] = await Promise.all([
+    prisma.category.findMany({
+      orderBy: { name: 'asc' },
+    }),
+    prisma.tag.findMany({ orderBy: { name: 'asc' } }),
+    prisma.codeRule.findMany({
+      orderBy: { assignedCode: 'asc' },
+    }),
+  ]);
 
   return (
     <main className="mx-auto max-w-6xl p-6">
@@ -24,7 +30,11 @@ export default async function CategoriesPage() {
         Управление классификацией
       </div>
 
-      <ClassificationClient initialCategories={categories} initialTags={tags} />
+      <ClassificationClient
+        initialCategories={categories}
+        initialTags={tags}
+        initialCodeRules={codeRules} // <-- Передаем новый пропс
+      />
     </main>
   );
 }

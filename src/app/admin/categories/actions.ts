@@ -3,9 +3,10 @@
 
 import prisma from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем оригинальную функцию ---
-import { createRuleWithSynonym as createRuleInMappings } from '../mappings/actions';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import {
+  createRuleWithSynonym as createRuleInMappings,
+  addSynonymToRule as addSynonymInMappings,
+} from '../mappings/actions';
 
 const pathToRevalidate = '/admin/categories';
 
@@ -85,7 +86,7 @@ export async function deleteTag(id: string) {
   revalidatePath(pathToRevalidate);
 }
 
-// --- СУПЕР-ФУНКЦИЯ ДЛЯ СОХРАНЕНИЯ ---
+// --- НОВАЯ СУПЕР-ФУНКЦИЯ ДЛЯ СОХРАНЕНИЯ ВСЕХ ИЗМЕНЕНИЙ ---
 export async function saveAllClassifications(
   categories: {
     id: string;
@@ -126,12 +127,14 @@ export async function saveAllClassifications(
   revalidatePath('/admin/dashboard');
 }
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем асинхронную функцию-обертку ---
+// --- ФУНКЦИИ-ОБЕРТКИ ДЛЯ РАБОТЫ СО СЛОВАРЕМ ---
 export async function createRuleWithSynonym(
   assignedCode: string,
   synonymName: string,
 ) {
-  // Просто вызываем оригинальную функцию и возвращаем ее результат
   return createRuleInMappings(assignedCode, synonymName);
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+export async function addSynonymToRule(ruleId: string, synonymName: string) {
+  return addSynonymInMappings(ruleId, synonymName);
+}

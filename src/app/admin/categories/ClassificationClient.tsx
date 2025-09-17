@@ -4,7 +4,7 @@
 import { useState, useTransition, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Category, Tag } from '@prisma/client';
+import type { Category, Tag, CodeRule } from '@prisma/client';
 import toast from 'react-hot-toast';
 import {
   createCategory,
@@ -13,6 +13,7 @@ import {
   deleteTag,
   saveAllClassifications,
   createRuleWithSynonym,
+  addSynonymToRule,
 } from './actions';
 import {
   DragDropContext,
@@ -227,14 +228,17 @@ const ItemRow = ({
 export function ClassificationClient({
   initialCategories,
   initialTags,
+  initialCodeRules,
 }: {
   initialCategories: Category[];
   initialTags: Tag[];
+  initialCodeRules: CodeRule[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [categories, setCategories] = useState<CategoryWithChildren[]>([]);
   const [tags, setTags] = useState(initialTags);
+  const [codeRules, setCodeRules] = useState(initialCodeRules);
   const [addingToParent, setAddingToParent] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -256,10 +260,12 @@ export function ClassificationClient({
     },
     [],
   );
+
   useEffect(() => {
     setCategories(buildTree(initialCategories));
     setTags(initialTags.sort((a, b) => a.order - b.order));
-  }, [initialCategories, initialTags, buildTree]);
+    setCodeRules(initialCodeRules);
+  }, [initialCategories, initialTags, initialCodeRules, buildTree]);
 
   const handleCheckSync = async (showLoadingToast = true) => {
     setIsChecking(true);
@@ -286,13 +292,24 @@ export function ClassificationClient({
       setIsChecking(false);
     }
   };
-  const handleAddToDictionaryFromModal = async (name: string, code: string) => {
+  const handleAddNewRuleFromModal = async (name: string, code: string) => {
     const result = await createRuleWithSynonym(code, name);
     if (result.success) {
-      toast.success(`Правило "${name}" → ${code} добавлено в словарь!`);
+      toast.success(`Правило "${name}" → ${code} добавлено!`);
+      await handleCheckSync(false);
+      router.refresh();
+    } else {
+      toast.error(result.error || 'Ошибка.');
+    }
+    return { success: !!result.success };
+  };
+  const handleAddNewSynonymFromModal = async (ruleId: string, name: string) => {
+    const result = await addSynonymToRule(ruleId, name);
+    if (result.success) {
+      toast.success(`Синоним "${name}" добавлен.`);
       await handleCheckSync(false);
     } else {
-      toast.error(result.error || 'Не удалось добавить правило.');
+      toast.error(result.error || 'Ошибка.');
     }
     return { success: !!result.success };
   };
@@ -307,8 +324,7 @@ export function ClassificationClient({
           body: JSON.stringify({ plan }),
         });
         const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.error || 'Ошибка при выполнении плана');
+        if (!response.ok) throw new Error(data.error || 'Ошибка');
         toast.success(
           `Синхронизация завершена! Создано: ${data.created}, Обновлено: ${data.updated}.`,
           { id: 'execute-plan' },
@@ -317,10 +333,9 @@ export function ClassificationClient({
         setSyncPlan(null);
         router.refresh();
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Неизвестная ошибка',
-          { id: 'execute-plan' },
-        );
+        toast.error(error instanceof Error ? error.message : 'Ошибка', {
+          id: 'execute-plan',
+        });
       } finally {
         setIsExecuting(false);
       }
@@ -485,13 +500,15 @@ export function ClassificationClient({
     <>
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="mb-4 flex justify-end">
+          {' '}
           <button
             onClick={handleSaveAll}
             disabled={!isDirty || isPending}
             className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isPending ? 'Сохранение...' : 'Сохранить все изменения'}
-          </button>
+            {' '}
+            {isPending ? 'Сохранение...' : 'Сохранить все изменения'}{' '}
+          </button>{' '}
         </div>
         <div className="grid grid-cols-1 gap-x-12 gap-y-8 md:grid-cols-2">
           <section>
@@ -510,17 +527,19 @@ export function ClassificationClient({
                   disabled={isChecking || isExecuting}
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
                 >
-                  <ArrowPathIcon className="h-5 w-5" />
+                  {' '}
+                  <ArrowPathIcon className="h-5 w-5" />{' '}
                   {isChecking
                     ? 'Анализ...'
-                    : 'Проверить актуальность по "МойСклад"'}
+                    : 'Проверить актуальность по "МойСклад"'}{' '}
                 </button>
                 <Link
                   href="/admin/mappings"
                   className="flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                 >
-                  <BookOpenIcon className="h-5 w-5" />
-                  Словарь сайта Kyanchir
+                  {' '}
+                  <BookOpenIcon className="h-5 w-5" /> Словарь сайта
+                  Kyanchir{' '}
                 </Link>
               </div>
             </div>
@@ -675,9 +694,11 @@ export function ClassificationClient({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onConfirm={handleConfirmSync}
-        onAddToDictionary={handleAddToDictionaryFromModal}
+        onAddRule={handleAddNewRuleFromModal}
+        onAddSynonym={handleAddNewSynonymFromModal}
         plan={syncPlan}
         isExecuting={isExecuting}
+        codeRules={codeRules}
       />
     </>
   );

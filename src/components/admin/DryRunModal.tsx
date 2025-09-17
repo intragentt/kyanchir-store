@@ -9,19 +9,126 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   BookOpenIcon,
+  PlusIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline';
 import type { SyncPlan } from '@/app/api/admin/sync/dry-run/route';
+import type { CodeRule } from '@prisma/client';
+
+// Определяем новый тип для интерактивного предупреждения
+interface InteractiveWarningProps {
+  item: SyncPlan['warnings'][0];
+  codeRules: CodeRule[];
+  onAddRule: (name: string, code: string) => Promise<{ success: boolean }>;
+  onAddSynonym: (ruleId: string, name: string) => Promise<{ success: boolean }>;
+}
+
+function InteractiveWarning({
+  item,
+  codeRules,
+  onAddRule,
+  onAddSynonym,
+}: InteractiveWarningProps) {
+  const [mode, setMode] = useState<'new' | 'existing'>('new');
+  const [newCode, setNewCode] = useState('');
+  const [selectedRuleId, setSelectedRuleId] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    let result = { success: false };
+    if (mode === 'new' && newCode.trim()) {
+      result = await onAddRule(item.name, newCode);
+    } else if (mode === 'existing' && selectedRuleId) {
+      result = await onAddSynonym(selectedRuleId, item.name);
+    }
+
+    if (result.success) {
+      setNewCode('');
+      setSelectedRuleId('');
+    }
+    setIsSaving(false);
+  };
+
+  const isSaveDisabled =
+    isSaving ||
+    (mode === 'new' && !newCode.trim()) ||
+    (mode === 'existing' && !selectedRuleId);
+
+  return (
+    <li className="list-disc">
+      <strong>{item.name}:</strong> {item.reason}
+      <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 p-3">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setMode('new')}
+            className={`flex items-center gap-1.5 text-xs font-medium ${
+              mode === 'new'
+                ? 'text-indigo-600'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            <PlusIcon className="h-4 w-4" /> Создать новый код
+          </button>
+          <button
+            onClick={() => setMode('existing')}
+            className={`flex items-center gap-1.5 text-xs font-medium ${
+              mode === 'existing'
+                ? 'text-indigo-600'
+                : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            <LinkIcon className="h-4 w-4" /> Добавить к существующему
+          </button>
+        </div>
+        <div className="mt-2 flex items-center gap-2">
+          {mode === 'new' ? (
+            <input
+              type="text"
+              placeholder="Код (напр., BE)"
+              value={newCode}
+              onChange={(e) => setNewCode(e.target.value.toUpperCase())}
+              className="block w-full rounded-md border-gray-300 py-1 text-sm shadow-sm"
+              disabled={isSaving}
+            />
+          ) : (
+            <select
+              value={selectedRuleId}
+              onChange={(e) => setSelectedRuleId(e.target.value)}
+              className="block w-full rounded-md border-gray-300 py-1 text-sm shadow-sm"
+              disabled={isSaving}
+            >
+              <option value="">-- Выберите код --</option>
+              {codeRules.map((rule) => (
+                <option key={rule.id} value={rule.id}>
+                  {rule.assignedCode}
+                </option>
+              ))}
+            </select>
+          )}
+          <button
+            onClick={handleSave}
+            disabled={isSaveDisabled}
+            className="flex flex-shrink-0 items-center gap-1 rounded-md bg-green-100 px-2 py-1 text-xs font-semibold text-green-800 hover:bg-green-200 disabled:opacity-50"
+          >
+            <BookOpenIcon className="h-4 w-4" />
+            {isSaving ? '...' : 'Сохранить'}
+          </button>
+        </div>
+      </div>
+    </li>
+  );
+}
 
 interface DryRunModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (plan: SyncPlan) => void;
-  onAddToDictionary: (
-    name: string,
-    code: string,
-  ) => Promise<{ success: boolean }>;
+  onAddRule: (name: string, code: string) => Promise<{ success: boolean }>;
+  onAddSynonym: (ruleId: string, name: string) => Promise<{ success: boolean }>;
   plan: SyncPlan | null;
   isExecuting: boolean;
+  codeRules: CodeRule[];
 }
 
 export default function DryRunModal({
@@ -29,34 +136,12 @@ export default function DryRunModal({
   onClose,
   plan,
   onConfirm,
-  onAddToDictionary,
+  onAddRule,
+  onAddSynonym,
   isExecuting,
+  codeRules,
 }: DryRunModalProps) {
-  const [newCodes, setNewCodes] = useState<{ [key: string]: string }>({});
-  const [isSavingToDict, setIsSavingToDict] = useState<string | null>(null);
-
   if (!plan) return null;
-
-  const handleCodeChange = (moyskladId: string, value: string) => {
-    setNewCodes((prev) => ({ ...prev, [moyskladId]: value.toUpperCase() }));
-  };
-
-  const handleSaveToDictionary = async (moyskladId: string, name: string) => {
-    const code = newCodes[moyskladId];
-    if (!code || !code.trim()) return;
-
-    setIsSavingToDict(moyskladId);
-    const result = await onAddToDictionary(name, code);
-    if (result.success) {
-      setNewCodes((prev) => {
-        const next = { ...prev };
-        delete next[moyskladId];
-        return next;
-      });
-    }
-    setIsSavingToDict(null);
-  };
-
   const totalChanges = plan.toCreate.length + plan.toUpdate.length;
 
   return (
@@ -169,51 +254,24 @@ export default function DryRunModal({
                           Предупреждения ({plan.warnings.length})
                         </h4>
                         <ul className="mt-2 space-y-3 pl-5 text-sm text-gray-600">
-                          {plan.warnings.map((item, index) => (
-                            <li
-                              key={`${item.moyskladId}-${index}`}
-                              className="list-disc"
-                            >
-                              <strong>{item.name}:</strong> {item.reason}
-                              {item.reason.includes('Словаре') && (
-                                <div className="mt-1.5 flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Код (напр., BE)"
-                                    value={newCodes[item.moyskladId] || ''}
-                                    onChange={(e) =>
-                                      handleCodeChange(
-                                        item.moyskladId,
-                                        e.target.value,
-                                      )
-                                    }
-                                    className="w-1/3 rounded-md border-gray-300 py-1 text-sm shadow-sm"
-                                    disabled={
-                                      isSavingToDict === item.moyskladId
-                                    }
-                                  />
-                                  <button
-                                    onClick={() =>
-                                      handleSaveToDictionary(
-                                        item.moyskladId,
-                                        item.name,
-                                      )
-                                    }
-                                    disabled={
-                                      !newCodes[item.moyskladId] ||
-                                      isSavingToDict === item.moyskladId
-                                    }
-                                    className="flex items-center gap-1 rounded-md bg-green-100 px-2 py-1 text-xs font-semibold text-green-800 hover:bg-green-200 disabled:opacity-50"
-                                  >
-                                    <BookOpenIcon className="h-4 w-4" />
-                                    {isSavingToDict === item.moyskladId
-                                      ? '...'
-                                      : 'Сохранить в словарь'}
-                                  </button>
-                                </div>
-                              )}
-                            </li>
-                          ))}
+                          {plan.warnings.map((item, index) =>
+                            item.reason.includes('Словаре') ? (
+                              <InteractiveWarning
+                                key={`${item.moyskladId}-${index}`}
+                                item={item}
+                                codeRules={codeRules}
+                                onAddRule={onAddRule}
+                                onAddSynonym={onAddSynonym}
+                              />
+                            ) : (
+                              <li
+                                key={`${item.moyskladId}-${index}`}
+                                className="list-disc"
+                              >
+                                <strong>{item.name}:</strong> {item.reason}
+                              </li>
+                            ),
+                          )}
                         </ul>
                       </section>
                     )}
