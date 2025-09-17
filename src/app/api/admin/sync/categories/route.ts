@@ -28,11 +28,18 @@ export async function POST() {
   try {
     console.log('[SYNC CATEGORIES] Начинаем интеллектуальную синхронизацию...');
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Загружаем "Словарь" ---
-    console.log('[SYNC CATEGORIES] Шаг 0/4: Загрузка словаря кодов...');
-    const codeMappings = await prisma.categoryCodeMapping.findMany();
-    const codeMap = new Map(
-      codeMappings.map((m) => [m.categoryName, m.assignedCode]),
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Загружаем "Словарь" по новой схеме ---
+    console.log('[SYNC CATEGORIES] Шаг 0/4: Загрузка словаря синонимов...');
+    const synonyms = await prisma.categorySynonym.findMany({
+      include: {
+        rule: true, // Включаем родительское правило, чтобы получить код
+      },
+    });
+
+    // Создаем карту: "Название синонима" -> "Присвоенный код"
+    const codeMap = new Map(synonyms.map((s) => [s.name, s.rule.assignedCode]));
+    console.log(
+      `[SYNC CATEGORIES] Словарь успешно загружен, ${codeMap.size} правил активно.`,
     );
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
