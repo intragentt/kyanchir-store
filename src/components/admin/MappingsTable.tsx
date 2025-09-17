@@ -11,22 +11,41 @@ import {
   updateMapping,
 } from '@/app/admin/mappings/actions';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Умная строка, управляемая извне ---
-function MappingRow({
-  mapping,
-  isEditing,
-  onStartEdit,
-  onCancelEdit,
-  onSave,
-}: {
-  mapping: CategoryCodeMapping;
-  isEditing: boolean;
-  onStartEdit: (id: string, initialName: string, initialCode: string) => void;
-  onCancelEdit: () => void;
-  onSave: (id: string, newName: string, newCode: string) => void;
-}) {
+function MappingRow({ mapping }: { mapping: CategoryCodeMapping }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const router = useRouter(); // router теперь нужен только для удаления
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(mapping.categoryName);
+  const [code, setCode] = useState(mapping.assignedCode);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      inputRef.current?.focus();
+    }
+  }, [isEditing]);
+
+  const handleSave = () => {
+    if (name === mapping.categoryName && code === mapping.assignedCode) {
+      setIsEditing(false);
+      return;
+    }
+    startTransition(async () => {
+      const result = await updateMapping(mapping.id, {
+        categoryName: name,
+        assignedCode: code,
+      });
+      if (result?.error) {
+        toast.error(result.error);
+        setName(mapping.categoryName);
+        setCode(mapping.assignedCode);
+      } else {
+        toast.success('Правило обновлено!');
+        router.refresh();
+      }
+      setIsEditing(false);
+    });
+  };
 
   const handleDelete = () => {
     startTransition(async () => {
@@ -36,100 +55,92 @@ function MappingRow({
     });
   };
 
-  if (isEditing) {
-    // В режиме редактирования строка не управляет своим состоянием,
-    // она просто вызывает функции, переданные от родителя.
-    return null; // Рендеринг редактируемой строки теперь в родителе
-  }
+  const handleCancel = () => {
+    setName(mapping.categoryName);
+    setCode(mapping.assignedCode);
+    setIsEditing(false);
+  };
 
   return (
     <tr>
       <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900">
-        {mapping.categoryName}
+        {isEditing ? (
+          <input
+            ref={inputRef}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            className="w-full rounded-md border-gray-300 shadow-sm"
+            disabled={isPending}
+          />
+        ) : (
+          name
+        )}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-        {mapping.assignedCode}
+        {isEditing ? (
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onBlur={handleSave}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            className="w-full rounded-md border-gray-300 shadow-sm"
+            disabled={isPending}
+          />
+        ) : (
+          code
+        )}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-        <div className="flex items-center justify-end gap-x-4">
-          <button
-            onClick={() =>
-              onStartEdit(
-                mapping.id,
-                mapping.categoryName,
-                mapping.assignedCode,
-              )
-            }
-            className="font-semibold text-indigo-600 hover:text-indigo-800"
-          >
-            Изменить
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={isPending}
-            className="text-red-600 hover:text-red-900 disabled:opacity-50"
-          >
-            Удалить
-          </button>
-        </div>
+        {isEditing ? (
+          <div className="flex items-center justify-end gap-x-4">
+            <button
+              onClick={handleSave}
+              disabled={isPending}
+              className="font-semibold text-indigo-600 hover:text-indigo-800"
+            >
+              Сохранить
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={isPending}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              Отмена
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-end gap-x-4">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="font-semibold text-indigo-600 hover:text-indigo-800"
+            >
+              Изменить
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={isPending}
+              className="text-red-600 hover:text-red-900 disabled:opacity-50"
+            >
+              Удалить
+            </button>
+          </div>
+        )}
       </td>
     </tr>
   );
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-export default function MappingsTable({
-  mappings,
-}: {
+interface MappingsTableProps {
   mappings: CategoryCodeMapping[];
-}) {
+}
+
+export default function MappingsTable({ mappings }: MappingsTableProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [categoryName, setCategoryName] = useState('');
   const [assignedCode, setAssignedCode] = useState('');
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Центральный Диспетчер" ---
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editCode, setEditCode] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (editingId) {
-      inputRef.current?.focus();
-    }
-  }, [editingId]);
-
-  const handleStartEdit = (
-    id: string,
-    initialName: string,
-    initialCode: string,
-  ) => {
-    setEditingId(id);
-    setEditName(initialName);
-    setEditCode(initialCode);
-  };
-
-  const handleCancelEdit = () => {
-    setEditingId(null);
-  };
-
-  const handleSave = (id: string, newName: string, newCode: string) => {
-    startTransition(async () => {
-      const result = await updateMapping(id, {
-        categoryName: newName,
-        assignedCode: newCode,
-      });
-      if (result?.error) {
-        toast.error(result.error);
-      } else {
-        toast.success('Правило обновлено!');
-        router.refresh();
-      }
-      setEditingId(null);
-    });
-  };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleAddMapping = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +148,7 @@ export default function MappingsTable({
       toast.error('Название и код должны быть заполнены.');
       return;
     }
+
     startTransition(async () => {
       const result = await createMapping(categoryName, assignedCode);
       if (result?.error) {
@@ -160,13 +172,37 @@ export default function MappingsTable({
         Нажмите "Изменить", чтобы редактировать правило.
       </p>
 
-      {/* ... (Форма добавления без изменений) ... */}
+      {/* --- НАЧАЛО ИСПРАВЛЕНИЯ: Возвращаем форму на место --- */}
       <form
         onSubmit={handleAddMapping}
         className="rounded-lg border bg-white p-4 shadow-sm"
       >
-        {/* ... */}
+        <h2 className="mb-4 text-lg font-semibold">Добавить новое правило</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <input
+            value={categoryName}
+            onChange={(e) => setCategoryName(e.target.value)}
+            placeholder="Название категории (как в МойСклад)"
+            className="rounded-md border-gray-300 shadow-sm"
+            disabled={isPending}
+          />
+          <input
+            value={assignedCode}
+            onChange={(e) => setAssignedCode(e.target.value.toUpperCase())}
+            placeholder="Присваиваемый код (напр., BE, KP2)"
+            className="rounded-md border-gray-300 shadow-sm"
+            disabled={isPending}
+          />
+          <button
+            type="submit"
+            disabled={isPending}
+            className="rounded-md bg-indigo-600 px-4 py-2 font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
+          >
+            {isPending ? 'Добавление...' : '+ Добавить'}
+          </button>
+        </div>
       </form>
+      {/* --- КОНЕЦ ИСПРАВЛЕНИЯ --- */}
 
       <div className="overflow-hidden border-b border-gray-200 shadow sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-200">
@@ -182,61 +218,9 @@ export default function MappingsTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
-            {mappings.map((mapping) =>
-              editingId === mapping.id ? (
-                // --- Рендерим инпуты прямо здесь, в родителе ---
-                <tr key={mapping.id}>
-                  <td className="px-6 py-4">
-                    <input
-                      ref={inputRef}
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="w-full rounded-md border-gray-300 shadow-sm"
-                      disabled={isPending}
-                    />
-                  </td>
-                  <td className="px-6 py-4">
-                    <input
-                      value={editCode}
-                      onChange={(e) =>
-                        setEditCode(e.target.value.toUpperCase())
-                      }
-                      className="w-full rounded-md border-gray-300 shadow-sm"
-                      disabled={isPending}
-                    />
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                    <div className="flex items-center justify-end gap-x-4">
-                      <button
-                        onClick={() =>
-                          handleSave(mapping.id, editName, editCode)
-                        }
-                        disabled={isPending}
-                        className="font-semibold text-indigo-600 hover:text-indigo-800"
-                      >
-                        Сохранить
-                      </button>
-                      <button
-                        onClick={handleCancelEdit}
-                        disabled={isPending}
-                        className="text-gray-500 hover:text-gray-700"
-                      >
-                        Отмена
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                <MappingRow
-                  key={mapping.id}
-                  mapping={mapping}
-                  isEditing={false}
-                  onStartEdit={handleStartEdit}
-                  onCancelEdit={handleCancelEdit}
-                  onSave={handleSave}
-                />
-              ),
-            )}
+            {mappings.map((mapping) => (
+              <MappingRow key={mapping.id} mapping={mapping} />
+            ))}
           </tbody>
         </table>
       </div>
