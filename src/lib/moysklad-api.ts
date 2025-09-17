@@ -346,12 +346,9 @@ export const getProductsWithVariants = async () => {
 
   const variantPromises = products.map((product: any) => {
     if (product.variantsCount > 0) {
-      // --- НАЧАЛО ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
-      // Единственно верная комбинация, подтвержденная документацией и логами.
-      // Эндпоинт: `entity/variant`
-      // Фильтр: `product` + `href` родителя
-      const variantsUrl = `entity/variant?filter=product=${product.meta.href}&expand=characteristics`;
-      // --- КОНЕЦ ФИНАЛЬНОГО ИСПРАВЛЕНИЯ ---
+      // --- ФИНАЛЬНОЕ ИСПРАВЛЕНИЕ, ОСНОВАННОЕ НА ВНЕШНЕМ ПОИСКЕ ---
+      const variantsUrl = `entity/variant?filter=productid=${product.id}&expand=characteristics`;
+      // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
       console.log(
         `[API-Bridge] Для товара "${product.name}" генерируем URL: ${variantsUrl}`,
