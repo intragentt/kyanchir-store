@@ -327,3 +327,13 @@ model SupportMessage {
   agent        SupportAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
   createdAt    DateTime      @default(now())
 }
+
+// Эта таблица будет нашим "Словарём" для автоматического назначения кодов.
+model CategoryCodeMapping {
+  id           String @id @default(cuid())
+  categoryName String @unique // Название категории из МойСклад (e.g., "Нижнее белье")
+  assignedCode String // Код, который нужно присвоить (e.g., "BE")
+
+  createdAt DateTime @default(now())
+}
+// --- КОНЕЦ НОВОЙ МОДЕЛИ ---

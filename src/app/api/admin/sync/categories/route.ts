@@ -26,51 +26,56 @@ export async function POST() {
   }
 
   try {
-    console.log('[SYNC CATEGORIES] Начинаем синхронизацию категорий...');
+    console.log('[SYNC CATEGORIES] Начинаем интеллектуальную синхронизацию...');
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Загружаем "Словарь" ---
+    console.log('[SYNC CATEGORIES] Шаг 0/4: Загрузка словаря кодов...');
+    const codeMappings = await prisma.categoryCodeMapping.findMany();
+    const codeMap = new Map(
+      codeMappings.map((m) => [m.categoryName, m.assignedCode]),
+    );
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     const moySkladResponse = await getMoySkladCategories();
     const moySkladCategories: MoySkladCategory[] = moySkladResponse.rows || [];
 
     if (moySkladCategories.length === 0) {
-      console.log(
-        '[SYNC CATEGORIES] В МойСклад не найдено ни одной категории.',
-      );
       return NextResponse.json({ message: 'Категории в МойСклад не найдены.' });
     }
     console.log(
       `[SYNC CATEGORIES] Найдено ${moySkladCategories.length} категорий в МойСклад.`,
     );
 
-    // ШАГ 1: Upsert всех категорий (создание/обновление)
+    // ШАГ 1: Upsert всех категорий
     await prisma.$transaction(
-      moySkladCategories.map((category) =>
-        prisma.category.upsert({
+      moySkladCategories.map((category) => {
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем "Словарь" ---
+        const assignedCode = codeMap.get(category.name);
+        const code = assignedCode || `TEMP-${category.id}`; // Если нет в словаре, ставим TEMP
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+        return prisma.category.upsert({
           where: { moyskladId: category.id },
           update: { name: category.name },
-          // --- НАЧАЛО ИЗМЕНЕНИЯ ---
           create: {
             name: category.name,
             moyskladId: category.id,
-            // Добавляем временный код, чтобы new-категория прошла валидацию.
-            // Используем ID из МойСклад, чтобы гарантировать уникальность.
-            code: `TEMP-${category.id}`,
+            code: code, // <-- Присваиваем правильный или временный код
           },
-          // --- КОНЕЦ ИЗМЕНЕНИЯ ---
-        }),
-      ),
+        });
+      }),
     );
     console.log(
-      '[SYNC CATEGORIES] Шаг 1/3: Все категории успешно созданы/обновлены в нашей БД.',
+      '[SYNC CATEGORIES] Шаг 1/4: Все категории успешно созданы/обновлены.',
     );
 
-    // ШАГ 2: Сброс всех существующих связей parentId на null.
-    await prisma.category.updateMany({
-      data: { parentId: null },
-    });
+    // ШАГ 2: Сброс старых связей
+    await prisma.category.updateMany({ data: { parentId: null } });
     console.log(
-      '[SYNC CATEGORIES] Шаг 2/3: Все старые родительские связи сброшены.',
+      '[SYNC CATEGORIES] Шаг 2/4: Все старые родительские связи сброшены.',
     );
 
-    // ШАГ 3: Установка новых, актуальных связей
+    // ШАГ 3: Установка новых связей
     const ourCategoriesMap = new Map<string, string>();
     const allOurCategories = await prisma.category.findMany({
       select: { id: true, moyskladId: true },
@@ -106,11 +111,11 @@ export async function POST() {
       await prisma.$transaction(updatePromises);
     }
     console.log(
-      `[SYNC CATEGORIES] Шаг 3/3: Установлено ${linksUpdatedCount} новых родительских связей.`,
+      `[SYNC CATEGORIES] Шаг 3/4: Установлено ${linksUpdatedCount} новых родительских связей.`,
     );
 
     return NextResponse.json({
-      message: 'Синхронизация категорий с иерархией завершена.',
+      message: 'Синхронизация категорий завершена.',
       totalFound: moySkladCategories.length,
       linksEstablished: linksUpdatedCount,
     });
