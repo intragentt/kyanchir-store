@@ -3,6 +3,7 @@
 
 import { useState, useTransition, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { Category, Tag } from '@prisma/client';
 import toast from 'react-hot-toast';
 import {
@@ -11,6 +12,7 @@ import {
   createTag,
   deleteTag,
   saveAllClassifications,
+  createRuleWithSynonym,
 } from './actions';
 import {
   DragDropContext,
@@ -20,13 +22,11 @@ import {
 } from '@hello-pangea/dnd';
 import DryRunModal from '@/components/admin/DryRunModal';
 import type { SyncPlan } from '@/app/api/admin/sync/dry-run/route';
-import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ArrowPathIcon, BookOpenIcon } from '@heroicons/react/24/outline';
 
-// --- Типы ---
 type CategoryWithChildren = Category & { children: CategoryWithChildren[] };
 type Item = { id: string; name: string; color: string | null; code?: string };
 
-// --- Иконки (без изменений) ---
 const DragHandleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     {...props}
@@ -44,8 +44,6 @@ const DragHandleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <circle cx="14" cy="18" r="1.5" fill="currentColor" />
   </svg>
 );
-
-// --- Компоненты UI (без изменений) ---
 const ColorPicker = ({
   color,
   onSave,
@@ -92,6 +90,7 @@ const AddItemForm = ({
   };
   return (
     <form onSubmit={handleSubmit} className="flex items-center gap-2 py-2">
+      {' '}
       <input
         ref={inputRef}
         value={name}
@@ -99,7 +98,7 @@ const AddItemForm = ({
         placeholder="Название..."
         className="w-full rounded-md border px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500"
         disabled={isPending}
-      />
+      />{' '}
       {needsCode && (
         <input
           value={code}
@@ -108,21 +107,21 @@ const AddItemForm = ({
           className="w-1/2 rounded-md border px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500"
           disabled={isPending}
         />
-      )}
+      )}{' '}
       <button
         type="submit"
         disabled={isPending}
         className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-sm text-white hover:bg-indigo-500"
       >
         ✓
-      </button>
+      </button>{' '}
       <button
         type="button"
         onClick={onCancel}
         className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-200 text-sm text-gray-700 hover:bg-gray-300"
       >
         ×
-      </button>
+      </button>{' '}
     </form>
   );
 };
@@ -167,13 +166,16 @@ const ItemRow = ({
       className="group flex items-center justify-between border-b py-1.5"
       onDoubleClick={() => !isSystem && setIsEditing(true)}
     >
+      {' '}
       <div className="flex flex-grow items-center gap-2">
+        {' '}
         <ColorPicker
           color={item.color}
           onSave={(color) => onUpdate(item.id, { color })}
-        />
+        />{' '}
         {isEditing ? (
           <div className="flex w-full items-center gap-2">
+            {' '}
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -182,7 +184,7 @@ const ItemRow = ({
               className="w-full rounded-md border px-2 py-1 text-sm"
               autoFocus
               disabled={isPending}
-            />
+            />{' '}
             {isCategory && (
               <input
                 value={code}
@@ -193,7 +195,7 @@ const ItemRow = ({
                 className="w-1/3 rounded-md border px-2 py-1 text-sm"
                 disabled={isPending}
               />
-            )}
+            )}{' '}
           </div>
         ) : (
           <div className="flex items-baseline gap-2">
@@ -204,8 +206,8 @@ const ItemRow = ({
               <span className="text-xs text-gray-400">{item.code}</span>
             )}
           </div>
-        )}
-      </div>
+        )}{' '}
+      </div>{' '}
       <div className="flex items-center gap-x-3 text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100">
         {children}
         {!isSystem && (
@@ -217,12 +219,11 @@ const ItemRow = ({
             Удалить
           </button>
         )}
-      </div>
+      </div>{' '}
     </div>
   );
 };
 
-// --- Основной клиентский компонент ---
 export function ClassificationClient({
   initialCategories,
   initialTags,
@@ -236,13 +237,10 @@ export function ClassificationClient({
   const [tags, setTags] = useState(initialTags);
   const [addingToParent, setAddingToParent] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
-
-  // Стейт для "Предпросмотра"
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [syncPlan, setSyncPlan] = useState<SyncPlan | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
-
   const buildTree = useCallback(
     (
       cats: Category[],
@@ -258,16 +256,16 @@ export function ClassificationClient({
     },
     [],
   );
-
   useEffect(() => {
     setCategories(buildTree(initialCategories));
     setTags(initialTags.sort((a, b) => a.order - b.order));
   }, [initialCategories, initialTags, buildTree]);
 
-  // Обработчики для "Предпросмотра"
-  const handleCheckSync = async () => {
+  const handleCheckSync = async (showLoadingToast = true) => {
     setIsChecking(true);
-    toast.loading('Анализ данных из "МойСклад"...', { id: 'dry-run' });
+    if (showLoadingToast) {
+      toast.loading('Анализ данных из "МойСклад"...', { id: 'dry-run' });
+    }
     try {
       const response = await fetch('/api/admin/sync/dry-run', {
         method: 'POST',
@@ -275,8 +273,10 @@ export function ClassificationClient({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Ошибка при проверке');
       setSyncPlan(data.plan);
-      setIsModalOpen(true);
-      toast.success('План синхронизации готов!', { id: 'dry-run' });
+      if (!isModalOpen) setIsModalOpen(true);
+      if (showLoadingToast) {
+        toast.success('План синхронизации готов!', { id: 'dry-run' });
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Неизвестная ошибка',
@@ -286,11 +286,20 @@ export function ClassificationClient({
       setIsChecking(false);
     }
   };
-
+  const handleAddToDictionaryFromModal = async (name: string, code: string) => {
+    const result = await createRuleWithSynonym(code, name);
+    if (result.success) {
+      toast.success(`Правило "${name}" → ${code} добавлено в словарь!`);
+      await handleCheckSync(false);
+    } else {
+      toast.error(result.error || 'Не удалось добавить правило.');
+    }
+    return { success: !!result.success };
+  };
   const handleConfirmSync = (plan: SyncPlan) => {
-    setIsExecuting(true);
-    toast.loading('Выполнение плана...', { id: 'execute-plan' });
     startTransition(async () => {
+      setIsExecuting(true);
+      toast.loading('Выполнение плана...', { id: 'execute-plan' });
       try {
         const response = await fetch('/api/admin/sync/execute-plan', {
           method: 'POST',
@@ -317,8 +326,6 @@ export function ClassificationClient({
       }
     });
   };
-
-  // Старые обработчики
   const handleCreateCategory = (
     name: string,
     code: string,
@@ -412,16 +419,16 @@ export function ClassificationClient({
   }) => (
     <>
       {items.map((cat, index) => (
-        <div key={cat.id} className="relative pl-4">
-          <div className="absolute left-0 top-0 h-full w-4 border-l border-gray-200"></div>
-          <div className="absolute left-0 top-1/2 h-1/2 w-4 border-b border-gray-200"></div>
-          <Draggable key={cat.id} draggableId={cat.id} index={index}>
-            {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.draggableProps}
-                className="flex items-center gap-1"
-              >
+        <Draggable key={cat.id} draggableId={cat.id} index={index}>
+          {(provided) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.draggableProps}
+              className="relative pl-4"
+            >
+              <div className="absolute left-0 top-0 h-full w-4 border-l border-gray-200"></div>
+              <div className="absolute left-0 top-1/2 h-1/2 w-4 border-b border-gray-200"></div>
+              <div className="flex items-center gap-1">
                 <div
                   {...provided.dragHandleProps}
                   className="cursor-grab text-gray-300 hover:text-gray-500"
@@ -453,23 +460,23 @@ export function ClassificationClient({
                   </ItemRow>
                 </div>
               </div>
-            )}
-          </Draggable>
-          {addingToParent === cat.id && (
-            <div className="pl-12">
-              <AddItemForm
-                parentId={cat.id}
-                onSave={handleCreateCategory}
-                onCancel={() => setAddingToParent(null)}
-                isPending={isPending}
-                needsCode={true}
-              />
+              {addingToParent === cat.id && (
+                <div className="pl-12">
+                  <AddItemForm
+                    parentId={cat.id}
+                    onSave={handleCreateCategory}
+                    onCancel={() => setAddingToParent(null)}
+                    isPending={isPending}
+                    needsCode={true}
+                  />
+                </div>
+              )}
+              {cat.children.length > 0 && (
+                <CategoryTree items={cat.children} level={level + 1} />
+              )}
             </div>
           )}
-          {cat.children.length > 0 && (
-            <CategoryTree items={cat.children} level={level + 1} />
-          )}
-        </div>
+        </Draggable>
       ))}
     </>
   );
@@ -497,16 +504,25 @@ export function ClassificationClient({
                 Проверьте данные из "МойСклад" и примените изменения. Система
                 сравнит категории и покажет план действий.
               </p>
-              <button
-                onClick={handleCheckSync}
-                disabled={isChecking || isExecuting}
-                className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
-              >
-                <ArrowPathIcon className="h-5 w-5" />
-                {isChecking
-                  ? 'Анализ...'
-                  : 'Проверить актуальность по "МойСклад"'}
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => handleCheckSync()}
+                  disabled={isChecking || isExecuting}
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+                >
+                  <ArrowPathIcon className="h-5 w-5" />
+                  {isChecking
+                    ? 'Анализ...'
+                    : 'Проверить актуальность по "МойСклад"'}
+                </button>
+                <Link
+                  href="/admin/mappings"
+                  className="flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                >
+                  <BookOpenIcon className="h-5 w-5" />
+                  Словарь сайта Kyanchir
+                </Link>
+              </div>
             </div>
             <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
               <div className="mb-2 font-medium">Добавить новую категорию</div>
@@ -544,50 +560,51 @@ export function ClassificationClient({
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
-                            className="flex items-center gap-1"
                           >
-                            <div
-                              {...provided.dragHandleProps}
-                              className="cursor-grab text-gray-300 hover:text-gray-500"
-                            >
-                              <DragHandleIcon />
-                            </div>
-                            <div className="flex-grow">
-                              <ItemRow
-                                item={root}
-                                onUpdate={(id, data) => {
-                                  setCategories((prev) =>
-                                    updateCategoryState(prev, id, data),
-                                  );
-                                  setIsDirty(true);
-                                }}
-                                onDelete={handleDeleteCategory}
-                                isPending={isPending}
-                                isCategory={true}
-                                level={0}
+                            <div className="flex items-center gap-1">
+                              <div
+                                {...provided.dragHandleProps}
+                                className="cursor-grab text-gray-300 hover:text-gray-500"
                               >
-                                <button
-                                  onClick={() => setAddingToParent(root.id)}
-                                  className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+                                <DragHandleIcon />
+                              </div>
+                              <div className="flex-grow">
+                                <ItemRow
+                                  item={root}
+                                  onUpdate={(id, data) => {
+                                    setCategories((prev) =>
+                                      updateCategoryState(prev, id, data),
+                                    );
+                                    setIsDirty(true);
+                                  }}
+                                  onDelete={handleDeleteCategory}
+                                  isPending={isPending}
+                                  isCategory={true}
+                                  level={0}
                                 >
-                                  +
-                                </button>
-                              </ItemRow>
-                              {addingToParent === root.id && (
-                                <div className="pl-6">
-                                  <AddItemForm
-                                    parentId={root.id}
-                                    onSave={handleCreateCategory}
-                                    onCancel={() => setAddingToParent(null)}
-                                    isPending={isPending}
-                                    needsCode={true}
-                                  />
-                                </div>
-                              )}
-                              {root.children.length > 0 && (
-                                <CategoryTree items={root.children} level={1} />
-                              )}
+                                  <button
+                                    onClick={() => setAddingToParent(root.id)}
+                                    className="text-sm font-semibold text-gray-500 hover:text-gray-800"
+                                  >
+                                    +
+                                  </button>
+                                </ItemRow>
+                              </div>
                             </div>
+                            {addingToParent === root.id && (
+                              <div className="pl-6">
+                                <AddItemForm
+                                  parentId={root.id}
+                                  onSave={handleCreateCategory}
+                                  onCancel={() => setAddingToParent(null)}
+                                  isPending={isPending}
+                                  needsCode={true}
+                                />
+                              </div>
+                            )}
+                            {root.children.length > 0 && (
+                              <CategoryTree items={root.children} level={1} />
+                            )}
                           </div>
                         )}
                       </Draggable>
@@ -598,7 +615,6 @@ export function ClassificationClient({
               </Droppable>
             </div>
           </section>
-
           <section>
             <h2 className="mb-4 text-lg font-semibold text-gray-800">
               Метки (Теги)
@@ -659,6 +675,7 @@ export function ClassificationClient({
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onConfirm={handleConfirmSync}
+        onAddToDictionary={handleAddToDictionaryFromModal}
         plan={syncPlan}
         isExecuting={isExecuting}
       />

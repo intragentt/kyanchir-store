@@ -122,3 +122,5 @@ export async function saveAllClassifications(
   revalidatePath(pathToRevalidate);
   revalidatePath('/admin/dashboard');
 }
+
+export { createRuleWithSynonym } from '../mappings/actions';

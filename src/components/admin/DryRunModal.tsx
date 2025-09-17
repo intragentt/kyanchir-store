@@ -1,13 +1,14 @@
 // Местоположение: /src/components/admin/DryRunModal.tsx
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import {
   PlusCircleIcon,
   ArrowPathIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
+  BookOpenIcon,
 } from '@heroicons/react/24/outline';
 import type { SyncPlan } from '@/app/api/admin/sync/dry-run/route';
 
@@ -15,6 +16,10 @@ interface DryRunModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (plan: SyncPlan) => void;
+  onAddToDictionary: (
+    name: string,
+    code: string,
+  ) => Promise<{ success: boolean }>;
   plan: SyncPlan | null;
   isExecuting: boolean;
 }
@@ -24,9 +29,33 @@ export default function DryRunModal({
   onClose,
   plan,
   onConfirm,
+  onAddToDictionary,
   isExecuting,
 }: DryRunModalProps) {
+  const [newCodes, setNewCodes] = useState<{ [key: string]: string }>({});
+  const [isSavingToDict, setIsSavingToDict] = useState<string | null>(null);
+
   if (!plan) return null;
+
+  const handleCodeChange = (moyskladId: string, value: string) => {
+    setNewCodes((prev) => ({ ...prev, [moyskladId]: value.toUpperCase() }));
+  };
+
+  const handleSaveToDictionary = async (moyskladId: string, name: string) => {
+    const code = newCodes[moyskladId];
+    if (!code || !code.trim()) return;
+
+    setIsSavingToDict(moyskladId);
+    const result = await onAddToDictionary(name, code);
+    if (result.success) {
+      setNewCodes((prev) => {
+        const next = { ...prev };
+        delete next[moyskladId];
+        return next;
+      });
+    }
+    setIsSavingToDict(null);
+  };
 
   const totalChanges = plan.toCreate.length + plan.toUpdate.length;
 
@@ -82,9 +111,7 @@ export default function DryRunModal({
                     </div>
                   </div>
 
-                  {/* Секции с изменениями */}
                   <div className="mt-6 max-h-[60vh] space-y-4 overflow-y-auto pr-2">
-                    {/* Секция: Создать */}
                     {plan.toCreate.length > 0 && (
                       <section>
                         <h4 className="text-md flex items-center gap-2 font-medium text-green-700">
@@ -103,8 +130,6 @@ export default function DryRunModal({
                         </ul>
                       </section>
                     )}
-
-                    {/* Секция: Обновить */}
                     {plan.toUpdate.length > 0 && (
                       <section>
                         <h4 className="text-md flex items-center gap-2 font-medium text-yellow-700">
@@ -126,8 +151,6 @@ export default function DryRunModal({
                         </ul>
                       </section>
                     )}
-
-                    {/* Секция: Без изменений */}
                     {plan.noAction.length > 0 && (
                       <section>
                         <h4 className="text-md flex items-center gap-2 font-medium text-gray-500">
@@ -139,18 +162,56 @@ export default function DryRunModal({
                         </p>
                       </section>
                     )}
-
-                    {/* Секция: Предупреждения */}
                     {plan.warnings.length > 0 && (
                       <section>
                         <h4 className="text-md flex items-center gap-2 font-medium text-orange-700">
                           <ExclamationTriangleIcon className="h-5 w-5" />
                           Предупреждения ({plan.warnings.length})
                         </h4>
-                        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-gray-600">
+                        <ul className="mt-2 space-y-3 pl-5 text-sm text-gray-600">
                           {plan.warnings.map((item, index) => (
-                            <li key={`${item.moyskladId}-${index}`}>
+                            <li
+                              key={`${item.moyskladId}-${index}`}
+                              className="list-disc"
+                            >
                               <strong>{item.name}:</strong> {item.reason}
+                              {item.reason.includes('Словаре') && (
+                                <div className="mt-1.5 flex items-center gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Код (напр., BE)"
+                                    value={newCodes[item.moyskladId] || ''}
+                                    onChange={(e) =>
+                                      handleCodeChange(
+                                        item.moyskladId,
+                                        e.target.value,
+                                      )
+                                    }
+                                    className="w-1/3 rounded-md border-gray-300 py-1 text-sm shadow-sm"
+                                    disabled={
+                                      isSavingToDict === item.moyskladId
+                                    }
+                                  />
+                                  <button
+                                    onClick={() =>
+                                      handleSaveToDictionary(
+                                        item.moyskladId,
+                                        item.name,
+                                      )
+                                    }
+                                    disabled={
+                                      !newCodes[item.moyskladId] ||
+                                      isSavingToDict === item.moyskladId
+                                    }
+                                    className="flex items-center gap-1 rounded-md bg-green-100 px-2 py-1 text-xs font-semibold text-green-800 hover:bg-green-200 disabled:opacity-50"
+                                  >
+                                    <BookOpenIcon className="h-4 w-4" />
+                                    {isSavingToDict === item.moyskladId
+                                      ? '...'
+                                      : 'Сохранить в словарь'}
+                                  </button>
+                                </div>
+                              )}
                             </li>
                           ))}
                         </ul>
@@ -158,8 +219,6 @@ export default function DryRunModal({
                     )}
                   </div>
                 </div>
-
-                {/* Кнопки действий */}
                 <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                   <button
                     type="button"
