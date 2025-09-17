@@ -5,8 +5,9 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import {
   updateMoySkladArticle,
-  updateMoySkladProductFolder, // Мы добавим эту функцию на следующем шаге
+  updateMoySkladProductFolder,
 } from '@/lib/moysklad-api';
+// --- ИСПРАВЛЕННЫЙ ПУТЬ ИМПОРТА ---
 import type { SkuResolutionPlan } from '../backfill-skus/route';
 import type { UserResolutions } from '@/components/admin/ConflictResolutionModal';
 
@@ -60,7 +61,6 @@ export async function POST(req: Request) {
         resolution === 'REVERT_CATEGORY' &&
         conflict.expectedCategoryFromArticle
       ) {
-        // Вызываем новую функцию, которую мы добавим в moysklad-api.ts
         allPromises.push(
           updateMoySkladProductFolder(
             conflict.moySkladId,
