@@ -23,6 +23,7 @@ model Product {
   updatedAt        DateTime          @updatedAt
   tags             Tag[]             @relation("ProductTags")
   moyskladId       String?           @unique
+  archived         Boolean           @default(false) // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
 }
 
 model ProductVariant {
@@ -66,6 +67,8 @@ model ProductSize {
   price            Int?
   oldPrice         Int?
   orderItems       OrderItem[]
+  moyskladId       String?           @unique // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+  archived         Boolean           @default(false) // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
 
   @@unique([productVariantId, sizeId])
 }

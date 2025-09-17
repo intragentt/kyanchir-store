@@ -5,13 +5,14 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import {
-  getMoySkladProductsAndVariants,
+  getProductsWithVariants,
   getMoySkladStock,
+  AuthError,
 } from '@/lib/moysklad-api';
-import { AuthError } from '@/lib/moysklad-api'; // <-- 1. Импортируем AuthError
 
 function getUUIDFromHref(href: string): string {
-  return href.split('/').pop() || '';
+  const parts = href.split('/');
+  return parts[parts.length - 1];
 }
 
 export async function POST() {
@@ -23,27 +24,30 @@ export async function POST() {
   }
 
   try {
-    console.log('[SYNC PRODUCTS] Начало синхронизации товаров v2...');
+    console.log('[SYNC PRODUCTS] Начало полной синхронизации товаров...');
 
-    console.log('[SYNC PRODUCTS] Шаг 1/3: Получение данных...');
+    console.log(
+      '[SYNC PRODUCTS] Шаг 1/3: Получение данных из МойСклад и нашей БД...',
+    );
     const [
-      moySkladResponse,
+      productsWithVariants,
       stockResponse,
-      statuses,
       allOurCategories,
       allOurSizes,
+      draftStatus,
     ] = await Promise.all([
-      getMoySkladProductsAndVariants(),
+      getProductsWithVariants(),
       getMoySkladStock(),
-      prisma.status.findMany(),
       prisma.category.findMany({ select: { id: true, moyskladId: true } }),
       prisma.size.findMany(),
+      prisma.status.findFirst({ where: { name: 'DRAFT' } }),
     ]);
 
-    const moySkladItems: any[] = moySkladResponse.rows || [];
-    const draftStatus = statuses.find((s) => s.name === 'DRAFT');
-    if (!draftStatus) throw new Error('Статус "DRAFT" не найден в БД.');
+    if (!draftStatus) {
+      throw new Error('Базовый статус "DRAFT" не найден в базе данных.');
+    }
 
+    console.log('[SYNC PRODUCTS] Шаг 2/3: Подготовка кэшей и карт...');
     const categoryMap = new Map(
       allOurCategories.map((cat) => [cat.moyskladId, cat.id]),
     );
@@ -53,100 +57,117 @@ export async function POST() {
         item.stock || 0,
       ]),
     );
+    const sizeMap = new Map(allOurSizes.map((s) => [s.value, s.id]));
 
     console.log(
-      `[SYNC PRODUCTS] Шаг 2/3: Обработка ${moySkladItems.length} товаров...`,
+      `[SYNC PRODUCTS] Шаг 3/3: Обработка ${productsWithVariants.length} родительских товаров...`,
     );
-    for (const msProduct of moySkladItems) {
-      const nameMatch = msProduct.name.match(/(.+)\s\((.+)\)/);
-      const baseProductName = nameMatch ? nameMatch[1].trim() : msProduct.name;
-      const color = nameMatch ? nameMatch[2].trim() : 'Основной';
 
-      const categoryMoySkladId = msProduct.productFolder
-        ? getUUIDFromHref(msProduct.productFolder.meta.href)
-        : null;
-      const ourCategoryId = categoryMoySkladId
-        ? categoryMap.get(categoryMoySkladId)
-        : undefined;
+    await prisma.$transaction(async (tx) => {
+      for (const msProduct of productsWithVariants) {
+        const categoryMoySkladId = msProduct.productFolder
+          ? getUUIDFromHref(msProduct.productFolder.meta.href)
+          : null;
+        const ourCategoryId = categoryMoySkladId
+          ? categoryMap.get(categoryMoySkladId)
+          : undefined;
 
-      const ourParentProduct = await prisma.product.upsert({
-        where: { name: baseProductName },
-        update: {
-          categories: ourCategoryId
-            ? { set: [{ id: ourCategoryId }] }
-            : undefined,
-        },
-        create: {
-          name: baseProductName,
-          article: msProduct.article || `TEMP-${msProduct.id}`,
-          statusId: draftStatus.id,
-          categories: ourCategoryId
-            ? { connect: { id: ourCategoryId } }
-            : undefined,
-        },
-      });
-
-      const ourVariant = await prisma.productVariant.upsert({
-        where: {
-          productId_color: { productId: ourParentProduct.id, color: color },
-        },
-        update: {
-          moySkladId: msProduct.id,
-          price: (msProduct.salePrices?.[0]?.value || 0) / 100,
-        },
-        create: {
-          productId: ourParentProduct.id,
-          color: color,
-          moySkladId: msProduct.id,
-          price: (msProduct.salePrices?.[0]?.value || 0) / 100,
-        },
-      });
-
-      const oneSize = await prisma.size.upsert({
-        where: { value: 'ONE_SIZE' },
-        create: { value: 'ONE_SIZE' },
-        update: {},
-      });
-
-      await prisma.productSize.upsert({
-        where: {
-          productVariantId_sizeId: {
-            productVariantId: ourVariant.id,
-            sizeId: oneSize.id,
+        const parentProduct = await tx.product.upsert({
+          where: { moyskladId: msProduct.id },
+          update: {
+            name: msProduct.name,
+            article: msProduct.article,
+            archived: msProduct.archived,
+            categories: ourCategoryId
+              ? { set: [{ id: ourCategoryId }] }
+              : { set: [] },
           },
-        },
-        update: {
-          stock: stockMap.get(msProduct.id) || 0,
-          moySkladHref: msProduct.meta.href,
-          moySkladType: msProduct.meta.type,
-          article: msProduct.article,
-        },
-        create: {
-          productVariantId: ourVariant.id,
-          sizeId: oneSize.id,
-          stock: stockMap.get(msProduct.id) || 0,
-          moySkladHref: msProduct.meta.href,
-          moySkladType: msProduct.meta.type,
-          article: msProduct.article,
-        },
-      });
-    }
+          create: {
+            name: msProduct.name,
+            article: msProduct.article || `TEMP-${msProduct.id}`,
+            moyskladId: msProduct.id,
+            statusId: draftStatus.id,
+            archived: msProduct.archived,
+            categories: ourCategoryId
+              ? { connect: { id: ourCategoryId } }
+              : undefined,
+          },
+        });
 
-    console.log('[SYNC PRODUCTS] Шаг 3/3: Синхронизация завершена.');
+        if (msProduct.variants && msProduct.variants.length > 0) {
+          for (const msVariant of msProduct.variants) {
+            const characteristics = msVariant.characteristics || [];
+            const sizeCharacteristic = characteristics.find(
+              (c: any) => c.name === 'Размер',
+            );
+            if (!sizeCharacteristic) continue;
+
+            const colorCharacteristic = characteristics.find(
+              (c: any) => c.name === 'Цвет',
+            );
+            const color = colorCharacteristic
+              ? colorCharacteristic.value
+              : 'Основной';
+
+            const productVariant = await tx.productVariant.upsert({
+              where: {
+                productId_color: { productId: parentProduct.id, color: color },
+              },
+              update: {},
+              create: {
+                productId: parentProduct.id,
+                color: color,
+                price: (msProduct.salePrices?.[0]?.value || 0) / 100,
+                oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
+              },
+            });
+
+            const sizeValue = sizeCharacteristic.value;
+            let sizeId = sizeMap.get(sizeValue);
+            if (!sizeId) {
+              const newSize = await tx.size.create({
+                data: { value: sizeValue },
+              });
+              sizeId = newSize.id;
+              sizeMap.set(sizeValue, sizeId);
+            }
+
+            await tx.productSize.upsert({
+              where: { moyskladId: msVariant.id },
+              update: {
+                stock: stockMap.get(msVariant.id) || 0,
+                article: msVariant.article,
+                archived: msVariant.archived,
+              },
+              create: {
+                productVariantId: productVariant.id,
+                sizeId: sizeId,
+                moyskladId: msVariant.id,
+                moySkladHref: msVariant.meta.href,
+                moySkladType: msVariant.meta.type,
+                stock: stockMap.get(msVariant.id) || 0,
+                article: msVariant.article,
+                archived: msVariant.archived,
+              },
+            });
+          }
+        }
+      }
+    });
+
+    console.log('[SYNC PRODUCTS] Синхронизация успешно завершена.');
     return NextResponse.json({
       message: 'Синхронизация товаров успешно завершена.',
-      totalMoySklad: moySkladItems.length,
+      totalProducts: productsWithVariants.length,
     });
   } catch (error) {
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: "Умный" обработчик ошибок ---
     if (error instanceof AuthError) {
       return new NextResponse(JSON.stringify({ error: error.message }), {
         status: 401,
       });
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[PRODUCTS SYNC ERROR]:', errorMessage);
+    console.error('[PRODUCTS SYNC ERROR]:', errorMessage, error);
     return new NextResponse(
       JSON.stringify({ error: `Ошибка синхронизации: ${errorMessage}` }),
       { status: 500 },

@@ -67,7 +67,6 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   }
 };
 
-// ... (остальной код файла без изменений)
 export const createMoySkladProduct = async (
   name: string,
   article: string,
@@ -90,19 +89,24 @@ export const createMoySkladProduct = async (
     body: JSON.stringify(body),
   });
 };
+
 export const getMoySkladProducts = async () => {
   return await moySkladFetch(
     'entity/assortment?expand=productFolder,images,product',
   );
 };
+
 export const getMoySkladCategories = async () => {
   return await moySkladFetch('entity/productfolder?expand=productFolder');
 };
+
 export const getMoySkladStock = async () => {
   const data = await moySkladFetch('report/stock/all?stockMode=all');
   return data;
 };
+
 let cachedRefs: { organization: any; store: any } | null = null;
+
 const getMoySkladDefaultRefs = async () => {
   if (cachedRefs) return cachedRefs;
   const [orgResponse, storeResponse] = await Promise.all([
@@ -117,6 +121,7 @@ const getMoySkladDefaultRefs = async () => {
   };
   return cachedRefs;
 };
+
 export const updateMoySkladVariantStock = async (
   moySkladHref: string,
   moySkladType: string,
@@ -143,8 +148,10 @@ export const updateMoySkladVariantStock = async (
     body: JSON.stringify(body),
   });
 };
+
 let cachedPriceTypes: { salePriceMeta: any; discountPriceMeta: any } | null =
   null;
+
 const getMoySkladPriceTypes = async () => {
   if (cachedPriceTypes) {
     return cachedPriceTypes;
@@ -162,6 +169,7 @@ const getMoySkladPriceTypes = async () => {
   };
   return cachedPriceTypes;
 };
+
 export const updateMoySkladPrice = async (
   moySkladProductId: string,
   price: number | null,
@@ -194,6 +202,7 @@ export const updateMoySkladPrice = async (
     body: JSON.stringify(body),
   });
 };
+
 export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
   console.log(`[API МойСклад] Архивация ${moySkladIds.length} товаров...`);
   const body = { archived: true };
@@ -205,6 +214,7 @@ export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
   );
   return Promise.all(promises);
 };
+
 export const getMoySkladProductsAndVariants = async () => {
   console.log('[API МойСклад] Запрос списка всех товаров и вариантов...');
   const filter = 'type=product;type=variant';
@@ -213,6 +223,7 @@ export const getMoySkladProductsAndVariants = async () => {
     `entity/assortment?filter=${filter}&expand=${expand}`,
   );
 };
+
 export const updateMoySkladArticle = async (
   moySkladId: string,
   newArticle: string,
@@ -228,12 +239,15 @@ export const updateMoySkladArticle = async (
     body: JSON.stringify(body),
   });
 };
+
 export const getMoySkladEntityByHref = async (href: string) => {
   const endpoint = href.replace(MOYSKLAD_API_URL + '/', '');
   return await moySkladFetch(endpoint);
 };
+
 let sizeCharacteristicCache: { meta: any; values: Map<string, any> } | null =
   null;
+
 const getMoySkladSizeCharacteristicData = async (): Promise<{
   meta: any;
   values: Map<string, any>;
@@ -263,6 +277,7 @@ const getMoySkladSizeCharacteristicData = async (): Promise<{
   sizeCharacteristicCache = { meta: sizeChar.meta, values: valuesMap };
   return sizeCharacteristicCache;
 };
+
 export const createMoySkladVariant = async (
   parentProductId: string,
   article: string,
@@ -299,6 +314,7 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
+
 export const updateMoySkladProductFolder = async (
   moySkladProductId: string,
   newCategoryMoySkladId: string,
@@ -321,3 +337,39 @@ export const updateMoySkladProductFolder = async (
     body: JSON.stringify(body),
   });
 };
+
+// --- НАЧАЛО НОВОЙ ФУНКЦИИ ---
+/**
+ * Получает все товары и для каждого из них подгружает его вложенные модификации (варианты).
+ * @returns {Promise<any[]>} Массив товаров, где каждый товар содержит поле `variants` со списком его модификаций.
+ */
+export const getProductsWithVariants = async () => {
+  console.log('[API-Bridge] Этап 1: Получение всех родительских товаров...');
+  const productsResponse = await moySkladFetch(
+    'entity/product?expand=productFolder,images',
+  );
+  const products = productsResponse.rows;
+
+  console.log(
+    `[API-Bridge] Найдено ${products.length} родительских товаров. Этап 2: Получение их модификаций...`,
+  );
+
+  const variantPromises = products.map((product: any) => {
+    if (product.variantsCount > 0) {
+      const variantsUrl = `entity/product/${product.id}/variants?expand=characteristics`;
+      return moySkladFetch(variantsUrl).then((variantResponse) => ({
+        ...product,
+        variants: variantResponse.rows || [],
+      }));
+    }
+    return Promise.resolve({ ...product, variants: [] });
+  });
+
+  const productsWithVariants = await Promise.all(variantPromises);
+  console.log(
+    '[API-Bridge] Все модификации получены и "склеены" с родительскими товарами.',
+  );
+
+  return productsWithVariants;
+};
+// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
