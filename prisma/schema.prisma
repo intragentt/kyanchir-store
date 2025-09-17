@@ -67,7 +67,7 @@ model ProductSize {
   price            Int?
   oldPrice         Int?
   orderItems       OrderItem[]
-  moyskladId       String?           @unique // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+  moyskladId       String?          
   archived         Boolean           @default(false) // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
 
   @@unique([productVariantId, sizeId])

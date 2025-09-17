@@ -94,7 +94,6 @@ export async function POST() {
           },
         });
 
-        // --- НАЧАЛО ФИНАЛЬНОЙ ФИЛОСОФИИ ---
         if (msProduct.variants && msProduct.variants.length > 0) {
           const colorsToVariantsMap = new Map<string, any[]>();
 
@@ -125,10 +124,7 @@ export async function POST() {
                   color: colorName,
                 },
               },
-              update: {
-                price: (msProduct.salePrices?.[0]?.value || 0) / 100,
-                oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
-              },
+              update: {},
               create: {
                 productId: parentProduct.id,
                 color: colorName,
@@ -153,7 +149,6 @@ export async function POST() {
                 sizeMap.set(sizeValue, sizeId);
               }
 
-              // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: УНИКАЛЬНОСТЬ ПО ВАРИАНТУ+РАЗМЕРУ ---
               await tx.productSize.upsert({
                 where: {
                   productVariantId_sizeId: {
@@ -183,7 +178,6 @@ export async function POST() {
             }
           }
         }
-        // --- КОНЕЦ ФИНАЛЬНОЙ ФИЛОСОФИИ ---
       }
     });
 
