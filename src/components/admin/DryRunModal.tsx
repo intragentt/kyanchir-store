@@ -15,7 +15,6 @@ import {
 import type { SyncPlan } from '@/app/api/admin/sync/dry-run/route';
 import type { CodeRule } from '@prisma/client';
 
-// Определяем новый тип для интерактивного предупреждения
 interface InteractiveWarningProps {
   item: SyncPlan['warnings'][0];
   codeRules: CodeRule[];
@@ -42,7 +41,6 @@ function InteractiveWarning({
     } else if (mode === 'existing' && selectedRuleId) {
       result = await onAddSynonym(selectedRuleId, item.name);
     }
-
     if (result.success) {
       setNewCode('');
       setSelectedRuleId('');
@@ -62,21 +60,13 @@ function InteractiveWarning({
         <div className="flex items-center gap-4">
           <button
             onClick={() => setMode('new')}
-            className={`flex items-center gap-1.5 text-xs font-medium ${
-              mode === 'new'
-                ? 'text-indigo-600'
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
+            className={`flex items-center gap-1.5 text-xs font-medium ${mode === 'new' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-800'}`}
           >
             <PlusIcon className="h-4 w-4" /> Создать новый код
           </button>
           <button
             onClick={() => setMode('existing')}
-            className={`flex items-center gap-1.5 text-xs font-medium ${
-              mode === 'existing'
-                ? 'text-indigo-600'
-                : 'text-gray-500 hover:text-gray-800'
-            }`}
+            className={`flex items-center gap-1.5 text-xs font-medium ${mode === 'existing' ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-800'}`}
           >
             <LinkIcon className="h-4 w-4" /> Добавить к существующему
           </button>
@@ -129,6 +119,7 @@ interface DryRunModalProps {
   plan: SyncPlan | null;
   isExecuting: boolean;
   codeRules: CodeRule[];
+  planJustUpdated: boolean; // <-- НОВЫЙ ПРОПС
 }
 
 export default function DryRunModal({
@@ -140,6 +131,7 @@ export default function DryRunModal({
   onAddSynonym,
   isExecuting,
   codeRules,
+  planJustUpdated, // <-- НОВЫЙ ПРОПС
 }: DryRunModalProps) {
   if (!plan) return null;
   const totalChanges = plan.toCreate.length + plan.toUpdate.length;
@@ -158,7 +150,6 @@ export default function DryRunModal({
         >
           <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
         </Transition.Child>
-
         <div className="fixed inset-0 z-10 overflow-y-auto">
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <Transition.Child
@@ -195,7 +186,6 @@ export default function DryRunModal({
                       </div>
                     </div>
                   </div>
-
                   <div className="mt-6 max-h-[60vh] space-y-4 overflow-y-auto pr-2">
                     {plan.toCreate.length > 0 && (
                       <section>
@@ -281,7 +271,7 @@ export default function DryRunModal({
                   <button
                     type="button"
                     disabled={isExecuting || totalChanges === 0}
-                    className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 sm:ml-3 sm:w-auto"
+                    className={`inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 sm:ml-3 sm:w-auto ${planJustUpdated ? 'animate-pulse' : ''}`}
                     onClick={() => onConfirm(plan)}
                   >
                     {isExecuting
