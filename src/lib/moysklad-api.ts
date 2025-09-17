@@ -6,18 +6,23 @@ const MOYSKLAD_API_URL = 'https://api.moysklad.ru/api/remap/1.2';
 
 let apiKeyCache: string | null = null;
 
-const getMoySkladApiKey = async () => {
-  if (apiKeyCache) {
-    return apiKeyCache;
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем специальный класс для ошибки авторизации ---
+export class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AuthError';
   }
+}
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+const getMoySkladApiKey = async () => {
+  if (apiKeyCache) return apiKeyCache;
   console.log('[API-Bridge] Ключ не в кэше, ищем в БД...');
   const setting = await prisma.systemSetting.findUnique({
     where: { key: 'MOYSKLAD_API_KEY' },
   });
   const key = setting?.value || process.env.MOYSKLAD_API_TOKEN;
-  if (key) {
-    apiKeyCache = key;
-  }
+  if (key) apiKeyCache = key;
   return key;
 };
 
@@ -29,9 +34,7 @@ export const clearApiKeyCache = () => {
 const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   const apiKey = await getMoySkladApiKey();
   if (!apiKey) {
-    throw new Error(
-      'API-ключ для МойСклад не найден ни в базе данных, ни в переменных окружения.',
-    );
+    throw new Error('API-ключ для МойСклад не найден ни в БД, ни в .env');
   }
   const url = `${MOYSKLAD_API_URL}/${endpoint}`;
   const headers = new Headers(options.headers || {});
@@ -39,21 +42,32 @@ const moySkladFetch = async (endpoint: string, options: RequestInit = {}) => {
   headers.set('Content-Type', 'application/json');
   headers.set('Accept-Encoding', 'gzip');
   const config: RequestInit = { ...options, headers };
+
   try {
     const response = await fetch(url, config);
     if (!response.ok) {
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: Проверяем статус ответа ---
+      const status = response.status;
       const errorBody = await response.text();
-      console.error(`Ошибка API МойСклад [${response.status}]: ${errorBody}`);
-      throw new Error(`Ошибка API МойСклад: ${response.status} - ${errorBody}`);
+      console.error(`Ошибка API МойСклад [${status}]: ${errorBody}`);
+      // Если это ошибка авторизации, выбрасываем нашу специальную ошибку
+      if (status === 401) {
+        throw new AuthError(
+          'Ошибка авторизации в МойСклад. Проверьте API-ключ.',
+        );
+      }
+      throw new Error(`Ошибка API МойСклад: ${status} - ${errorBody}`);
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     }
     if (response.status === 204) return null;
     return await response.json();
   } catch (error) {
     console.error('Ошибка при выполнении запроса к МойСклад:', error);
-    throw error;
+    throw error; // Просто "пробрасываем" ошибку дальше (будет либо AuthError, либо обычная)
   }
 };
 
+// ... (остальной код файла без изменений)
 export const createMoySkladProduct = async (
   name: string,
   article: string,
@@ -76,22 +90,18 @@ export const createMoySkladProduct = async (
     body: JSON.stringify(body),
   });
 };
-
 export const getMoySkladProducts = async () => {
   return await moySkladFetch(
     'entity/assortment?expand=productFolder,images,product',
   );
 };
-
 export const getMoySkladCategories = async () => {
   return await moySkladFetch('entity/productfolder?expand=productFolder');
 };
-
 export const getMoySkladStock = async () => {
   const data = await moySkladFetch('report/stock/all?stockMode=all');
   return data;
 };
-
 let cachedRefs: { organization: any; store: any } | null = null;
 const getMoySkladDefaultRefs = async () => {
   if (cachedRefs) return cachedRefs;
@@ -107,7 +117,6 @@ const getMoySkladDefaultRefs = async () => {
   };
   return cachedRefs;
 };
-
 export const updateMoySkladVariantStock = async (
   moySkladHref: string,
   moySkladType: string,
@@ -134,7 +143,6 @@ export const updateMoySkladVariantStock = async (
     body: JSON.stringify(body),
   });
 };
-
 let cachedPriceTypes: { salePriceMeta: any; discountPriceMeta: any } | null =
   null;
 const getMoySkladPriceTypes = async () => {
@@ -154,7 +162,6 @@ const getMoySkladPriceTypes = async () => {
   };
   return cachedPriceTypes;
 };
-
 export const updateMoySkladPrice = async (
   moySkladProductId: string,
   price: number | null,
@@ -187,7 +194,6 @@ export const updateMoySkladPrice = async (
     body: JSON.stringify(body),
   });
 };
-
 export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
   console.log(`[API МойСклад] Архивация ${moySkladIds.length} товаров...`);
   const body = { archived: true };
@@ -199,7 +205,6 @@ export const archiveMoySkladProducts = async (moySkladIds: string[]) => {
   );
   return Promise.all(promises);
 };
-
 export const getMoySkladProductsAndVariants = async () => {
   console.log('[API МойСклад] Запрос списка всех товаров и вариантов...');
   const filter = 'type=product;type=variant';
@@ -208,7 +213,6 @@ export const getMoySkladProductsAndVariants = async () => {
     `entity/assortment?filter=${filter}&expand=${expand}`,
   );
 };
-
 export const updateMoySkladArticle = async (
   moySkladId: string,
   newArticle: string,
@@ -224,12 +228,10 @@ export const updateMoySkladArticle = async (
     body: JSON.stringify(body),
   });
 };
-
 export const getMoySkladEntityByHref = async (href: string) => {
   const endpoint = href.replace(MOYSKLAD_API_URL + '/', '');
   return await moySkladFetch(endpoint);
 };
-
 let sizeCharacteristicCache: { meta: any; values: Map<string, any> } | null =
   null;
 const getMoySkladSizeCharacteristicData = async (): Promise<{
@@ -261,7 +263,6 @@ const getMoySkladSizeCharacteristicData = async (): Promise<{
   sizeCharacteristicCache = { meta: sizeChar.meta, values: valuesMap };
   return sizeCharacteristicCache;
 };
-
 export const createMoySkladVariant = async (
   parentProductId: string,
   article: string,
@@ -273,9 +274,7 @@ export const createMoySkladVariant = async (
   const { meta, values } = await getMoySkladSizeCharacteristicData();
   const sizeValueData = values.get(sizeValue);
   if (!sizeValueData) {
-    throw new Error(
-      `Значение размера "${sizeValue}" не найдено в МойСклад. Добавьте его в справочник.`,
-    );
+    throw new Error(`Значение размера "${sizeValue}" не найдено в МойСклад.`);
   }
   const body = {
     article,
@@ -300,13 +299,6 @@ export const createMoySkladVariant = async (
     body: JSON.stringify(body),
   });
 };
-
-// --- НАЧАЛО НОВОЙ ФУНКЦИИ ---
-/**
- * Перемещает товар в другую категорию (productFolder) в МойСклад.
- * @param moySkladProductId - ID товара, который нужно переместить.
- * @param newCategoryMoySkladId - ID новой категории.
- */
 export const updateMoySkladProductFolder = async (
   moySkladProductId: string,
   newCategoryMoySkladId: string,
@@ -329,4 +321,3 @@ export const updateMoySkladProductFolder = async (
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
