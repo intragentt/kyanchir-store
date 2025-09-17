@@ -340,17 +340,29 @@ export const getProductsWithVariants = async () => {
   );
   const products = productsResponse.rows;
 
+  // --- НАЧАЛО ЛОГИРОВАНИЯ ---
+  console.log(`[API-Bridge] Найдено ${products.length} родительских товаров.`);
+  if (products.length > 0) {
+    console.log(
+      '[API-Bridge] Структура первого товара:',
+      JSON.stringify(products[0], null, 2),
+    );
+  }
   console.log(
-    `[API-Bridge] Найдено ${products.length} родительских товаров. Этап 2: Получение их модификаций...`,
+    '[API-Bridge] Этап 2: Попытка получить модификации для каждого...',
   );
+  // --- КОНЕЦ ЛОГИРОВАНИЯ ---
 
   const variantPromises = products.map((product: any) => {
     if (product.variantsCount > 0) {
-      // --- НАЧАЛО ФИНАЛЬНОГО ИЗМЕНЕНИЯ ---
-      // Правильный эндпоинт: `entity/assortment`, так как модификации являются частью "ассортимента".
-      // Правильный фильтр: `assortment=${product.meta.href}`.
       const variantsUrl = `entity/assortment?filter=assortment=${product.meta.href}&expand=characteristics`;
-      // --- КОНЕЦ ФИНАЛЬНОГО ИЗМЕНЕНИЯ ---
+
+      // --- НАЧАЛО ЛОГИРОВАНИЯ ---
+      console.log(
+        `[API-Bridge] Для товара "${product.name}" (variants: ${product.variantsCount}) генерируем URL: ${variantsUrl}`,
+      );
+      // --- КОНЕЦ ЛОГИРОВАНИЯ ---
+
       return moySkladFetch(variantsUrl).then((variantResponse) => ({
         ...product,
         variants: variantResponse.rows || [],
