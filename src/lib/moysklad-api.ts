@@ -310,6 +310,10 @@ export const createMoySkladVariant = async (
   });
 };
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ ---
+// Добавлена новая функция для перемещения товара в другую группу (категорию).
+// Она принимает ID товара в МойСклад и ID новой категории,
+// формирует PUT-запрос для обновления поля `productFolder`.
 export const updateMoySkladProductFolder = async (
   moySkladProductId: string,
   newCategoryMoySkladId: string,
@@ -332,6 +336,7 @@ export const updateMoySkladProductFolder = async (
     body: JSON.stringify(body),
   });
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export const getProductsWithVariants = async () => {
   console.log('[API-Bridge] Этап 1: Получение всех родительских товаров...');
@@ -363,7 +368,6 @@ export const getProductsWithVariants = async () => {
   return productsWithVariants;
 };
 
-// --- НАЧАЛО НОВОЙ ФУНКЦИИ ---
 export const bulkUpdateMoySkladArticles = async (
   updates: { meta: any; article: string }[],
 ) => {
@@ -380,4 +384,3 @@ export const bulkUpdateMoySkladArticles = async (
     body: JSON.stringify(body),
   });
 };
-// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---

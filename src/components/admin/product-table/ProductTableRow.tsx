@@ -59,11 +59,15 @@ interface ProductTableRowProps {
 
 export const ProductTableRow = ({
   product,
+  allCategories, // --- ИЗМЕНЕНИЕ: Добавили allCategories в пропсы
   isEditMode,
 }: ProductTableRowProps) => {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const { isCopied, copy } = useCopyToClipboard();
 
   const totalStock = product.variants.reduce(
@@ -82,6 +86,47 @@ export const ProductTableRow = ({
     }, 0);
     return formatPrice(totalValue);
   };
+
+  // --- НАЧАЛО НОВОЙ ФУНКЦИИ ---
+  const handleCategoryChange = async (
+    e: React.ChangeEvent<HTMLSelectElement>,
+  ) => {
+    e.stopPropagation();
+    const newCategoryId = e.target.value;
+    const currentCategoryId = product.categories[0]?.id;
+
+    if (newCategoryId === currentCategoryId) return;
+
+    setIsUpdatingCategory(true);
+    const toastId = toast.loading('Перемещаем товар в новую группу...');
+
+    try {
+      const response = await fetch('/api/admin/products/update-category', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: product.id,
+          newCategoryId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Не удалось переместить товар');
+      }
+
+      toast.success('Товар успешно перемещен!', { id: toastId });
+      router.refresh(); // Обновляем данные на странице
+    } catch (error) {
+      toast.error(
+        `Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
+        { id: toastId },
+      );
+    } finally {
+      setIsUpdatingCategory(false);
+    }
+  };
+  // --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -117,6 +162,7 @@ export const ProductTableRow = ({
     product.article,
   );
   const rowClassName = isExpanded ? 'bg-indigo-50/50' : 'bg-white';
+  const currentCategory = product.categories[0]; // Предполагаем, что у товара одна категория
 
   return (
     <Fragment>
@@ -203,9 +249,30 @@ export const ProductTableRow = ({
             </div>
           </div>
         </td>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ В ЯЧЕЙКЕ --- */}
         <td className="px-6 py-4 text-xs">
-          {product.categories.map((c) => c.name).join(' / ')}
+          {isEditMode ? (
+            <select
+              value={currentCategory?.id || ''}
+              onChange={handleCategoryChange}
+              onClick={(e) => e.stopPropagation()}
+              disabled={isUpdatingCategory}
+              className="block w-full rounded-md border-gray-300 py-1 pl-2 pr-8 text-xs focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+            >
+              <option value="" disabled>
+                Выберите категорию
+              </option>
+              {allCategories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span>{currentCategory?.name || 'Без категории'}</span>
+          )}
         </td>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ В ЯЧЕЙКЕ --- */}
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm font-bold">
