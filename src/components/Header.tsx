@@ -4,9 +4,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Logo from './icons/Logo';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем неверный путь ---
 import CloseIcon from './icons/CloseIcon';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import BurgerIcon from './icons/BurgerIcon';
 import SearchIcon from './icons/SearchIcon';
 import { useAppStore } from '@/store/useAppStore';
@@ -23,7 +21,9 @@ export default function Header({
   className = '',
   isSearchActive,
   onSearchToggle,
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем опечатку ---
   isMenuOpen,
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   onMenuToggle,
 }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +31,7 @@ export default function Header({
 
   return (
     <header className={`w-full bg-white ${className}`}>
-      <div className="container mx-auto flex h-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
+      <div className="container mx-auto flex h-full items-center justify-between p-6 sm:px-6 lg:px-8 xl:px-12">
         {!isSearchActive ? (
           <div className="flex w-full items-center justify-between">
             <Link
