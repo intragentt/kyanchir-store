@@ -9,8 +9,8 @@ async function main() {
   // Удаляем в правильном порядке, чтобы избежать ошибок внешних ключей
   await prisma.presetItem.deleteMany();
   await prisma.filterPreset.deleteMany();
-  await prisma.orderItem.deleteMany(); // Добавили очистку OrderItem
-  await prisma.order.deleteMany(); // Добавили очистку Order
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
   await prisma.productSize.deleteMany();
   await prisma.image.deleteMany();
   await prisma.attribute.deleteMany();
@@ -27,7 +27,7 @@ async function main() {
   await prisma.size.deleteMany();
   await prisma.supportRoute.deleteMany();
   await prisma.status.deleteMany();
-  await prisma.orderStatus.deleteMany(); // Добавили очистку OrderStatus
+  await prisma.orderStatus.deleteMany();
   await prisma.userRole.deleteMany();
   await prisma.agentRole.deleteMany();
   await prisma.ticketStatus.deleteMany();
@@ -39,18 +39,18 @@ async function main() {
   console.log('📚 Создание записей в справочниках...');
 
   console.log('   - Создание статусов продуктов...');
-  const statusDraft = await prisma.status.create({ data: { name: 'DRAFT' } });
-  const statusPublished = await prisma.status.create({
-    data: { name: 'PUBLISHED' },
-  });
-  await prisma.status.create({
-    data: { name: 'ARCHIVED' },
+  await prisma.status.createMany({
+    data: [{ name: 'DRAFT' }, { name: 'PUBLISHED' }, { name: 'ARCHIVED' }],
   });
 
-  // Роли Пользователей
-  console.log('   - Создание ролей пользователей...');
-  const roleAdmin = await prisma.userRole.create({ data: { name: 'ADMIN' } });
-  await prisma.userRole.create({ data: { name: 'CLIENT' } });
+  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+  console.log('   - Создание ролей пользователей (ADMIN, MANAGEMENT, USER)...');
+  // Создаем все три роли, которые ожидает система.
+  // 'CLIENT' заменена на 'USER' для соответствия с API регистрации.
+  await prisma.userRole.createMany({
+    data: [{ name: 'ADMIN' }, { name: 'MANAGEMENT' }, { name: 'USER' }],
+  });
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   // Роли Агентов
   await prisma.agentRole.create({
@@ -68,49 +68,12 @@ async function main() {
     data: { name: 'CLIENT' },
   });
 
-  // --- ШАГ 3: СОЗДАНИЕ ОСНОВНЫХ ДАННЫХ (Примеры) ---
-  console.log('👑 Создание администратора...');
+  // --- ШАГ 3: УБРАЛИ СОЗДАНИЕ ТЕСТОВЫХ ДАННЫХ ---
+  // Мы больше не создаем здесь админа или тестовые товары,
+  // чтобы сид-скрипт отвечал только за "фундамент" (справочники).
+  // Пользователей-администраторов мы создадим через сам сайт.
 
-  await prisma.user.create({
-    data: {
-      email: 'intragentt@gmail.com',
-      name: 'Admin',
-      roleId: roleAdmin.id,
-    },
-  });
-
-  console.log('👕 Создание тестового продукта...');
-
-  const sizeS = await prisma.size.create({ data: { value: 'S' } });
-  const sizeM = await prisma.size.create({ data: { value: 'M' } });
-
-  const testProduct = await prisma.product.create({
-    data: {
-      name: 'Тестовый Корсет (Seed)',
-      description:
-        'Это описание для тестового продукта, созданного через seed.',
-      statusId: statusPublished.id, // Тестовый продукт будет сразу опубликован
-      // --- ИЗМЕНЕНИЕ: 'sku' заменено на 'article' ---
-      article: 'KYA-SEED-001',
-    },
-  });
-
-  const testVariant = await prisma.productVariant.create({
-    data: {
-      productId: testProduct.id,
-      color: 'Черный',
-      price: 2500,
-    },
-  });
-
-  await prisma.productSize.createMany({
-    data: [
-      { productVariantId: testVariant.id, sizeId: sizeS.id, stock: 10 },
-      { productVariantId: testVariant.id, sizeId: sizeM.id, stock: 15 },
-    ],
-  });
-
-  console.log('🌱 СИДИНГ УСПЕШНО ЗАВЕРШЕН');
+  console.log('🌱 СИДИНГ ФУНДАМЕНТА УСПЕШНО ЗАВЕРШЕН');
 }
 
 main()
@@ -121,4 +84,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-  
