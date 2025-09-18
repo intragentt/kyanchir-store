@@ -7,7 +7,6 @@ import { signIn } from 'next-auth/react';
 import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
 import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
-import ClearIcon from '@/components/icons/ClearIcon';
 import { EyeIcon } from '@/components/icons/EyeIcon';
 import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
 
@@ -18,9 +17,8 @@ const validateEmail = (email: string) => {
 };
 
 export default function RegisterPage() {
-  const [step, setStep] = useState(1); // Состояние для отслеживания шага
+  const [step, setStep] = useState(1);
 
-  // Единое состояние для всех данных формы
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -47,24 +45,24 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    // Валидация для текущего шага
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая логика валидации ---
     if (step === 1) {
       if (!validateEmail(formData.email)) {
         return setError('Пожалуйста, введите корректный Email.');
       }
+      setStep(2); // Переходим к паролям
+    } else if (step === 2) {
       if (formData.password.length < 8) {
         return setError('Пароль должен содержать не менее 8 символов.');
       }
-      setStep(2); // Переходим на следующий шаг
-    } else if (step === 2) {
       if (formData.password !== formData.confirmPassword) {
         return setError('Пароли не совпадают.');
       }
-      setStep(3); // Переходим на финальный шаг
+      setStep(3); // Переходим к личным данным
     }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   };
 
-  // Финальная отправка всех данных
   const handleRegisterSubmit = async () => {
     setError(null);
     if (!formData.name.trim()) {
@@ -99,13 +97,14 @@ export default function RegisterPage() {
 
       if (signInResult?.error) {
         throw new Error(
-          'Аккаунт создан, но не удалось войти. Попробуйте на странице входа.',
+          'Аккаунт создан, но войти не удалось. Попробуйте на странице входа.',
         );
       }
 
-      router.push('/'); // Успех!
+      router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Непредвиденная ошибка');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -128,7 +127,7 @@ export default function RegisterPage() {
             onSubmit={(e) => e.preventDefault()}
             noValidate
           >
-            {/* --- ШАГ 1: Email и Пароль --- */}
+            {/* --- ШАГ 1: Только Email --- */}
             {step === 1 && (
               <>
                 <div className="relative">
@@ -142,6 +141,15 @@ export default function RegisterPage() {
                     placeholder="Email"
                   />
                 </div>
+                <button onClick={handleNextStep} className="button-style">
+                  Продолжить
+                </button>
+              </>
+            )}
+
+            {/* --- ШАГ 2: Пароль и Подтверждение --- */}
+            {step === 2 && (
+              <>
                 <div className="relative">
                   <input
                     id="password"
@@ -164,15 +172,6 @@ export default function RegisterPage() {
                     </button>
                   )}
                 </div>
-                <button onClick={handleNextStep} className="button-style">
-                  Продолжить
-                </button>
-              </>
-            )}
-
-            {/* --- ШАГ 2: Подтверждение Пароля --- */}
-            {step === 2 && (
-              <>
                 <div className="relative">
                   <input
                     id="confirmPassword"
@@ -309,7 +308,6 @@ export default function RegisterPage() {
           </p>
         </div>
       </div>
-      {/* Добавляем общие стили в CSS-in-JS для переиспользования */}
       <style jsx>{`
         .input-style {
           display: block;
