@@ -4,6 +4,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import ClearIcon from '@/components/icons/ClearIcon';
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
@@ -38,10 +39,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Произошла неизвестная ошибка');
-      }
+      if (!response.ok) throw new Error(data.error || 'Произошла ошибка');
 
       toast.success('Пароль успешно изменён!', { id: toastId });
       setIsSuccess(true);
@@ -58,14 +56,11 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
   if (isSuccess) {
     return (
-      <div className="text-center">
-        <h2 className="text-lg font-semibold text-green-700">
+      <div className="space-y-4 text-center font-body">
+        <h2 className="text-base font-semibold text-green-700">
           Пароль изменён!
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
-          Теперь вы можете войти в свой аккаунт с новым паролем.
-        </p>
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="text-sm text-zinc-600">
           Перенаправляем на страницу входа...
         </p>
       </div>
@@ -73,14 +68,8 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Новый пароль
-        </label>
+    <form onSubmit={handleSubmit} className="space-y-4 text-left font-body">
+      <div className="relative">
         <input
           id="password"
           name="password"
@@ -88,18 +77,21 @@ export function ResetPasswordForm({ token }: { token: string }) {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          placeholder="••••••••"
+          className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+          placeholder="Новый пароль"
           disabled={isLoading}
         />
+        {password && (
+          <button
+            type="button"
+            onClick={() => setPassword('')}
+            className="absolute inset-y-0 right-0 flex items-center pr-3"
+          >
+            <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+          </button>
+        )}
       </div>
-      <div>
-        <label
-          htmlFor="confirmPassword"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Подтвердите новый пароль
-        </label>
+      <div className="relative">
         <input
           id="confirmPassword"
           name="confirmPassword"
@@ -107,20 +99,27 @@ export function ResetPasswordForm({ token }: { token: string }) {
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          placeholder="••••••••"
+          className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+          placeholder="Подтвердите пароль"
           disabled={isLoading}
         />
+        {confirmPassword && (
+          <button
+            type="button"
+            onClick={() => setConfirmPassword('')}
+            className="absolute inset-y-0 right-0 flex items-center pr-3"
+          >
+            <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+          </button>
+        )}
       </div>
-      <div>
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-indigo-400"
-        >
-          {isLoading ? 'Сохранение...' : 'Сохранить новый пароль'}
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+      >
+        {isLoading ? 'Сохранение...' : 'Сохранить новый пароль'}
+      </button>
     </form>
   );
 }

@@ -1,11 +1,11 @@
 // Местоположение: /src/app/forgot-password/page.tsx
 import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
 import Link from 'next/link';
-import Logo from '@/components/icons/Logo'; // Импортируем наш логотип
+import Logo from '@/components/icons/Logo';
 
 export default function ForgotPasswordPage() {
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем тот же стиль, что и на странице логина ---
+    // Используем тот же стиль, что и на странице логина
     <div className="flex min-h-screen items-start justify-center bg-zinc-50 px-4 pt-20 sm:pt-24">
       <div className="w-full max-w-sm">
         <div className="space-y-5 rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm">
@@ -17,7 +17,14 @@ export default function ForgotPasswordPage() {
               <Logo />
             </div>
           </Link>
-
+          <div className="text-center font-body">
+            <h2 className="text-lg font-semibold text-zinc-800">
+              Восстановление пароля
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              Введите email, и мы отправим вам ссылку для сброса.
+            </p>
+          </div>
           <ForgotPasswordForm />
         </div>
         <div className="mt-6 rounded-lg border border-zinc-200 bg-white p-6 text-center font-body text-sm">
@@ -33,6 +40,5 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 }
