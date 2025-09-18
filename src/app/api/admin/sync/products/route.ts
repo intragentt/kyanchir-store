@@ -30,7 +30,7 @@ export async function POST() {
 
     console.log('[SYNC PRODUCTS] Шаг 1/3: Получение данных...');
     const [
-      allMoySkladProducts, // Получаем все как есть
+      allMoySkladProducts,
       stockResponse,
       allOurCategories,
       allOurSizes,
@@ -57,40 +57,33 @@ export async function POST() {
     );
     const sizeMap = new Map(allOurSizes.map((s) => [s.value, s.id]));
 
-    // --- НАЧАЛО ГРАНДИОЗНОГО РЕДИЗАЙНА: СОРТИРОВКА ПО БАЗОВОМУ ИМЕНИ ---
     const productGroups = new Map<string, any[]>();
 
     for (const msProduct of allMoySkladProducts) {
       if (msProduct.archived) continue;
-
       const nameMatch = msProduct.name.match(/(.+)\s\((.+)\)/);
       const baseName = nameMatch ? nameMatch[1].trim() : msProduct.name;
-
       if (!productGroups.has(baseName)) {
         productGroups.set(baseName, []);
       }
       productGroups.get(baseName)!.push(msProduct);
     }
-    // --- КОНЕЦ СОРТИРОВКИ ---
 
     console.log(
       `[SYNC PRODUCTS] Шаг 3/3: Обработка ${productGroups.size} сгруппированных товаров...`,
     );
 
     await prisma.$transaction(async (tx) => {
-      // Проходимся по "папкам" ("Пижама", "Комплект двойка" и т.д.)
       for (const [baseName, msProductsInGroup] of productGroups.entries()) {
-        // Создаем ОДИН родительский товар-контейнер (Уровень 1)
         const parentProduct = await tx.product.upsert({
           where: { name: baseName },
           update: { name: baseName },
           create: {
             name: baseName,
             statusId: draftStatus.id,
-            // Артикул и категорию берем от первого товара в группе
             article:
               msProductsInGroup[0].article || `TEMP-${msProductsInGroup[0].id}`,
-            moyskladId: null, // Родительский товар - виртуальный
+            moyskladId: null,
             categories: msProductsInGroup[0].productFolder
               ? {
                   connect: {
@@ -105,12 +98,10 @@ export async function POST() {
           },
         });
 
-        // Проходимся по реальным товарам из МС внутри группы ("Пижама (Белый)", "Пижама (Розовый)")
         for (const msProduct of msProductsInGroup) {
           const nameMatch = msProduct.name.match(/(.+)\s\((.+)\)/);
           const colorName = nameMatch ? nameMatch[2].trim() : 'Основной';
 
-          // Создаем для каждого из них ВАРИАНТ (Уровень 2)
           const productVariant = await tx.productVariant.upsert({
             where: {
               productId_color: {
@@ -121,7 +112,7 @@ export async function POST() {
             update: {
               price: (msProduct.salePrices?.[0]?.value || 0) / 100,
               oldPrice: (msProduct.salePrices?.[1]?.value || 0) / 100,
-              moySkladId: msProduct.id, // Связываем вариант с конкретным товаром в МС
+              moySkladId: msProduct.id,
             },
             create: {
               productId: parentProduct.id,
@@ -132,9 +123,7 @@ export async function POST() {
             },
           });
 
-          // Проверяем, есть ли у этого товара-варианта модификации (размеры)
           if (msProduct.variants && msProduct.variants.length > 0) {
-            // Если да - создаем РАЗМЕРЫ (Уровень 3) из модификаций
             for (const msVariant of msProduct.variants) {
               const sizeCharacteristic = (msVariant.characteristics || []).find(
                 (c: any) => c.name === 'Размер одежды',
@@ -159,6 +148,7 @@ export async function POST() {
                   },
                 },
                 update: {
+                  code: msVariant.code,
                   stock: stockMap.get(msVariant.id) || 0,
                   article: msVariant.article,
                   moyskladId: msVariant.id,
@@ -167,6 +157,7 @@ export async function POST() {
                 create: {
                   productVariantId: productVariant.id,
                   sizeId,
+                  code: msVariant.code,
                   stock: stockMap.get(msVariant.id) || 0,
                   article: msVariant.article,
                   moyskladId: msVariant.id,
@@ -176,7 +167,6 @@ export async function POST() {
               });
             }
           } else {
-            // Если нет - сам товар-вариант является РАЗМЕРОМ "ONE SIZE" (Уровень 3)
             const sizeValue = 'ONE SIZE';
             let sizeId = sizeMap.get(sizeValue);
             if (!sizeId) {
@@ -195,19 +185,21 @@ export async function POST() {
                 },
               },
               update: {
+                code: msProduct.code,
                 stock: stockMap.get(msProduct.id) || 0,
                 article: msProduct.article,
-                moyskladId: msProduct.id, // Источник данных - сам товар
+                moyskladId: msProduct.id,
                 moySkladHref: msProduct.meta.href,
               },
               create: {
                 productVariantId: productVariant.id,
                 sizeId,
+                code: msProduct.code,
                 stock: stockMap.get(msProduct.id) || 0,
                 article: msProduct.article,
                 moyskladId: msProduct.id,
                 moySkladHref: msProduct.meta.href,
-                moySkladType: 'product', // Тип - товар, а не модификация
+                moySkladType: 'product',
               },
             });
           }

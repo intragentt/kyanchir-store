@@ -1,14 +1,16 @@
 // Местоположение: /src/components/admin/product-table/VariantRow.tsx
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useCallback } from 'react';
 import Image from 'next/image';
+import { Copy, Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 import type { Prisma } from '@prisma/client';
 
-import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
-import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
+import { ExpanderCell } from './ExpanderCell';
 import { ProductSizeRow } from './ProductSizeRow';
 
+// --- ШАГ 1: Обновляем тип, чтобы он включал `code` ---
 type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   include: {
     images: true;
@@ -16,6 +18,7 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
       include: {
         size: true;
       };
+      // Теперь выбираем и `code`
       select: {
         id: true;
         stock: true;
@@ -24,50 +27,69 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
         moySkladType: true;
         price: true;
         oldPrice: true;
+        code: true; // <-- ДОБАВЛЕНО
       };
     };
   };
-}> & {
-  price: number | null;
-  oldPrice: number | null;
-  moySkladId?: string | null;
+}>;
+
+// Кастомный хук для копирования
+const useCopyToClipboard = () => {
+  const [isCopied, setIsCopied] = useState(false);
+  const copy = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setIsCopied(true);
+      toast.success('Артикул скопирован!');
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  }, []);
+  return { isCopied, copy };
+};
+
+// Простая функция для транслитерации и получения кода цвета
+const getColorCode = (color: string) => {
+  const colorMap: { [key: string]: string } = {
+    белый: 'WHT',
+    красный: 'RED',
+    розовый: 'PNK',
+    черный: 'BLK',
+    синий: 'BLU',
+    зеленый: 'GRN',
+  };
+  const lowerColor = color.toLowerCase().split(' / ')[0]; // Берем первый цвет, если их несколько
+  return colorMap[lowerColor] || color.substring(0, 3).toUpperCase();
 };
 
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
   const priceInRubles = priceInCents / 100;
-  return `${new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(priceInRubles)} RUB`;
+  return `${new Intl.NumberFormat('ru-RU').format(priceInRubles)} RUB`;
 };
 
+// --- ШАГ 2: Обновляем пропсы компонента ---
 interface VariantRowProps {
   variant: VariantWithDetails;
+  parentProductArticle: string;
 }
 
-export function VariantRow({ variant }: VariantRowProps) {
+export function VariantRow({ variant, parentProductArticle }: VariantRowProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const totalStock = variant.sizes.reduce((sum, size) => sum + size.stock, 0);
+  const { isCopied, copy } = useCopyToClipboard();
 
+  const totalStock = variant.sizes.reduce((sum, size) => sum + size.stock, 0);
   const totalSalePrice = variant.sizes.reduce(
     (sum, size) => sum + (size.price ?? variant.price ?? 0) * size.stock,
     0,
   );
-
   const totalOldPrice = variant.sizes.reduce((sum, size) => {
-    const resolvedPrice = size.price ?? variant.price;
-    const resolvedOldPrice = size.oldPrice ?? variant.oldPrice;
-
-    const priceForOldSum =
-      resolvedPrice !== null &&
-      resolvedOldPrice !== null &&
-      resolvedOldPrice > resolvedPrice
-        ? resolvedOldPrice
-        : resolvedPrice;
-
-    return sum + (priceForOldSum ?? 0) * size.stock;
+    const priceToUse = size.price ?? variant.price ?? 0;
+    const oldPriceToUse = size.oldPrice ?? variant.oldPrice ?? 0;
+    const finalPrice = oldPriceToUse > priceToUse ? oldPriceToUse : priceToUse;
+    return sum + finalPrice * size.stock;
   }, 0);
+
+  // --- ШАГ 3: Генерируем артикул варианта ---
+  const variantArticle = `${parentProductArticle}-${getColorCode(variant.color || '')}`;
 
   return (
     <Fragment>
@@ -75,12 +97,21 @@ export function VariantRow({ variant }: VariantRowProps) {
         onClick={() => setIsExpanded(!isExpanded)}
         className="cursor-pointer bg-white hover:bg-gray-50"
       >
-        <td className="w-24 px-4 py-2" onClick={(e) => e.stopPropagation()}>
+        {/* --- ШАГ 4: Интегрируем ExpanderCell --- */}
+        <ExpanderCell
+          count={variant.sizes.length}
+          isExpanded={isExpanded}
+          onClick={() => setIsExpanded(!isExpanded)}
+          level={2}
+        />
+
+        <td className="w-12 px-2 py-2" onClick={(e) => e.stopPropagation()}>
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
         </td>
+
         <td className="whitespace-nowrap px-6 py-2">
           <div className="flex items-center">
             <Image
@@ -94,19 +125,31 @@ export function VariantRow({ variant }: VariantRowProps) {
               <div className="text-sm font-medium text-gray-800">
                 {variant.color || 'Основной'}
               </div>
-              {variant.sizes.length > 0 && (
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <span>{variant.sizes.length} размер</span>
-                  {isExpanded ? (
-                    <ChevronDownIcon className="h-4 w-4" />
-                  ) : (
-                    <ChevronRightIcon className="h-4 w-4" />
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </td>
+
+        {/* --- ШАГ 5: Добавляем ячейку с артикулом варианта --- */}
+        <td className="px-6 py-2 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-gray-700">{variantArticle}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                copy(variantArticle);
+              }}
+              className="text-gray-400 hover:text-indigo-600"
+              title="Скопировать артикул"
+            >
+              {isCopied ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </td>
+
         <td className="w-40 px-6 py-2 text-center text-sm">0 шт.</td>
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm text-gray-600">
           {totalStock} шт.
@@ -117,16 +160,19 @@ export function VariantRow({ variant }: VariantRowProps) {
         <td className="w-40 whitespace-nowrap px-6 py-2 text-center text-sm font-bold text-gray-800">
           {formatPrice(totalSalePrice)}
         </td>
+        <td className="w-[112px]"></td>
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={6} className="p-0">
+          {/* --- ШАГ 6: Увеличиваем colSpan, чтобы учесть все колонки --- */}
+          <td colSpan={9} className="p-0">
             <table className="min-w-full">
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Переименованы заголовки --- */}
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
-                  <th className="w-24 px-4 py-2"></th>
+                  <th className="w-12 pl-8"></th> {/* Expander */}
+                  <th className="w-12 px-2 py-2"></th> {/* Checkbox */}
                   <th className="px-6 py-2 text-left">Размер</th>
+                  <th className="px-6 py-2 text-left">Артикул</th>
                   <th className="w-32 px-6 py-2 text-center">Бронь</th>
                   <th className="w-32 px-6 py-2 text-center">Склад</th>
                   <th className="w-32 px-6 py-2 text-center">Цена</th>
@@ -136,14 +182,14 @@ export function VariantRow({ variant }: VariantRowProps) {
                   <th className="w-24 px-6 py-2"></th>
                 </tr>
               </thead>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <tbody className="divide-y divide-gray-100">
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
                     key={sizeInfo.id}
-                    sizeInfo={sizeInfo as any}
+                    sizeInfo={sizeInfo as any} // 'as any' пока оставляем, поправим типы позже если нужно
                     variantPrice={variant.price}
                     variantOldPrice={variant.oldPrice}
+                    variantArticle={variantArticle} // Передаем артикул варианта дальше
                   />
                 ))}
               </tbody>

@@ -56,6 +56,7 @@ model Image {
 
 model ProductSize {
   id               String      @id @default(cuid())
+  code             String?     // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
   article          String?
   moySkladHref     String?
   moySkladType     String      @default("variant")

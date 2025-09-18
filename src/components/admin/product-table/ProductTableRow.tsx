@@ -1,19 +1,33 @@
 // Местоположение: src/components/admin/product-table/ProductTableRow.tsx
 'use client';
 
-import { useState, Fragment } from 'react';
+import { useState, Fragment, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // <-- ШАГ 1: Импортируем useRouter
-import toast from 'react-hot-toast'; // <-- ШАГ 1: Импортируем toast
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
+import { Copy, Check } from 'lucide-react';
 import type { Category, Tag } from '@prisma/client';
 
 import type { ProductForTable } from '@/app/admin/dashboard/page';
-import { ChevronDownIcon } from '@/components/icons/ChevronDownIcon';
-import { ChevronRightIcon } from '@/components/icons/ChevronRightIcon';
 import { PencilIcon } from '@/components/icons/PencilIcon';
-import { TrashIcon } from '@/components/icons/TrashIcon'; // <-- ШАГ 2: Импортируем иконку
+import { TrashIcon } from '@/components/icons/TrashIcon';
 import { VariantRow } from './VariantRow';
+import { ExpanderCell } from './ExpanderCell'; // <-- ПУТЬ ИСПРАВЛЕН
+
+const useCopyToClipboard = () => {
+  const [isCopied, setIsCopied] = useState(false);
+
+  const copy = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setIsCopied(true);
+      toast.success('Артикул скопирован!');
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  }, []);
+
+  return { isCopied, copy };
+};
 
 const statusConfig: Record<string, { dotClassName: string; label: string }> = {
   DRAFT: { dotClassName: 'bg-yellow-400', label: 'Черновик' },
@@ -24,12 +38,7 @@ const statusConfig: Record<string, { dotClassName: string; label: string }> = {
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '0 RUB';
   const priceInRubles = priceInCents / 100;
-
-  const formattedNumber = new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(priceInRubles);
-
+  const formattedNumber = new Intl.NumberFormat('ru-RU').format(priceInRubles);
   return `${formattedNumber} RUB`;
 };
 
@@ -39,14 +48,11 @@ interface ProductTableRowProps {
   allTags: Tag[];
 }
 
-export const ProductTableRow = ({
-  product,
-  allCategories,
-  allTags,
-}: ProductTableRowProps) => {
-  const router = useRouter(); // <-- Инициализируем роутер
+export const ProductTableRow = ({ product }: ProductTableRowProps) => {
+  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false); // <-- Состояние для процесса удаления
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { isCopied, copy } = useCopyToClipboard();
 
   const totalStock = product.variants.reduce(
     (sum, variant) =>
@@ -65,10 +71,8 @@ export const ProductTableRow = ({
     return formatPrice(totalValue);
   };
 
-  // --- ШАГ 3: Создаем функцию удаления ---
   const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Останавливаем раскрытие строки
-
+    e.stopPropagation();
     if (
       window.confirm(
         `Вы уверены, что хотите удалить товар "${product.name}"? Это действие необратимо.`,
@@ -77,25 +81,23 @@ export const ProductTableRow = ({
       setIsDeleting(true);
       const toastId = toast.loading('Удаление товара...');
       try {
-        const response = await fetch(`/api/products/${product.id}`, {
+        const response = await fetch(`/api/admin/products/${product.id}`, {
           method: 'DELETE',
         });
-
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(errorText || 'Ошибка сервера');
+          throw new Error((await response.json()).error || 'Ошибка удаления');
         }
-
         toast.success('Товар успешно удален!', { id: toastId });
-        router.refresh(); // Обновляем таблицу
+        router.refresh();
       } catch (error) {
         toast.error(
-          `Не удалось удалить: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
-          { id: toastId },
+          `Не удалось удалить: ${error instanceof Error ? error.message : 'Ошибка'}`,
+          {
+            id: toastId,
+          },
         );
         setIsDeleting(false);
       }
-      // isDeleting(false) не нужен в `finally`, т.к. страница перезагрузится
     }
   };
 
@@ -107,12 +109,20 @@ export const ProductTableRow = ({
         onClick={() => setIsExpanded(!isExpanded)}
         className={`border-t ${rowClassName} cursor-pointer hover:bg-gray-50`}
       >
-        <td className="w-24 px-4 py-4" onClick={(e) => e.stopPropagation()}>
+        <ExpanderCell
+          count={product.variants.length}
+          isExpanded={isExpanded}
+          onClick={() => setIsExpanded(!isExpanded)}
+          level={1}
+        />
+
+        <td className="w-12 px-2 py-4" onClick={(e) => e.stopPropagation()}>
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
         </td>
+
         <td className="px-6 py-4">
           <div className="flex items-center">
             <div className="grid flex-shrink-0 grid-cols-2 gap-1">
@@ -135,18 +145,8 @@ export const ProductTableRow = ({
               <div className="text-sm font-medium text-gray-900">
                 {product.name}
               </div>
-              {product.variants.length > 0 && (
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <span>{product.variants.length} вариант</span>
-                  {isExpanded ? (
-                    <ChevronDownIcon className="h-4 w-4" />
-                  ) : (
-                    <ChevronRightIcon className="h-4 w-4" />
-                  )}
-                </div>
-              )}
               <Link
-                href={`/admin/products/${product.id}/edit`}
+                href={`/admin/products/edit?id=${product.id}`}
                 onClick={(e) => e.stopPropagation()}
                 className="mt-1 flex items-center gap-1 text-xs text-indigo-600 hover:underline"
               >
@@ -156,9 +156,31 @@ export const ProductTableRow = ({
             </div>
           </div>
         </td>
+
+        <td className="px-6 py-4 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-gray-700">{product.article}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                copy(product.article || '');
+              }}
+              className="text-gray-400 hover:text-indigo-600"
+              title="Скопировать артикул"
+            >
+              {isCopied ? (
+                <Check className="h-4 w-4 text-green-500" />
+              ) : (
+                <Copy className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </td>
+
         <td className="px-6 py-4 text-xs">
           {product.categories.map((c) => c.name).join(' / ')}
         </td>
+
         <td className="px-6 py-4">
           <span className="inline-flex items-center gap-x-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
             <span
@@ -169,12 +191,13 @@ export const ProductTableRow = ({
             {statusConfig[product.status.name]?.label || product.status.name}
           </span>
         </td>
+
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm font-bold">
           {calculateTotalValue()}
         </td>
-        {/* --- ШАГ 4: Добавляем новую ячейку для кнопки удаления --- */}
+
         <td className="px-6 py-4 text-center text-sm">
           <button
             onClick={handleDelete}
@@ -189,25 +212,29 @@ export const ProductTableRow = ({
 
       {isExpanded && (
         <tr>
-          {/* --- ШАГ 4: Увеличиваем colSpan, чтобы учесть новую колонку --- */}
-          <td colSpan={8} className="p-0">
-            <div className="border-l-4 border-indigo-200 bg-indigo-50/30">
+          <td colSpan={11} className="p-0">
+            <div className="bg-indigo-50/30">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
-                    <th className="w-24 px-4 py-2"></th>
+                    <th className="w-12 pl-8"></th> {/* Expander */}
+                    <th className="w-12 px-2 py-2"></th> {/* Checkbox */}
                     <th className="px-6 py-2 text-left">Вариант</th>
+                    <th className="px-6 py-2 text-left">Артикул</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Старая сумма</th>
                     <th className="w-40 px-6 py-2 text-center">Сумма</th>
-                    {/* Пустая ячейка для выравнивания с новой колонкой */}
-                    <th className="w-[112px] px-6 py-2"></th>
+                    <th className="w-[112px] px-6 py-2"></th> {/* Delete */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {product.variants.map((variant) => (
-                    <VariantRow key={variant.id} variant={variant} />
+                    <VariantRow
+                      key={variant.id}
+                      variant={variant}
+                      parentProductArticle={product.article || ''}
+                    />
                   ))}
                 </tbody>
               </table>

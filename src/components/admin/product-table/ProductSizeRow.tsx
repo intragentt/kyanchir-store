@@ -1,22 +1,33 @@
 // Местоположение: /src/components/admin/product-table/ProductSizeRow.tsx
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Prisma } from '@prisma/client';
 import toast from 'react-hot-toast';
+import { Copy, Check } from 'lucide-react';
 
 import { PencilIcon } from '@/components/icons/PencilIcon';
 import { CheckIcon } from '@/components/icons/CheckIcon';
 import { XMarkIcon } from '@/components/icons/XMarkIcon';
 import { SpinnerIcon } from '@/components/icons/SpinnerIcon';
 
+// Кастомный хук для копирования
+const useCopyToClipboard = () => {
+  const [isCopied, setIsCopied] = useState(false);
+  const copy = useCallback((text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setIsCopied(true);
+      toast.success('Артикул скопирован!');
+      setTimeout(() => setIsCopied(false), 2000);
+    });
+  }, []);
+  return { isCopied, copy };
+};
+
 const formatPrice = (priceInCents: number | null | undefined) => {
   if (priceInCents === null || priceInCents === undefined) return '—';
   const priceInRubles = priceInCents / 100;
-  return new Intl.NumberFormat('ru-RU', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(priceInRubles);
+  return new Intl.NumberFormat('ru-RU').format(priceInRubles);
 };
 
 const calculateDiscount = (oldPrice: number | null, price: number | null) => {
@@ -26,27 +37,33 @@ const calculateDiscount = (oldPrice: number | null, price: number | null) => {
   return 0;
 };
 
+// --- ШАГ 1: Обновляем тип, чтобы он включал `code` ---
 type SizeInfo = Prisma.ProductSizeGetPayload<{
   include: { size: true };
 }> & {
+  code: string | null;
   moySkladHref: string | null;
   moySkladType: string;
   price: number | null;
   oldPrice: number | null;
 };
 
+// --- ШАГ 2: Обновляем пропсы ---
 interface ProductSizeRowProps {
   sizeInfo: SizeInfo;
   variantPrice: number | null;
   variantOldPrice: number | null;
+  variantArticle: string;
 }
 
 export function ProductSizeRow({
   sizeInfo,
   variantPrice,
   variantOldPrice,
+  variantArticle,
 }: ProductSizeRowProps) {
   const router = useRouter();
+  const { isCopied, copy } = useCopyToClipboard();
 
   const [editMode, setEditMode] = useState<'none' | 'stock' | 'price'>('none');
   const [isSaving, setIsSaving] = useState(false);
@@ -78,6 +95,9 @@ export function ProductSizeRow({
 
   const totalValue = (priceForDisplay || 0) * sizeInfo.stock;
 
+  // --- ШАГ 3: Генерируем финальный артикул ---
+  const finalArticle = `${variantArticle}-${sizeInfo.size.value}`;
+
   const handleOldPriceChange = (value: string) => {
     setOldPriceValue(value);
     const oldP = parseFloat(value.replace(',', '.')) || 0;
@@ -102,7 +122,6 @@ export function ProductSizeRow({
     setDiscountValue(String(newDiscount));
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем логику сохранения ---
   const handlePriceSave = async () => {
     let newPrice = parseFloat(priceValue.replace(',', '.'));
     let newOldPrice = parseFloat(oldPriceValue.replace(',', '.'));
@@ -111,17 +130,13 @@ export function ProductSizeRow({
       toast.error('Введите корректные числовые значения для цен.');
       return;
     }
-
     setIsSaving(true);
     const toastId = toast.loading('Обновляем цены...');
-
-    if (newPrice > newOldPrice) {
-      newOldPrice = newPrice;
-    }
+    if (newPrice > newOldPrice) newOldPrice = newPrice;
 
     try {
       const response = await fetch(`/api/admin/product-sizes/${sizeInfo.id}`, {
-        method: 'PATCH', // Используем PATCH
+        method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -129,19 +144,16 @@ export function ProductSizeRow({
           oldPrice: Math.round(newOldPrice * 100),
         }),
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Ошибка сервера: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(await response.text());
       toast.success('Цены успешно обновлены!', { id: toastId });
       router.refresh();
       setEditMode('none');
     } catch (error) {
       toast.error(
-        `Не удалось обновить: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
-        { id: toastId },
+        `Не удалось обновить: ${error instanceof Error ? error.message : 'Ошибка'}`,
+        {
+          id: toastId,
+        },
       );
     } finally {
       setIsSaving(false);
@@ -158,66 +170,46 @@ export function ProductSizeRow({
       setEditMode('none');
       return;
     }
-
     setIsSaving(true);
     const toastId = toast.loading('Обновляем остатки...');
-
     try {
       const response = await fetch(`/api/admin/product-sizes/${sizeInfo.id}`, {
-        method: 'PATCH', // Используем PATCH
+        method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stock: newStock,
-        }),
+        body: JSON.stringify({ stock: newStock }),
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Ошибка сервера: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(await response.text());
       toast.success('Остатки успешно обновлены!', { id: toastId });
       router.refresh();
       setEditMode('none');
     } catch (error) {
       toast.error(
-        `Не удалось обновить: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`,
-        { id: toastId },
+        `Не удалось обновить: ${error instanceof Error ? error.message : 'Ошибка'}`,
+        {
+          id: toastId,
+        },
       );
     } finally {
       setIsSaving(false);
     }
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  const handlePriceCancel = () => {
-    setPriceValue(priceForDisplay ? (priceForDisplay / 100).toString() : '');
-    setOldPriceValue(
-      oldPriceForDisplay ? (oldPriceForDisplay / 100).toString() : '',
-    );
-    setDiscountValue(String(discountForDisplay));
-  };
-
-  const handleStockCancel = () => {
-    setStockValue(String(sizeInfo.stock));
+  const handleCancel = () => {
+    if (editMode === 'stock') setStockValue(String(sizeInfo.stock));
+    if (editMode === 'price') {
+      setPriceValue(priceForDisplay ? (priceForDisplay / 100).toString() : '');
+      setOldPriceValue(
+        oldPriceForDisplay ? (oldPriceForDisplay / 100).toString() : '',
+      );
+      setDiscountValue(String(discountForDisplay));
+    }
+    setEditMode('none');
   };
 
   const handleSave = () => {
-    if (editMode === 'stock') {
-      handleStockSave();
-    } else if (editMode === 'price') {
-      handlePriceSave();
-    }
-  };
-
-  const handleCancel = () => {
-    if (editMode === 'stock') {
-      handleStockCancel();
-    } else if (editMode === 'price') {
-      handlePriceCancel();
-    }
-    setEditMode('none');
+    if (editMode === 'stock') handleStockSave();
+    if (editMode === 'price') handlePriceSave();
   };
 
   const inputClassName =
@@ -225,9 +217,30 @@ export function ProductSizeRow({
 
   return (
     <tr className="bg-gray-50/50 hover:bg-gray-100">
-      <td className="w-24 px-4 py-1"></td>
+      <td className="w-12 pl-8"></td>
+      <td className="w-12 px-2 py-1"></td>
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
         {sizeInfo.size.value}
+      </td>
+      {/* --- ШАГ 4: Добавляем ячейку с артикулом --- */}
+      <td className="px-6 py-1 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-gray-700">{finalArticle}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              copy(finalArticle);
+            }}
+            className="text-gray-400 hover:text-indigo-600"
+            title="Скопировать артикул"
+          >
+            {isCopied ? (
+              <Check className="h-4 w-4 text-green-500" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </button>
+        </div>
       </td>
       <td className="w-32 whitespace-nowrap px-6 py-1 text-right text-sm text-gray-500">
         0 шт.
