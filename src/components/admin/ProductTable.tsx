@@ -34,55 +34,61 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
+                {/* --- НАЧАЛО ФИНАЛЬНЫХ ИЗМЕНЕНИЙ --- */}
                 <tr>
-                  {/* 1. Expander */}
-                  <th scope="col" className="w-12 pl-4">
-                    <span className="sr-only">Expand</span>
-                  </th>
-                  {/* 2. Checkbox */}
+                  {/* 1. Checkbox */}
                   <th scope="col" className="w-12 px-2">
                     <span className="sr-only">Select</span>
                   </th>
-                  {/* 3. Товар */}
+                  {/* 2. Пустая ячейка для иконки "Детали" */}
+                  <th scope="col" className="w-12 pl-2 pr-4">
+                    <span className="sr-only">Details</span>
+                  </th>
+                  {/* 3. Expander */}
+                  <th scope="col" className="w-12">
+                    <span className="sr-only">Expand</span>
+                  </th>
+                  {/* 4. Товар */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Товар
                   </th>
-                  {/* 4. Тип */}
+                  {/* 5. Тип */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Тип
                   </th>
-                  {/* 5. Бронь */}
+                  {/* 6. Бронь */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Бронь
                   </th>
-                  {/* 6. Склад */}
+                  {/* 7. Склад */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Склад
                   </th>
-                  {/* 7. Сумма */}
+                  {/* 8. Сумма */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Сумма
                   </th>
-                  {/* 8. Действия */}
+                  {/* 9. Действия */}
                   <th scope="col" className="relative w-[112px] px-6 py-3">
                     <span className="sr-only">Действия</span>
                   </th>
                 </tr>
+                {/* --- КОНЕЦ ФИНАЛЬНЫХ ИЗМЕНЕНИЙ --- */}
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {products.map((product) => (
