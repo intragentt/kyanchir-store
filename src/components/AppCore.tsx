@@ -47,10 +47,18 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const scrollUpAnchor = useRef<number | null>(null);
   const scrollDownAnchor = useRef<number | null>(null);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем старый useEffect ---
-  // Его работу теперь выполняет скрипт в layout.tsx на более низком,
-  // более надежном уровне. Этот код больше не нужен.
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  useEffect(() => {
+    // "Умный" рестарт с setTimeout.
+    // Этот код выполняется ПОСЛЕ того, как Safari
+    // завершит свою анимацию обновления, решая баг с "залипанием".
+    const timer = setTimeout(() => {
+      window.scrollTo(0, 0);
+      setHeaderStatus('static');
+      lastScrollY.current = 0;
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [pathname]);
 
   useEffect(() => {
     if (window.Telegram?.WebApp) {
