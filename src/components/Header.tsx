@@ -38,8 +38,8 @@ export default function Header({
               aria-label="На главную"
               className="-mt-1"
             >
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Финальная калибровка размера --- */}
-              <Logo className="logo-brand-color h-5.5 w-auto" />
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Устанавливаем единый размер h-5 --- */}
+              <Logo className="logo-brand-color h-5 w-auto" />
               {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </Link>
             <div className="flex items-center space-x-2">
