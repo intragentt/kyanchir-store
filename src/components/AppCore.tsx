@@ -3,8 +3,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react'; // Импортируем хук для получения сессии
-import { useAppStore } from '@/store/useAppStore'; // Импортируем наш "сейф"
+import { useSession } from 'next-auth/react';
+import { useAppStore } from '@/store/useAppStore';
 import {
   StickyHeaderContext,
   HeaderStatus,
@@ -18,25 +18,25 @@ import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Убираем initialUser. Компонент теперь самостоятельный.
 export default function AppCore({ children }: { children: React.ReactNode }) {
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  // Добавляем /register, чтобы на этой странице тоже не было шапки
-  const isAuthPage =
-    pathname.startsWith('/login') || pathname.startsWith('/register');
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  const { data: session } = useSession(); // Получаем сессию от AuthProvider
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем список исключений ---
+  // Теперь все страницы, связанные с аутентификацией, будут без шапки.
+  const isAuthPage =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password');
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  const { data: session } = useSession();
   const setUser = useAppStore((state) => state.setUser);
 
-  // Этот useEffect будет автоматически синхронизировать сессию с нашим "сейфом"
   useEffect(() => {
     setUser(session?.user ?? null);
   }, [session, setUser]);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
   const [headerHeight, setHeaderHeight] = useState(0);
