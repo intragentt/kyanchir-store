@@ -5,13 +5,16 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAppStore } from '@/store/useAppStore';
-import { useRouter } from 'next/navigation';
 import SearchIcon from './icons/SearchIcon';
 import HeartIcon from './icons/HeartIcon';
 import ChevronIcon from './icons/ChevronIcon';
 import { signOut } from 'next-auth/react';
 import SettingsIcon from './icons/SettingsIcon';
 import TruckIcon from './icons/TruckIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем недостающие компоненты ---
+import Logo from './icons/Logo';
+import CloseIcon from './icons/CloseIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -23,16 +26,20 @@ export default function FloatingMenuOverlay({
   onClose,
 }: FloatingMenuOverlayProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Новое состояние для управления режимом шапки ---
+  const [isSearchModeActive, setIsSearchModeActive] = useState(false);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
-  const router = useRouter();
 
   if (!isOpen) {
     return null;
   }
 
   return (
-    <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col bg-white p-6 duration-300">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем overflow-y-auto для исправления скролла на iPhone ---
+    <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white p-6 duration-300">
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {isHelpOpen && (
         <div className="animate-in slide-in-from-top-5 flex flex-col space-y-3 duration-300">
           <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
@@ -46,28 +53,65 @@ export default function FloatingMenuOverlay({
           </div>
         </div>
       )}
+
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанная шапка меню с двумя режимами --- */}
       <div
         className={`flex w-full flex-none items-center space-x-4 transition-all duration-300 ${isHelpOpen ? 'mt-8' : 'mt-0'}`}
       >
-        <div className="flex flex-grow items-center space-x-3 rounded-xl bg-gray-100 px-4 py-3">
-          <SearchIcon className="h-5 w-5 flex-none text-gray-500" />
-          <div className="font-body text-base text-gray-500">Поиск...</div>
-        </div>
-        <div className="flex flex-none items-center">
-          <button
-            aria-label="Основное меню"
-            className="p-2"
-            onClick={() => setIsHelpOpen(!isHelpOpen)}
-          >
-            <ChevronIcon
-              isOpen={isHelpOpen}
-              className="h-7 w-7 text-gray-800"
-            />
-          </button>
-        </div>
+        {!isSearchModeActive ? (
+          // --- РЕЖИМ ОТОБРАЖЕНИЯ (по умолчанию) ---
+          <div className="flex w-full items-center justify-between">
+            <Link href="/" onClick={onClose}>
+              <Logo className="logo-brand-color h-5 w-auto" />
+            </Link>
+            <div className="flex items-center">
+              <button
+                aria-label="Активировать поиск"
+                className="p-2"
+                onClick={() => setIsSearchModeActive(true)}
+              >
+                <SearchIcon className="h-6 w-6 text-gray-800" />
+              </button>
+              <button
+                aria-label="Дополнительное меню"
+                className="p-2"
+                onClick={() => setIsHelpOpen(!isHelpOpen)}
+              >
+                <ChevronIcon
+                  isOpen={isHelpOpen}
+                  className="h-7 w-7 text-gray-800"
+                />
+              </button>
+            </div>
+          </div>
+        ) : (
+          // --- РЕЖИМ ПОИСКА (активный) ---
+          <div className="flex w-full items-center space-x-2">
+            <button
+              aria-label="Закрыть поиск"
+              className="p-2"
+              onClick={() => setIsSearchModeActive(false)}
+            >
+              <CloseIcon className="h-6 w-6 text-gray-700" />
+            </button>
+            <div className="relative flex-grow">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                <SearchIcon className="h-5 w-5 text-gray-400" />
+              </span>
+              <input
+                type="search"
+                placeholder="Поиск..."
+                className="w-full rounded-lg border-none bg-gray-100 py-3 pl-10 pr-4 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
       </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       <div className="mt-10">
+        {/* ... остальная часть меню без изменений ... */}
         {isAuthenticated ? (
           <div className="flex items-center space-x-4">
             <Image
@@ -148,7 +192,6 @@ export default function FloatingMenuOverlay({
           </div>
         </div>
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем единую группу для Помощи --- */}
         <div className="mt-10 flex flex-col space-y-4">
           <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
             Политика
@@ -160,7 +203,6 @@ export default function FloatingMenuOverlay({
             Помощь
           </div>
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
         <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
           Корзина
