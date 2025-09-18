@@ -30,9 +30,7 @@ export default function Header({
   return (
     <header className={`w-full bg-white ${className}`}>
       <div className="container mx-auto flex h-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Единая, универсальная логика для ВСЕХ экранов --- */}
         {!isSearchActive ? (
-          // --- Состояние по умолчанию (Лого + Иконки) ---
           <div className="flex w-full items-center justify-between">
             <Link
               href="/"
@@ -40,11 +38,10 @@ export default function Header({
               aria-label="На главную"
               className="-mt-1"
             >
-              {/* Логотип по-прежнему будет чуть больше на десктопе для баланса */}
-              <Logo className="logo-brand-color h-[10px] w-auto lg:h-[14px]" />
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Увеличиваем логотип и упрощаем классы --- */}
+              <Logo className="logo-brand-color h-6 w-auto" />
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </Link>
-
-            {/* Иконки теперь отображаются на ВСЕХ размерах экрана (класс lg:hidden удалён) */}
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => onSearchToggle(true)}
@@ -62,7 +59,6 @@ export default function Header({
             </div>
           </div>
         ) : (
-          // --- Состояние активного поиска (Закрыть + Поле ввода + Бургер) ---
           <div className="flex w-full items-center space-x-2">
             <button
               onClick={() => {
@@ -95,7 +91,6 @@ export default function Header({
             </button>
           </div>
         )}
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
     </header>
   );
