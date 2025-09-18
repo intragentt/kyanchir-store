@@ -1,6 +1,7 @@
 // Местоположение: src/components/admin/ProductTable.tsx
 'use client';
 
+import { useState } from 'react';
 import type { ProductForTable } from '@/app/admin/dashboard/page';
 import type { Prisma, Category, Tag } from '@prisma/client';
 import { ProductTableRow } from './product-table/ProductTableRow';
@@ -24,10 +25,15 @@ export default function ProductTable({
   allTags,
   filterPresets,
 }: ProductTableProps) {
+  const [isEditMode, setIsEditMode] = useState(false);
+
   return (
     <div className="w-full">
       <Toaster position="top-center" />
-      <DashboardControls />
+      <DashboardControls
+        isEditMode={isEditMode}
+        setIsEditMode={setIsEditMode}
+      />
 
       <div className="overflow-x-auto">
         <div className="inline-block min-w-full align-middle">
@@ -35,54 +41,45 @@ export default function ProductTable({
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {/* 1. Checkbox */}
                   <th scope="col" className="w-12 px-2">
                     <span className="sr-only">Select</span>
                   </th>
-                  {/* 2. Пустая ячейка для иконки "Детали" */}
                   <th scope="col" className="w-12 pl-2 pr-4">
                     <span className="sr-only">Details</span>
                   </th>
-                  {/* 3. Expander */}
                   <th scope="col" className="w-12">
                     <span className="sr-only">Expand</span>
                   </th>
-                  {/* 4. Товар */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Товар
                   </th>
-                  {/* 5. Тип */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Тип
                   </th>
-                  {/* 6. Бронь */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Бронь
                   </th>
-                  {/* 7. Склад */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Склад
                   </th>
-                  {/* 8. Сумма */}
                   <th
                     scope="col"
                     className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500"
                   >
                     Сумма
                   </th>
-                  {/* 9. Действия */}
                   <th scope="col" className="relative w-[112px] px-6 py-3">
                     <span className="sr-only">Действия</span>
                   </th>
@@ -95,6 +92,7 @@ export default function ProductTable({
                     product={product}
                     allCategories={allCategories}
                     allTags={allTags}
+                    isEditMode={isEditMode}
                   />
                 ))}
               </tbody>

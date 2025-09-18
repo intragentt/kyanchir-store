@@ -10,7 +10,6 @@ import type { Prisma } from '@prisma/client';
 import { ExpanderCell } from './ExpanderCell';
 import { ProductSizeRow } from './ProductSizeRow';
 
-// --- ШАГ 1: Обновляем тип, чтобы он включал `code` ---
 type VariantWithDetails = Prisma.ProductVariantGetPayload<{
   include: {
     images: true;
@@ -18,7 +17,6 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
       include: {
         size: true;
       };
-      // Теперь выбираем и `code`
       select: {
         id: true;
         stock: true;
@@ -27,13 +25,12 @@ type VariantWithDetails = Prisma.ProductVariantGetPayload<{
         moySkladType: true;
         price: true;
         oldPrice: true;
-        code: true; // <-- ДОБАВЛЕНО
+        code: true;
       };
     };
   };
 }>;
 
-// Кастомный хук для копирования
 const useCopyToClipboard = () => {
   const [isCopied, setIsCopied] = useState(false);
   const copy = useCallback((text: string) => {
@@ -46,7 +43,6 @@ const useCopyToClipboard = () => {
   return { isCopied, copy };
 };
 
-// Простая функция для транслитерации и получения кода цвета
 const getColorCode = (color: string) => {
   const colorMap: { [key: string]: string } = {
     белый: 'WHT',
@@ -56,7 +52,7 @@ const getColorCode = (color: string) => {
     синий: 'BLU',
     зеленый: 'GRN',
   };
-  const lowerColor = color.toLowerCase().split(' / ')[0]; // Берем первый цвет, если их несколько
+  const lowerColor = color.toLowerCase().split(' / ')[0];
   return colorMap[lowerColor] || color.substring(0, 3).toUpperCase();
 };
 
@@ -66,13 +62,19 @@ const formatPrice = (priceInCents: number | null | undefined) => {
   return `${new Intl.NumberFormat('ru-RU').format(priceInRubles)} RUB`;
 };
 
-// --- ШАГ 2: Обновляем пропсы компонента ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем пропсы ---
 interface VariantRowProps {
   variant: VariantWithDetails;
   parentProductArticle: string;
+  isEditMode: boolean; // <-- Добавляем
 }
 
-export function VariantRow({ variant, parentProductArticle }: VariantRowProps) {
+export function VariantRow({
+  variant,
+  parentProductArticle,
+  isEditMode, // <-- Принимаем
+}: VariantRowProps) {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const [isExpanded, setIsExpanded] = useState(false);
   const { isCopied, copy } = useCopyToClipboard();
 
@@ -88,7 +90,6 @@ export function VariantRow({ variant, parentProductArticle }: VariantRowProps) {
     return sum + finalPrice * size.stock;
   }, 0);
 
-  // --- ШАГ 3: Генерируем артикул варианта ---
   const variantArticle = `${parentProductArticle}-${getColorCode(variant.color || '')}`;
 
   return (
@@ -97,7 +98,6 @@ export function VariantRow({ variant, parentProductArticle }: VariantRowProps) {
         onClick={() => setIsExpanded(!isExpanded)}
         className="cursor-pointer bg-white hover:bg-gray-50"
       >
-        {/* --- ШАГ 4: Интегрируем ExpanderCell --- */}
         <ExpanderCell
           count={variant.sizes.length}
           isExpanded={isExpanded}
@@ -129,7 +129,6 @@ export function VariantRow({ variant, parentProductArticle }: VariantRowProps) {
           </div>
         </td>
 
-        {/* --- ШАГ 5: Добавляем ячейку с артикулом варианта --- */}
         <td className="px-6 py-2 text-xs">
           <div className="flex items-center gap-2">
             <span className="font-mono text-gray-700">{variantArticle}</span>
@@ -164,13 +163,12 @@ export function VariantRow({ variant, parentProductArticle }: VariantRowProps) {
       </tr>
       {isExpanded && (
         <tr>
-          {/* --- ШАГ 6: Увеличиваем colSpan, чтобы учесть все колонки --- */}
           <td colSpan={9} className="p-0">
             <table className="min-w-full">
               <thead>
                 <tr className="bg-gray-50 text-xs uppercase text-gray-500">
-                  <th className="w-12 pl-8"></th> {/* Expander */}
-                  <th className="w-12 px-2 py-2"></th> {/* Checkbox */}
+                  <th className="w-12 pl-8"></th>
+                  <th className="w-12 px-2 py-2"></th>
                   <th className="px-6 py-2 text-left">Размер</th>
                   <th className="px-6 py-2 text-left">Артикул</th>
                   <th className="w-32 px-6 py-2 text-center">Бронь</th>
@@ -186,10 +184,11 @@ export function VariantRow({ variant, parentProductArticle }: VariantRowProps) {
                 {variant.sizes.map((sizeInfo) => (
                   <ProductSizeRow
                     key={sizeInfo.id}
-                    sizeInfo={sizeInfo as any} // 'as any' пока оставляем, поправим типы позже если нужно
+                    sizeInfo={sizeInfo as any}
                     variantPrice={variant.price}
                     variantOldPrice={variant.oldPrice}
-                    variantArticle={variantArticle} // Передаем артикул варианта дальше
+                    variantArticle={variantArticle}
+                    isEditMode={isEditMode} // <-- Передаем сигнал дальше
                   />
                 ))}
               </tbody>

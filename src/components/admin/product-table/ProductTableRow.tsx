@@ -54,9 +54,13 @@ interface ProductTableRowProps {
   product: ProductForTable;
   allCategories: Category[];
   allTags: Tag[];
+  isEditMode: boolean;
 }
 
-export const ProductTableRow = ({ product }: ProductTableRowProps) => {
+export const ProductTableRow = ({
+  product,
+  isEditMode,
+}: ProductTableRowProps) => {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -124,14 +128,16 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
           />
         </td>
         <td className="w-12 pl-2 pr-4 text-center">
-          <Link
-            href={`/admin/products/edit?id=${product.id}`}
-            onClick={(e) => e.stopPropagation()}
-            className="group flex-shrink-0 text-gray-400 hover:text-indigo-600"
-            title="Редактировать детали"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </Link>
+          {isEditMode && (
+            <Link
+              href={`/admin/products/edit?id=${product.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="group flex-shrink-0 text-gray-400 hover:text-indigo-600"
+              title="Редактировать детали"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Link>
+          )}
         </td>
         <ExpanderCell
           count={product.variants.length}
@@ -240,6 +246,7 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
                       key={variant.id}
                       variant={variant}
                       parentProductArticle={product.article || ''}
+                      isEditMode={isEditMode}
                     />
                   ))}
                 </tbody>

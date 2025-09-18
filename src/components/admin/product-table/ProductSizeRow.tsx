@@ -1,6 +1,6 @@
 // Местоположение: /src/components/admin/product-table/ProductSizeRow.tsx
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Prisma } from '@prisma/client';
 import toast from 'react-hot-toast';
@@ -11,7 +11,6 @@ import { CheckIcon } from '@/components/icons/CheckIcon';
 import { XMarkIcon } from '@/components/icons/XMarkIcon';
 import { SpinnerIcon } from '@/components/icons/SpinnerIcon';
 
-// Кастомный хук для копирования
 const useCopyToClipboard = () => {
   const [isCopied, setIsCopied] = useState(false);
   const copy = useCallback((text: string) => {
@@ -37,7 +36,6 @@ const calculateDiscount = (oldPrice: number | null, price: number | null) => {
   return 0;
 };
 
-// --- ШАГ 1: Обновляем тип, чтобы он включал `code` ---
 type SizeInfo = Prisma.ProductSizeGetPayload<{
   include: { size: true };
 }> & {
@@ -48,12 +46,13 @@ type SizeInfo = Prisma.ProductSizeGetPayload<{
   oldPrice: number | null;
 };
 
-// --- ШАГ 2: Обновляем пропсы ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем пропсы ---
 interface ProductSizeRowProps {
   sizeInfo: SizeInfo;
   variantPrice: number | null;
   variantOldPrice: number | null;
   variantArticle: string;
+  isEditMode: boolean; // <-- Добавляем
 }
 
 export function ProductSizeRow({
@@ -61,12 +60,23 @@ export function ProductSizeRow({
   variantPrice,
   variantOldPrice,
   variantArticle,
+  isEditMode, // <-- Принимаем
 }: ProductSizeRowProps) {
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const router = useRouter();
   const { isCopied, copy } = useCopyToClipboard();
 
   const [editMode, setEditMode] = useState<'none' | 'stock' | 'price'>('none');
   const [isSaving, setIsSaving] = useState(false);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем useEffect для сброса состояния ---
+  useEffect(() => {
+    // Если глобальный режим редактирования выключается, сбрасываем локальный режим
+    if (!isEditMode) {
+      setEditMode('none');
+    }
+  }, [isEditMode]);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const resolvedPrice = sizeInfo.price ?? variantPrice;
   const resolvedOldPrice = sizeInfo.oldPrice ?? variantOldPrice;
@@ -94,8 +104,6 @@ export function ProductSizeRow({
   );
 
   const totalValue = (priceForDisplay || 0) * sizeInfo.stock;
-
-  // --- ШАГ 3: Генерируем финальный артикул ---
   const finalArticle = `${variantArticle}-${sizeInfo.size.value}`;
 
   const handleOldPriceChange = (value: string) => {
@@ -222,7 +230,6 @@ export function ProductSizeRow({
       <td className="whitespace-nowrap px-6 py-1 text-sm text-gray-700">
         {sizeInfo.size.value}
       </td>
-      {/* --- ШАГ 4: Добавляем ячейку с артикулом --- */}
       <td className="px-6 py-1 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-mono text-gray-700">{finalArticle}</span>
@@ -261,10 +268,12 @@ export function ProductSizeRow({
         ) : (
           <div
             className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
-            onClick={() => !isSaving && setEditMode('stock')}
+            onClick={() => isEditMode && !isSaving && setEditMode('stock')} // <-- Защита
           >
             <span>{sizeInfo.stock} шт.</span>
-            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            {isEditMode && (
+              <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            )}
           </div>
         )}
       </td>
@@ -284,10 +293,12 @@ export function ProductSizeRow({
         ) : (
           <div
             className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
-            onClick={() => !isSaving && setEditMode('price')}
+            onClick={() => isEditMode && !isSaving && setEditMode('price')} // <-- Защита
           >
             <span>{formatPrice(oldPriceForDisplay)} RUB</span>
-            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            {isEditMode && (
+              <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            )}
           </div>
         )}
       </td>
@@ -306,14 +317,16 @@ export function ProductSizeRow({
         ) : (
           <div
             className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
-            onClick={() => !isSaving && setEditMode('price')}
+            onClick={() => isEditMode && !isSaving && setEditMode('price')} // <-- Защита
           >
             <span
               className={discountForDisplay > 0 ? 'font-bold text-red-600' : ''}
             >
               {discountForDisplay}%
             </span>
-            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            {isEditMode && (
+              <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            )}
           </div>
         )}
       </td>
@@ -332,10 +345,12 @@ export function ProductSizeRow({
         ) : (
           <div
             className="group relative inline-flex cursor-pointer items-center justify-end gap-2"
-            onClick={() => !isSaving && setEditMode('price')}
+            onClick={() => isEditMode && !isSaving && setEditMode('price')} // <-- Защита
           >
             <span>{formatPrice(priceForDisplay)} RUB</span>
-            <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            {isEditMode && (
+              <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            )}
           </div>
         )}
       </td>

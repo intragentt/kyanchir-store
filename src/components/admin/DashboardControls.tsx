@@ -5,11 +5,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { SlidersHorizontal } from 'lucide-react';
 import ConflictResolutionModal, {
   UserResolutions,
 } from './ConflictResolutionModal';
 import ApiKeyModal from './ApiKeyModal';
 import type { SkuResolutionPlan } from '@/app/api/admin/utils/backfill-skus/route';
+import { cn } from '@/lib/utils';
 
 const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
@@ -45,7 +47,15 @@ const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function DashboardControls() {
+interface DashboardControlsProps {
+  isEditMode: boolean;
+  setIsEditMode: (value: boolean) => void;
+}
+
+export default function DashboardControls({
+  isEditMode,
+  setIsEditMode,
+}: DashboardControlsProps) {
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
@@ -257,6 +267,19 @@ export default function DashboardControls() {
             >
               <TagIcon className="h-4 w-4" /> Управление категориями
             </Link>
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              disabled={anyActionInProgress}
+              className={cn(
+                'flex items-center gap-x-2 rounded-md border px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-50',
+                isEditMode
+                  ? 'border-green-300 bg-green-100 text-green-800 hover:bg-green-200'
+                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50',
+              )}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {isEditMode ? 'Завершить' : 'Редактировать'}
+            </button>
           </div>
           <Link
             href="/admin/products/new"
