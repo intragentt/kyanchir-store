@@ -1,13 +1,25 @@
 // Местоположение: /src/components/auth/ForgotPasswordForm.tsx
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
+import ClearIcon from '@/components/icons/ClearIcon'; // Импортируем иконку
 
 export function ForgotPasswordForm() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Подхватываем" email из URL ---
+  useEffect(() => {
+    const emailFromParams = searchParams.get('email');
+    if (emailFromParams) {
+      setEmail(emailFromParams);
+    }
+  }, [searchParams]);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -20,12 +32,9 @@ export function ForgotPasswordForm() {
     const toastId = toast.loading('Отправляем ссылку для сброса...');
 
     try {
-      // API, который мы создадим на следующем шаге
       const response = await fetch('/api/auth/password-reset/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
 
@@ -38,7 +47,7 @@ export function ForgotPasswordForm() {
       toast.success('Ссылка отправлена! Проверьте вашу почту.', {
         id: toastId,
       });
-      setIsSubmitted(true); // Показываем сообщение об успехе
+      setIsSubmitted(true);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : 'Не удалось отправить ссылку.',
@@ -49,59 +58,62 @@ export function ForgotPasswordForm() {
     }
   };
 
-  // Если форма успешно отправлена, показываем сообщение
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Редизайн сообщения об успехе ---
   if (isSubmitted) {
     return (
-      <div className="text-center">
-        <h2 className="text-lg font-semibold text-gray-800">
+      <div className="space-y-4 text-center font-body">
+        <h2 className="text-base font-semibold text-zinc-800">
           Проверьте вашу почту
         </h2>
-        <p className="mt-2 text-sm text-gray-600">
-          Мы отправили вам письмо с инструкциями по восстановлению пароля на
-          адрес <span className="font-medium text-gray-900">{email}</span>.
-        </p>
-        <p className="mt-4 text-xs text-gray-500">
-          (Если письмо не пришло, проверьте папку "Спам")
+        <p className="text-sm text-zinc-600">
+          Мы отправили письмо с инструкциями на адрес{' '}
+          <span className="font-medium text-zinc-900">{email}</span>.
         </p>
       </div>
     );
   }
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // Основная форма
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полный редизайн формы ---
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Email адрес
-        </label>
-        <div className="mt-1">
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="block w-full appearance-none rounded-md border border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
-            placeholder="you@example.com"
-            disabled={isLoading}
-          />
-        </div>
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 text-left font-body"
+      noValidate
+    >
+      <div className="relative">
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+          placeholder="Email"
+          disabled={isLoading}
+        />
+        {email && (
+          <button
+            type="button"
+            onClick={() => setEmail('')}
+            className="absolute inset-y-0 right-0 flex items-center pr-3"
+            aria-label="Очистить поле Email"
+          >
+            <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+          </button>
+        )}
       </div>
 
-      <div>
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-indigo-400"
-        >
-          {isLoading ? 'Отправка...' : 'Отправить ссылку для сброса'}
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+      >
+        {isLoading ? 'Отправка...' : 'Отправить ссылку'}
+      </button>
     </form>
   );
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }

@@ -42,7 +42,6 @@ export default function LoginPage() {
     }
 
     try {
-      // Этап 1: Проверяем учетные данные
       const validateRes = await fetch('/api/auth/validate-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -56,19 +55,15 @@ export default function LoginPage() {
         return;
       }
 
-      // Этап 2: Если все верно, отправляем код
       const sendCodeRes = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
 
-      // --- НАЧАЛО ИЗМЕНЕНИЙ: Перенаправляем на правильную страницу верификации ---
       if (sendCodeRes.ok) {
-        // Было: /auth/verify
         router.push(`/login/verify-code?email=${encodeURIComponent(email)}`);
       } else {
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
         setError('Не удалось отправить код подтверждения.');
       }
     } catch (err) {
@@ -175,14 +170,20 @@ export default function LoginPage() {
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
             )}
           </form>
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
           <div className="text-center font-body">
-            <a
-              href="#"
+            <Link
+              href={
+                email
+                  ? `/forgot-password?email=${encodeURIComponent(email)}`
+                  : '/forgot-password'
+              }
               className="text-sm font-semibold text-[#6B80C5] hover:text-opacity-80"
             >
               Забыли пароль?
-            </a>
+            </Link>
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <div className="flex items-center gap-x-3">
             <div className="h-px w-full bg-zinc-200" />
             <div className="font-body text-sm font-medium text-zinc-400">
