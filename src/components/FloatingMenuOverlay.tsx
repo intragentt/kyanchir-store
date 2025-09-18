@@ -9,8 +9,9 @@ import SearchIcon from './icons/SearchIcon';
 import HeartIcon from './icons/HeartIcon';
 import ChevronIcon from './icons/ChevronIcon';
 import { signOut } from 'next-auth/react';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем иконку настроек ---
 import SettingsIcon from './icons/SettingsIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новую иконку ---
+import TruckIcon from './icons/TruckIcon';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
@@ -70,22 +71,23 @@ export default function FloatingMenuOverlay({
 
       <div className="mt-10">
         {isAuthenticated ? (
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанный блок для авторизованного пользователя ---
           <div className="flex flex-col space-y-4">
             <div>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем "Личный кабинет" на имя пользователя --- */}
               <Link
                 href="/profile"
                 onClick={onClose}
                 className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
               >
-                Личный кабинет
+                {user?.name || 'Личный кабинет'}
               </Link>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <p className="truncate text-sm text-gray-500">{user?.email}</p>
             </div>
 
             <div className="flex items-center space-x-4 pt-2">
               <Link
-                href="/profile/settings" // Предполагаем, что страница настроек будет здесь
+                href="/profile/settings"
                 onClick={onClose}
                 className="flex items-center gap-2 text-base font-medium text-gray-700 transition-colors hover:text-black"
               >
@@ -104,7 +106,6 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
         ) : (
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           <Link
             href="/login"
             onClick={onClose}
@@ -119,6 +120,16 @@ export default function FloatingMenuOverlay({
             Избранное
           </div>
         </div>
+
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый пункт "Доставка" --- */}
+        <div className="mt-6 flex items-center space-x-3">
+          <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
+          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+            Доставка
+          </div>
+        </div>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
         <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
           Магазин
         </div>
