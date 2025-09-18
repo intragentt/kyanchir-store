@@ -57,9 +57,10 @@ export function ResetPasswordForm({ token }: { token: string }) {
   if (isSuccess) {
     return (
       <div className="space-y-4 text-center font-body">
-        <h2 className="text-base font-semibold text-green-700">
+        {/* ИЗМЕНЕНИЕ: h2 заменен на div */}
+        <div className="text-base font-semibold text-green-700">
           Пароль изменён!
-        </h2>
+        </div>
         <p className="text-sm text-zinc-600">
           Перенаправляем на страницу входа...
         </p>

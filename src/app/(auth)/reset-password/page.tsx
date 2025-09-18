@@ -1,4 +1,4 @@
-// Местоположение: /src/app/reset-password/page.tsx
+// Местоположение: /src/app/(auth)/reset-password/page.tsx
 import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
@@ -16,7 +16,8 @@ const MessageDisplay = ({
   linkText: string;
 }) => (
   <div className="space-y-4 text-center font-body">
-    <h2 className="text-lg font-semibold text-zinc-800">{title}</h2>
+    {/* ИЗМЕНЕНИЕ: h2 заменен на div */}
+    <div className="text-lg font-semibold text-zinc-800">{title}</div>
     <div className="text-sm text-zinc-600">{children}</div>
     <div className="pt-2">
       <Link
@@ -74,9 +75,10 @@ export default async function ResetPasswordPage({
           ) : (
             <>
               <div className="text-center font-body">
-                <h2 className="text-lg font-semibold text-zinc-800">
+                {/* ИЗМЕНЕНИЕ: h2 заменен на div */}
+                <div className="text-lg font-semibold text-zinc-800">
                   Установка нового пароля
-                </h2>
+                </div>
               </div>
               <ResetPasswordForm token={token} />
             </>
