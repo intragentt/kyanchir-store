@@ -33,6 +33,14 @@ export default function RootLayout({
       </head>
 
       <body className="h-full">
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Атомный" скрипт для Safari --- */}
+        {/* Этот скрипт выполняется ДО интерактивности React и принудительно отключает 
+            "умное" восстановление скролла в браузере. Это решает баг с жестом обновления. */}
+        <Script id="scroll-restoration-fix" strategy="beforeInteractive">
+          {`history.scrollRestoration = "manual"`}
+        </Script>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
@@ -41,12 +49,9 @@ export default function RootLayout({
           Для работы приложения требуется включить JavaScript.
         </noscript>
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
-        {/* Возвращаем AuthProvider к его стандартной форме. AppCore будет получать сессию через хук. */}
         <AuthProvider>
           <AppCore>{children}</AppCore>
         </AuthProvider>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </body>
     </html>
   );

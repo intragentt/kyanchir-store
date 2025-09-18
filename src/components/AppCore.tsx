@@ -47,16 +47,9 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const scrollUpAnchor = useRef<number | null>(null);
   const scrollDownAnchor = useRef<number | null>(null);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Железобетонный" Рестарт ---
-  // Этот useEffect выполняется ОДИН РАЗ при каждой загрузке/перезагрузке страницы.
-  useEffect(() => {
-    // 1. Принудительно возвращаем скролл в самый верх, отменяя попытки Safari его восстановить.
-    window.scrollTo(0, 0);
-    // 2. Сбрасываем состояние шапки в исходное положение.
-    setHeaderStatus('static');
-    // 3. Сбрасываем "память" о последней позиции скролла.
-    lastScrollY.current = 0;
-  }, [pathname]); // Зависимость от pathname, чтобы сброс происходил при смене страницы
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем старый useEffect ---
+  // Его работу теперь выполняет скрипт в layout.tsx на более низком,
+  // более надежном уровне. Этот код больше не нужен.
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
