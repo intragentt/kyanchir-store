@@ -1,3 +1,4 @@
+// Final check to force redeploy
 // Местоположение: /src/app/api/admin/products/update-category/route.ts
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
