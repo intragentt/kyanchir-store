@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAppStore } from '@/store/useAppStore';
 import { useRouter } from 'next/navigation';
 import SearchIcon from './icons/SearchIcon';
@@ -10,9 +11,7 @@ import HeartIcon from './icons/HeartIcon';
 import ChevronIcon from './icons/ChevronIcon';
 import { signOut } from 'next-auth/react';
 import SettingsIcon from './icons/SettingsIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новую иконку ---
 import TruckIcon from './icons/TruckIcon';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -36,18 +35,17 @@ export default function FloatingMenuOverlay({
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col bg-white p-6 duration-300">
       {isHelpOpen && (
         <div className="animate-in slide-in-from-top-5 flex flex-col space-y-3 duration-300">
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
             Политика и Конфиденциальность
           </div>
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
             Что такое K-койны?
           </div>
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
             Как определить размер?
           </div>
         </div>
       )}
-
       <div
         className={`flex w-full flex-none items-center space-x-4 transition-all duration-300 ${isHelpOpen ? 'mt-8' : 'mt-0'}`}
       >
@@ -71,45 +69,49 @@ export default function FloatingMenuOverlay({
 
       <div className="mt-10">
         {isAuthenticated ? (
-          <div className="flex flex-col space-y-4">
-            <div>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем "Личный кабинет" на имя пользователя --- */}
+          <div className="flex items-center space-x-4">
+            <Image
+              src={user?.image || '/placeholder.png'}
+              alt="Аватар пользователя"
+              width={56}
+              height={56}
+              className="h-14 w-14 flex-shrink-0 rounded-full object-cover"
+            />
+            <div className="flex flex-col">
               <Link
                 href="/profile"
                 onClick={onClose}
-                className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
+                className="font-body text-base font-semibold whitespace-nowrap text-gray-800 md:text-lg"
               >
                 {user?.name || 'Личный кабинет'}
               </Link>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <p className="truncate text-sm text-gray-500">{user?.email}</p>
-            </div>
-
-            <div className="flex items-center space-x-4 pt-2">
-              <Link
-                href="/profile/settings"
-                onClick={onClose}
-                className="flex items-center gap-2 text-base font-medium text-gray-700 transition-colors hover:text-black"
-              >
-                <SettingsIcon className="h-5 w-5" />
-                <span>Настройки</span>
-              </Link>
-              <button
-                onClick={() => {
-                  onClose();
-                  signOut({ callbackUrl: '/' });
-                }}
-                className="text-base font-medium text-red-600 transition-colors hover:text-red-800"
-              >
-                Выход
-              </button>
+              <div className="flex items-center space-x-4 pt-2">
+                <Link
+                  href="/profile/settings"
+                  onClick={onClose}
+                  className="flex items-center gap-2 text-base font-medium text-gray-700 transition-colors hover:text-black"
+                >
+                  <SettingsIcon className="h-5 w-5" />
+                  <span>Настройки</span>
+                </Link>
+                <button
+                  onClick={() => {
+                    onClose();
+                    signOut({ callbackUrl: '/' });
+                  }}
+                  className="text-base font-medium text-red-600 transition-colors hover:text-red-800"
+                >
+                  Выход
+                </button>
+              </div>
             </div>
           </div>
         ) : (
           <Link
             href="/login"
             onClick={onClose}
-            className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
+            className="font-body text-base font-semibold whitespace-nowrap text-gray-800 md:text-lg"
           >
             Вход / Регистрация
           </Link>
@@ -121,33 +123,31 @@ export default function FloatingMenuOverlay({
           </div>
         </div>
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый пункт "Доставка" --- */}
         <div className="mt-6 flex items-center space-x-3">
           <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
           <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
             Доставка
           </div>
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
-        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
+        <div className="font-body mt-10 text-base font-semibold text-gray-800 md:text-lg">
           Магазин
         </div>
         <div className="mt-4 flex flex-col space-y-3">
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
             пижамы
           </div>
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
             нижнее белье
           </div>
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
             для дома
           </div>
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
             сертификаты
           </div>
         </div>
-        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
+        <div className="font-body mt-10 text-base font-semibold text-gray-800 md:text-lg">
           Корзина
         </div>
       </div>
