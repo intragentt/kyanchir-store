@@ -117,31 +117,33 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
   return (
     <Fragment>
       <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
-        <ExpanderCell
-          count={product.variants.length}
-          isExpanded={isExpanded}
-          onClick={() => setIsExpanded(!isExpanded)}
-          level={1}
-        />
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
         <td className="w-12 px-2 py-4" onClick={(e) => e.stopPropagation()}>
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
         </td>
+        <td className="w-12 pl-2 pr-4 text-center">
+          <Link
+            href={`/admin/products/edit?id=${product.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="group flex-shrink-0 text-gray-400 hover:text-indigo-600"
+            title="Редактировать детали"
+          >
+            <PencilIcon className="h-4 w-4" />
+          </Link>
+        </td>
+        <ExpanderCell
+          count={product.variants.length}
+          isExpanded={isExpanded}
+          onClick={() => setIsExpanded(!isExpanded)}
+          level={1}
+        />
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <td className="px-6 py-4" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="flex items-center">
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
-            <Link
-              href={`/admin/products/edit?id=${product.id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="group flex-shrink-0 text-gray-400 hover:text-indigo-600"
-              title="Редактировать детали"
-            >
-              <PencilIcon className="h-4 w-4" />
-            </Link>
-            <div className="ml-3 grid flex-shrink-0 grid-cols-2 gap-1">
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+            <div className="grid flex-shrink-0 grid-cols-2 gap-1">
               <Image
                 src={product.variants[0]?.images[0]?.url || '/placeholder.png'}
                 alt={`${product.name} фото 1`}
@@ -160,7 +162,6 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
             <div className="ml-4">
               <div className="group inline-flex items-center gap-2 text-sm font-medium text-gray-900">
                 <span>{product.name}</span>
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
                 <div
                   className="flex items-center"
                   title={
@@ -169,10 +170,11 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
                   }
                 >
                   <span
-                    className={`h-2 w-2 rounded-full ${statusConfig[product.status.name]?.dotClassName}`}
+                    className={`h-2 w-2 rounded-full ${
+                      statusConfig[product.status.name]?.dotClassName
+                    }`}
                   />
                 </div>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
               <div
                 className="flex items-center gap-2 text-xs text-gray-500"
@@ -218,13 +220,14 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={8} className="p-0">
+          <td colSpan={9} className="p-0">
             <div className="bg-indigo-50/30">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
-                    <th className="w-12 pl-8"></th>
-                    <th className="w-12 px-2 py-2"></th>
+                    <th className="w-12 pl-4"></th>
+                    <th className="w-12 px-2"></th>
+                    <th className="w-12 pl-2 pr-4"></th>
                     <th className="px-6 py-2 text-left">Вариант</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
