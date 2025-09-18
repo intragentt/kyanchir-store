@@ -16,7 +16,6 @@ export const ExpanderCell = ({
   onClick,
   level,
 }: ExpanderCellProps) => {
-  // Не рендерим ничего, если вложенных элементов нет
   if (count === 0) {
     return <td className={cn('w-12', level === 1 ? 'pl-4' : 'pl-8')}></td>;
   }
@@ -25,18 +24,29 @@ export const ExpanderCell = ({
     <td
       className={cn(
         'w-12 cursor-pointer text-center',
-        level === 1 ? 'pl-4' : 'pl-8', // Увеличиваем отступ для второго уровня
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем отступы отсюда... ---
+        // level === 1 ? 'pl-4' : 'pl-8',
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       )}
       onClick={onClick}
     >
-      <div className="flex flex-col items-center">
-        <span className="text-sm font-medium text-gray-700">{count}</span>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: ...и добавляем их внутрь div для лучшего контроля --- */}
+      <div
+        className={cn(
+          'flex flex-col items-center',
+          level === 1 ? 'pl-4' : 'pl-8',
+        )}
+      >
+        {/* Меняем цвет текста на более светлый gray-500 */}
+        <span className="text-xs font-medium text-gray-500">{count}</span>
         <ChevronDown
           className={cn('h-5 w-5 text-gray-400 transition-transform', {
+            // Стрелка уже достаточно светлая
             'rotate-180': isExpanded,
           })}
         />
       </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </td>
   );
 };
