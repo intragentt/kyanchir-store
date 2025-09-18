@@ -8,7 +8,7 @@ export default function QuestionMarkIcon(props: React.SVGProps<SVGSVGElement>) {
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5" // ИЗМЕНЕНИЕ: Было "2"
+      strokeWidth="1.2" // ИЗМЕНЕНИЕ: Было "2"
       strokeLinecap="round"
       strokeLinejoin="round"
       {...props}
