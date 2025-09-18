@@ -148,12 +148,17 @@ export default function FloatingMenuOverlay({
           </div>
         </div>
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
-        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
-          Политика и Конфиденциальность
-        </div>
-        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
-          Помощь
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем единую группу для Помощи --- */}
+        <div className="mt-10 flex flex-col space-y-4">
+          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
+            Политика
+          </div>
+          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
+            Конфиденциальность
+          </div>
+          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
+            Помощь
+          </div>
         </div>
         {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
