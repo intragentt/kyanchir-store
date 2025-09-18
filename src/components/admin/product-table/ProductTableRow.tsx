@@ -13,7 +13,7 @@ import type { ProductForTable } from '@/app/admin/dashboard/page';
 import { PencilIcon } from '@/components/icons/PencilIcon';
 import { TrashIcon } from '@/components/icons/TrashIcon';
 import { VariantRow } from './VariantRow';
-import { ExpanderCell } from './ExpanderCell'; // <-- ПУТЬ ИСПРАВЛЕН
+import { ExpanderCell } from './ExpanderCell';
 
 const useCopyToClipboard = () => {
   const [isCopied, setIsCopied] = useState(false);
@@ -40,6 +40,16 @@ const formatPrice = (priceInCents: number | null | undefined) => {
   const priceInRubles = priceInCents / 100;
   const formattedNumber = new Intl.NumberFormat('ru-RU').format(priceInRubles);
   return `${formattedNumber} RUB`;
+};
+
+const formatArticle = (article: string | null) => {
+  if (!article) return { short: 'N/A', full: 'N/A' };
+  const full = article;
+  let short = article.startsWith('KYN-') ? article.substring(4) : article;
+  if (short.length > 12) {
+    short = short.substring(0, 10) + '...';
+  }
+  return { short, full };
 };
 
 interface ProductTableRowProps {
@@ -101,6 +111,9 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
     }
   };
 
+  const { short: shortArticle, full: fullArticle } = formatArticle(
+    product.article,
+  );
   const rowClassName = isExpanded ? 'bg-indigo-50/50' : 'bg-white';
 
   return (
@@ -115,14 +128,12 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
           onClick={() => setIsExpanded(!isExpanded)}
           level={1}
         />
-
         <td className="w-12 px-2 py-4" onClick={(e) => e.stopPropagation()}>
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
         </td>
-
         <td className="px-6 py-4">
           <div className="flex items-center">
             <div className="grid flex-shrink-0 grid-cols-2 gap-1">
@@ -156,14 +167,13 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
             </div>
           </div>
         </td>
-
         <td className="px-6 py-4 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-gray-700">{product.article}</span>
+          <div className="flex items-center gap-2" title={fullArticle}>
+            <span className="font-mono text-gray-700">{shortArticle}</span>
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                copy(product.article || '');
+                copy(fullArticle);
               }}
               className="text-gray-400 hover:text-indigo-600"
               title="Скопировать артикул"
@@ -176,11 +186,9 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
             </button>
           </div>
         </td>
-
         <td className="px-6 py-4 text-xs">
           {product.categories.map((c) => c.name).join(' / ')}
         </td>
-
         <td className="px-6 py-4">
           <span className="inline-flex items-center gap-x-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
             <span
@@ -191,13 +199,11 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
             {statusConfig[product.status.name]?.label || product.status.name}
           </span>
         </td>
-
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
         <td className="px-6 py-4 text-center text-sm font-bold">
           {calculateTotalValue()}
         </td>
-
         <td className="px-6 py-4 text-center text-sm">
           <button
             onClick={handleDelete}
@@ -212,20 +218,20 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
 
       {isExpanded && (
         <tr>
-          <td colSpan={11} className="p-0">
+          <td colSpan={10} className="p-0">
             <div className="bg-indigo-50/30">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
-                    <th className="w-12 pl-8"></th> {/* Expander */}
-                    <th className="w-12 px-2 py-2"></th> {/* Checkbox */}
+                    <th className="w-12 pl-8"></th>
+                    <th className="w-12 px-2 py-2"></th>
                     <th className="px-6 py-2 text-left">Вариант</th>
                     <th className="px-6 py-2 text-left">Артикул</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Старая сумма</th>
                     <th className="w-40 px-6 py-2 text-center">Сумма</th>
-                    <th className="w-[112px] px-6 py-2"></th> {/* Delete */}
+                    <th className="w-[112px] px-6 py-2"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
