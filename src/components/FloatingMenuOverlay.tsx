@@ -35,13 +35,13 @@ export default function FloatingMenuOverlay({
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col bg-white p-6 duration-300">
       {isHelpOpen && (
         <div className="animate-in slide-in-from-top-5 flex flex-col space-y-3 duration-300">
-          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
             Политика и Конфиденциальность
           </div>
-          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
             Что такое K-койны?
           </div>
-          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
             Как определить размер?
           </div>
         </div>
@@ -70,18 +70,20 @@ export default function FloatingMenuOverlay({
       <div className="mt-10">
         {isAuthenticated ? (
           <div className="flex items-center space-x-4">
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Увеличиваем размер аватара --- */}
             <Image
               src={user?.image || '/placeholder.png'}
               alt="Аватар пользователя"
-              width={56}
-              height={56}
-              className="h-14 w-14 flex-shrink-0 rounded-full object-cover"
+              width={64} // Было 56
+              height={64} // Было 56
+              className="h-16 w-16 flex-shrink-0 rounded-full object-cover" // Было h-14 w-14
             />
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="flex flex-col">
               <Link
                 href="/profile"
                 onClick={onClose}
-                className="font-body text-base font-semibold whitespace-nowrap text-gray-800 md:text-lg"
+                className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
               >
                 {user?.name || 'Личный кабинет'}
               </Link>
@@ -111,7 +113,7 @@ export default function FloatingMenuOverlay({
           <Link
             href="/login"
             onClick={onClose}
-            className="font-body text-base font-semibold whitespace-nowrap text-gray-800 md:text-lg"
+            className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
           >
             Вход / Регистрация
           </Link>
@@ -130,24 +132,24 @@ export default function FloatingMenuOverlay({
           </div>
         </div>
 
-        <div className="font-body mt-10 text-base font-semibold text-gray-800 md:text-lg">
+        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
           Магазин
         </div>
         <div className="mt-4 flex flex-col space-y-3">
-          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
             пижамы
           </div>
-          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
             нижнее белье
           </div>
-          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
             для дома
           </div>
-          <div className="font-body cursor-pointer text-base font-medium text-gray-600 transition-colors hover:text-black">
+          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
             сертификаты
           </div>
         </div>
-        <div className="font-body mt-10 text-base font-semibold text-gray-800 md:text-lg">
+        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
           Корзина
         </div>
       </div>
