@@ -4,7 +4,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Logo from './icons/Logo';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем неверный путь ---
 import CloseIcon from './icons/CloseIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import BurgerIcon from './icons/BurgerIcon';
 import SearchIcon from './icons/SearchIcon';
 import { useAppStore } from '@/store/useAppStore';
@@ -36,11 +38,8 @@ export default function Header({
               href="/"
               onClick={() => onMenuToggle(false)}
               aria-label="На главную"
-              className="-mt-1"
             >
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Устанавливаем единый размер h-5 --- */}
               <Logo className="logo-brand-color h-5 w-auto" />
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </Link>
             <div className="flex items-center space-x-2">
               <button
