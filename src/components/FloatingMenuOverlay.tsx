@@ -148,7 +148,10 @@ export default function FloatingMenuOverlay({
           </div>
         </div>
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый пункт "Помощь" --- */}
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
+          Политика и Конфиденциальность
+        </div>
         <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
           Помощь
         </div>
