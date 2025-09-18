@@ -17,7 +17,6 @@ import { ExpanderCell } from './ExpanderCell';
 
 const useCopyToClipboard = () => {
   const [isCopied, setIsCopied] = useState(false);
-
   const copy = useCallback((text: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setIsCopied(true);
@@ -25,7 +24,6 @@ const useCopyToClipboard = () => {
       setTimeout(() => setIsCopied(false), 2000);
     });
   }, []);
-
   return { isCopied, copy };
 };
 
@@ -46,8 +44,8 @@ const formatArticle = (article: string | null) => {
   if (!article) return { short: 'N/A', full: 'N/A' };
   const full = article;
   let short = article.startsWith('KYN-') ? article.substring(4) : article;
-  if (short.length > 12) {
-    short = short.substring(0, 10) + '...';
+  if (short.length > 15) {
+    short = short.substring(0, 12) + '...';
   }
   return { short, full };
 };
@@ -70,6 +68,7 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
     0,
   );
 
+  // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
   const calculateTotalValue = () => {
     const totalValue = product.variants.reduce((sum, variant) => {
       const variantValue = variant.sizes.reduce((value, size) => {
@@ -78,8 +77,10 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
       }, 0);
       return sum + variantValue;
     }, 0);
+    // Возвращаем отформатированное значение
     return formatPrice(totalValue);
   };
+  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -118,10 +119,7 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
 
   return (
     <Fragment>
-      <tr
-        onClick={() => setIsExpanded(!isExpanded)}
-        className={`border-t ${rowClassName} cursor-pointer hover:bg-gray-50`}
-      >
+      <tr className={`border-t ${rowClassName} hover:bg-gray-50`}>
         <ExpanderCell
           count={product.variants.length}
           isExpanded={isExpanded}
@@ -134,7 +132,7 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
         </td>
-        <td className="px-6 py-4">
+        <td className="px-6 py-4" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="flex items-center">
             <div className="grid flex-shrink-0 grid-cols-2 gap-1">
               <Image
@@ -153,37 +151,35 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
               />
             </div>
             <div className="ml-4">
-              <div className="text-sm font-medium text-gray-900">
-                {product.name}
-              </div>
               <Link
                 href={`/admin/products/edit?id=${product.id}`}
                 onClick={(e) => e.stopPropagation()}
-                className="mt-1 flex items-center gap-1 text-xs text-indigo-600 hover:underline"
+                className="group inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-indigo-600"
               >
-                <PencilIcon className="h-3 w-3" />
-                <span>Детали</span>
+                <span>{product.name}</span>
+                <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
               </Link>
+              <div
+                className="flex items-center gap-2 text-xs text-gray-500"
+                title={fullArticle}
+              >
+                <span className="font-mono">{shortArticle}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copy(fullArticle);
+                  }}
+                  className="text-gray-400 hover:text-indigo-600"
+                  title="Скопировать артикул"
+                >
+                  {isCopied ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-        </td>
-        <td className="px-6 py-4 text-xs">
-          <div className="flex items-center gap-2" title={fullArticle}>
-            <span className="font-mono text-gray-700">{shortArticle}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                copy(fullArticle);
-              }}
-              className="text-gray-400 hover:text-indigo-600"
-              title="Скопировать артикул"
-            >
-              {isCopied ? (
-                <Check className="h-4 w-4 text-green-500" />
-              ) : (
-                <Copy className="h-4 w-4" />
-              )}
-            </button>
           </div>
         </td>
         <td className="px-6 py-4 text-xs">
@@ -218,20 +214,19 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
 
       {isExpanded && (
         <tr>
-          <td colSpan={10} className="p-0">
+          <td colSpan={9} className="p-0">
             <div className="bg-indigo-50/30">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
-                    <th className="w-12 pl-8"></th>
-                    <th className="w-12 px-2 py-2"></th>
+                    <th className="w-12 pl-8"></th> {/* Expander */}
+                    <th className="w-12 px-2 py-2"></th> {/* Checkbox */}
                     <th className="px-6 py-2 text-left">Вариант</th>
-                    <th className="px-6 py-2 text-left">Артикул</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Старая сумма</th>
                     <th className="w-40 px-6 py-2 text-center">Сумма</th>
-                    <th className="w-[112px] px-6 py-2"></th>
+                    <th className="w-[112px] px-6 py-2"></th> {/* Delete */}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
