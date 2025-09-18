@@ -70,15 +70,13 @@ export default function FloatingMenuOverlay({
       <div className="mt-10">
         {isAuthenticated ? (
           <div className="flex items-center space-x-4">
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Увеличиваем размер аватара --- */}
             <Image
               src={user?.image || '/placeholder.png'}
               alt="Аватар пользователя"
-              width={64} // Было 56
-              height={64} // Было 56
-              className="h-16 w-16 flex-shrink-0 rounded-full object-cover" // Было h-14 w-14
+              width={64}
+              height={64}
+              className="h-16 w-16 flex-shrink-0 rounded-full object-cover"
             />
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="flex flex-col">
               <Link
                 href="/profile"
@@ -149,6 +147,13 @@ export default function FloatingMenuOverlay({
             сертификаты
           </div>
         </div>
+
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый пункт "Помощь" --- */}
+        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
+          Помощь
+        </div>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
         <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
           Корзина
         </div>
