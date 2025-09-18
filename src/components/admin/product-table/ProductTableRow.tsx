@@ -131,7 +131,17 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
         </td>
         <td className="px-6 py-4" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="flex items-center">
-            <div className="grid flex-shrink-0 grid-cols-2 gap-1">
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+            <Link
+              href={`/admin/products/edit?id=${product.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="group flex-shrink-0 text-gray-400 hover:text-indigo-600"
+              title="Редактировать детали"
+            >
+              <PencilIcon className="h-4 w-4" />
+            </Link>
+            <div className="ml-3 grid flex-shrink-0 grid-cols-2 gap-1">
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <Image
                 src={product.variants[0]?.images[0]?.url || '/placeholder.png'}
                 alt={`${product.name} фото 1`}
@@ -148,35 +158,9 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
               />
             </div>
             <div className="ml-4">
-              <Link
-                href={`/admin/products/edit?id=${product.id}`}
-                onClick={(e) => e.stopPropagation()}
-                className="group inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-indigo-600"
-              >
+              <div className="group inline-flex items-center gap-2 text-sm font-medium text-gray-900">
                 <span>{product.name}</span>
-                <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
-              </Link>
-              <div className="flex items-center gap-4">
-                <div
-                  className="flex items-center gap-2 text-xs text-gray-500"
-                  title={fullArticle}
-                >
-                  <span className="font-mono">{shortArticle}</span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      copy(fullArticle);
-                    }}
-                    className="text-gray-400 hover:text-indigo-600"
-                    title="Скопировать артикул"
-                  >
-                    {isCopied ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
                 <div
                   className="flex items-center"
                   title={
@@ -185,11 +169,30 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
                   }
                 >
                   <span
-                    className={`h-2 w-2 rounded-full ${
-                      statusConfig[product.status.name]?.dotClassName
-                    }`}
+                    className={`h-2 w-2 rounded-full ${statusConfig[product.status.name]?.dotClassName}`}
                   />
                 </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+              </div>
+              <div
+                className="flex items-center gap-2 text-xs text-gray-500"
+                title={fullArticle}
+              >
+                <span className="font-mono">{shortArticle}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    copy(fullArticle);
+                  }}
+                  className="text-gray-400 hover:text-indigo-600"
+                  title="Скопировать артикул"
+                >
+                  {isCopied ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
           </div>
