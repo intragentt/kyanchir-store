@@ -34,7 +34,6 @@ export default function ProductTable({
           <div className="overflow-hidden border-b border-gray-200">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                {/* --- НАЧАЛО ФИНАЛЬНЫХ ИЗМЕНЕНИЙ --- */}
                 <tr>
                   {/* 1. Checkbox */}
                   <th scope="col" className="w-12 px-2">
@@ -88,7 +87,6 @@ export default function ProductTable({
                     <span className="sr-only">Действия</span>
                   </th>
                 </tr>
-                {/* --- КОНЕЦ ФИНАЛЬНЫХ ИЗМЕНЕНИЙ --- */}
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
                 {products.map((product) => (

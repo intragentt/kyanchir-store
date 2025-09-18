@@ -123,6 +123,16 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
           />
         </td>
+        <td className="w-12 pl-2 pr-4 text-center">
+          <Link
+            href={`/admin/products/edit?id=${product.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="group flex-shrink-0 text-gray-400 hover:text-indigo-600"
+            title="Редактировать детали"
+          >
+            <PencilIcon className="h-4 w-4" />
+          </Link>
+        </td>
         <ExpanderCell
           count={product.variants.length}
           isExpanded={isExpanded}
@@ -196,35 +206,26 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
           {calculateTotalValue()}
         </td>
         <td className="px-6 py-4 text-center text-sm">
-          <div className="flex items-center justify-center gap-4">
-            <Link
-              href={`/admin/products/edit?id=${product.id}`}
-              onClick={(e) => e.stopPropagation()}
-              className="group flex-shrink-0 text-gray-400 hover:text-indigo-600"
-              title="Редактировать детали"
-            >
-              <PencilIcon className="h-4 w-4" />
-            </Link>
-            <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-              title="Удалить товар"
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+            title="Удалить товар"
+          >
+            <TrashIcon className="h-5 w-5" />
+          </button>
         </td>
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={8} className="p-0">
+          <td colSpan={9} className="p-0">
             <div className="bg-indigo-50/30">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
                     <th className="w-12 px-2 py-2"></th>
-                    <th className="w-12 pl-8"></th>
+                    <th className="w-12 pl-2 pr-4"></th>
+                    <th className="w-12"></th>
                     <th className="px-6 py-2 text-left">Вариант</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
