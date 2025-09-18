@@ -1,7 +1,7 @@
 // Местоположение: src/app/(auth)/register/page.tsx
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Logo from '@/components/icons/Logo';
@@ -9,6 +9,9 @@ import Link from 'next/link';
 import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
 import { EyeIcon } from '@/components/icons/EyeIcon';
 import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем иконку крестика ---
+import ClearIcon from '@/components/icons/ClearIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const validateEmail = (email: string) => {
   const re =
@@ -18,9 +21,10 @@ const validateEmail = (email: string) => {
 
 export default function RegisterPage() {
   const [step, setStep] = useState(1);
-
   const [formData, setFormData] = useState({
-    name: '',
+    // --- ИЗМЕНЕНИЕ: Разделяем имя и фамилию ---
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -28,7 +32,6 @@ export default function RegisterPage() {
     dob_month: '',
     dob_year: '',
   });
-
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -36,7 +39,9 @@ export default function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -44,29 +49,24 @@ export default function RegisterPage() {
   const handleNextStep = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая логика валидации ---
     if (step === 1) {
-      if (!validateEmail(formData.email)) {
+      if (!validateEmail(formData.email))
         return setError('Пожалуйста, введите корректный Email.');
-      }
-      setStep(2); // Переходим к паролям
+      setStep(2);
     } else if (step === 2) {
-      if (formData.password.length < 8) {
+      if (formData.password.length < 8)
         return setError('Пароль должен содержать не менее 8 символов.');
-      }
-      if (formData.password !== formData.confirmPassword) {
+      if (formData.password !== formData.confirmPassword)
         return setError('Пароли не совпадают.');
-      }
-      setStep(3); // Переходим к личным данным
+      setStep(3);
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   };
 
   const handleRegisterSubmit = async () => {
     setError(null);
-    if (!formData.name.trim()) {
-      return setError('Пожалуйста, введите ваше имя.');
+    // --- ИЗМЕНЕНИЕ: Проверяем оба поля имени ---
+    if (!formData.firstName.trim() || !formData.lastName.trim()) {
+      return setError('Пожалуйста, введите ваше имя и фамилию.');
     }
     if (!termsAccepted) {
       return setError('Необходимо принять пользовательское соглашение.');
@@ -78,7 +78,8 @@ export default function RegisterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: formData.name,
+          // --- ИЗМЕНЕНИЕ: Собираем полное имя перед отправкой ---
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
           email: formData.email,
           password: formData.password,
         }),
@@ -100,7 +101,6 @@ export default function RegisterPage() {
           'Аккаунт создан, но войти не удалось. Попробуйте на странице входа.',
         );
       }
-
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Непредвиденная ошибка');
@@ -108,6 +108,33 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Генераторы для выпадающих списков ---
+  const years = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 100 }, (_, i) => currentYear - i);
+  }, []);
+
+  const months = useMemo(
+    () => [
+      { value: '01', label: 'Январь' },
+      { value: '02', label: 'Февраль' },
+      { value: '03', label: 'Март' },
+      { value: '04', label: 'Апрель' },
+      { value: '05', label: 'Май' },
+      { value: '06', label: 'Июнь' },
+      { value: '07', label: 'Июль' },
+      { value: '08', label: 'Август' },
+      { value: '09', label: 'Сентябрь' },
+      { value: '10', label: 'Октябрь' },
+      { value: '11', label: 'Ноябрь' },
+      { value: '12', label: 'Декабрь' },
+    ],
+    [],
+  );
+
+  const days = useMemo(() => Array.from({ length: 31 }, (_, i) => i + 1), []);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
     <div className="flex min-h-screen items-start justify-center bg-zinc-50 px-4 pt-20 sm:pt-24">
@@ -127,7 +154,6 @@ export default function RegisterPage() {
             onSubmit={(e) => e.preventDefault()}
             noValidate
           >
-            {/* --- ШАГ 1: Только Email --- */}
             {step === 1 && (
               <>
                 <div className="relative">
@@ -147,9 +173,9 @@ export default function RegisterPage() {
               </>
             )}
 
-            {/* --- ШАГ 2: Пароль и Подтверждение --- */}
             {step === 2 && (
               <>
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Поле пароля с двумя иконками --- */}
                 <div className="relative">
                   <input
                     id="password"
@@ -157,19 +183,29 @@ export default function RegisterPage() {
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="input-style pr-10"
+                    className="input-style pr-16"
                     placeholder="Пароль (мин. 8 символов)"
                   />
                   {formData.password && (
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3"
-                    >
-                      <div className="h-5 w-5 text-zinc-400 hover:text-zinc-600">
-                        {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-                      </div>
-                    </button>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="mr-2"
+                      >
+                        <div className="h-5 w-5 text-zinc-400 hover:text-zinc-600">
+                          {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((p) => ({ ...p, password: '' }))
+                        }
+                      >
+                        <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div className="relative">
@@ -179,69 +215,107 @@ export default function RegisterPage() {
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
-                    className="input-style pr-10"
+                    className="input-style pr-16"
                     placeholder="Подтвердите пароль"
                   />
                   {formData.confirmPassword && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      className="absolute inset-y-0 right-0 flex items-center pr-3"
-                    >
-                      <div className="h-5 w-5 text-zinc-400 hover:text-zinc-600">
-                        {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
-                      </div>
-                    </button>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="mr-2"
+                      >
+                        <div className="h-5 w-5 text-zinc-400 hover:text-zinc-600">
+                          {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormData((p) => ({ ...p, confirmPassword: '' }))
+                        }
+                      >
+                        <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                      </button>
+                    </div>
                   )}
                 </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <button onClick={handleNextStep} className="button-style">
                   Продолжить
                 </button>
               </>
             )}
 
-            {/* --- ШАГ 3: Личные данные --- */}
             {step === 3 && (
               <>
-                <div className="relative">
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Разделенные поля для имени --- */}
+                <div className="grid grid-cols-2 gap-2">
                   <input
-                    id="name"
-                    name="name"
+                    id="firstName"
+                    name="firstName"
                     type="text"
-                    value={formData.name}
+                    value={formData.firstName}
                     onChange={handleInputChange}
                     className="input-style"
-                    placeholder="Ваше Имя и Фамилия"
+                    placeholder="Имя"
+                  />
+                  <input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    value={formData.lastName}
+                    onChange={handleInputChange}
+                    className="input-style"
+                    placeholder="Фамилия"
                   />
                 </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Выпадающие списки для даты рождения --- */}
                 <div className="grid grid-cols-3 gap-2">
-                  <input
+                  <select
                     name="dob_day"
                     value={formData.dob_day}
                     onChange={handleInputChange}
                     className="input-style text-center"
-                    placeholder="ДД"
-                    maxLength={2}
-                  />
-                  <input
+                  >
+                    <option value="">ДД</option>
+                    {days.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <select
                     name="dob_month"
                     value={formData.dob_month}
                     onChange={handleInputChange}
                     className="input-style text-center"
-                    placeholder="ММ"
-                    maxLength={2}
-                  />
-                  <input
+                  >
+                    <option value="">ММ</option>
+                    {months.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                  <select
                     name="dob_year"
                     value={formData.dob_year}
                     onChange={handleInputChange}
                     className="input-style text-center"
-                    placeholder="ГГГГ"
-                    maxLength={4}
-                  />
+                  >
+                    <option value="">ГГГГ</option>
+                    {years.map((y) => (
+                      <option key={y} value={y}>
+                        {y}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <div className="flex items-center">
                   <input
                     id="terms"
