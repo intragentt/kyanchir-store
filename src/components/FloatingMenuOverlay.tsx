@@ -6,14 +6,15 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAppStore } from '@/store/useAppStore';
 import { signOut } from 'next-auth/react';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем всё необходимое ---
 import { useStickyHeader } from '@/context/StickyHeaderContext';
 import Logo from './icons/Logo';
 import SearchIcon from './icons/SearchIcon';
-import ChevronIcon from './icons/ChevronIcon';
 import SettingsIcon from './icons/SettingsIcon';
 import TruckIcon from './icons/TruckIcon';
 import HeartIcon from './icons/HeartIcon';
+import CloseIcon from './icons/CloseIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем ChevronIcon на QuestionMarkIcon ---
+import QuestionMarkIcon from './icons/QuestionMarkIcon';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
@@ -26,27 +27,22 @@ export default function FloatingMenuOverlay({
   onClose,
 }: FloatingMenuOverlayProps) {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSearchModeActive, setIsSearchModeActive] = useState(false);
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Подключаемся к "мозговому центру" ---
-  // Получаем доступ к управлению главным поиском сайта
   const { setIsSearchActive } = useStickyHeader();
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!isOpen) {
     return null;
   }
 
   const handleSearchClick = () => {
-    onClose(); // Сначала закрываем это меню
-    setIsSearchActive(true); // Затем открываем главный оверлей поиска
+    onClose();
+    setIsSearchActive(true);
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая структура для фиксации шапки и скролла ---
-    <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col bg-white duration-300">
-      {/* --- ШАПКА МЕНЮ (Фиксированная) --- */}
+    <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white duration-300">
       <div className="flex-shrink-0 border-b border-gray-200 p-6">
         {isHelpOpen && (
           <div className="animate-in slide-in-from-top-5 mb-8 flex flex-col space-y-3 duration-300">
@@ -62,32 +58,55 @@ export default function FloatingMenuOverlay({
           </div>
         )}
         <div className="flex w-full items-center justify-between">
-          <Link href="/" onClick={onClose}>
-            <Logo className="logo-brand-color h-5 w-auto" />
-          </Link>
-          <div className="flex items-center">
-            <button
-              aria-label="Активировать поиск"
-              className="p-2"
-              onClick={handleSearchClick}
-            >
-              <SearchIcon className="h-6 w-6 text-gray-800" />
-            </button>
-            <button
-              aria-label="Дополнительное меню"
-              className="p-2"
-              onClick={() => setIsHelpOpen(!isHelpOpen)}
-            >
-              <ChevronIcon
-                isOpen={isHelpOpen}
-                className="h-7 w-7 text-gray-800"
-              />
-            </button>
-          </div>
+          {!isSearchModeActive ? (
+            <>
+              <Link href="/" onClick={onClose}>
+                <Logo className="logo-brand-color h-5 w-auto" />
+              </Link>
+              <div className="flex items-center">
+                <button
+                  aria-label="Активировать поиск"
+                  className="p-2"
+                  onClick={handleSearchClick}
+                >
+                  <SearchIcon className="h-6 w-6 text-gray-800" />
+                </button>
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Ставим новую иконку --- */}
+                <button
+                  aria-label="Дополнительное меню"
+                  className="p-2"
+                  onClick={() => setIsHelpOpen(!isHelpOpen)}
+                >
+                  <QuestionMarkIcon className="h-7 w-7 text-gray-800" />
+                </button>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+              </div>
+            </>
+          ) : (
+            <div className="flex w-full items-center space-x-2">
+              <button
+                aria-label="Закрыть поиск"
+                className="p-2"
+                onClick={() => setIsSearchModeActive(false)}
+              >
+                <CloseIcon className="h-6 w-6 text-gray-700" />
+              </button>
+              <div className="relative flex-grow">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+                  <SearchIcon className="h-5 w-5 text-gray-400" />
+                </span>
+                <input
+                  type="search"
+                  placeholder="Поиск..."
+                  className="w-full rounded-lg border-none bg-gray-100 py-3 pl-10 pr-4 text-base text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                  autoFocus
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* --- КОНТЕНТ МЕНЮ (Прокручиваемый) --- */}
       <div className="flex-grow overflow-y-auto p-6">
         {isAuthenticated ? (
           <div className="flex items-center space-x-4">
@@ -183,7 +202,6 @@ export default function FloatingMenuOverlay({
         </div>
       </div>
     </div>
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 }
 
