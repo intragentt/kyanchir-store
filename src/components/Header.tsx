@@ -7,7 +7,7 @@ import Logo from './icons/Logo';
 import CloseIcon from './icons/CloseIcon';
 import BurgerIcon from './icons/BurgerIcon';
 import SearchIcon from './icons/SearchIcon';
-import DesktopNav from './header/DesktopNav';
+// --- ИЗМЕНЕНИЕ: Больше не импортируем DesktopNav ---
 import { useAppStore } from '@/store/useAppStore';
 
 interface HeaderProps {
@@ -26,39 +26,51 @@ export default function Header({
   onMenuToggle,
 }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const user = useAppStore((state) => state.user);
   const setFloatingMenuOpen = useAppStore((state) => state.setFloatingMenuOpen);
 
   return (
     <header className={`w-full bg-white ${className}`}>
       <div className="container mx-auto flex h-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
-        <div className="flex w-full items-center lg:hidden">
+        
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Единый блок для всех экранов --- */}
+        <div className="flex w-full items-center justify-between">
+          
+          {/* --- Логотип --- */}
+          {/* Увеличиваем размер на десктопе с помощью lg:h-[14px] */}
+          <Link
+            href="/"
+            onClick={() => onMenuToggle(false)}
+            aria-label="На главную"
+            className="-mt-1"
+          >
+            <Logo className="logo-brand-color h-[10px] w-auto lg:h-[14px]" />
+          </Link>
+
+          {/* --- Иконки (Только для мобильных) --- */}
+          {/* Весь этот блок будет скрыт на экранах lg и больше */}
+          <div className="flex items-center space-x-2 lg:hidden">
+            <button
+              onClick={() => onSearchToggle(true)}
+              aria-label="Поиск"
+              className="p-2 text-gray-700"
+            >
+              <SearchIcon className="h-6 w-6" />
+            </button>
+            <button
+              onClick={() => setFloatingMenuOpen(true)}
+              className="relative z-50 p-2 text-gray-700"
+            >
+              <BurgerIcon className="h-7 w-7" />
+            </button>
+          </div>
+        </div>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
+        {/* --- Поиск на мобильных (остается без изменений, так как он скрыт по умолчанию) --- */}
+        {/* Этот блок кода был в `lg:hidden`, так что он не затрагивает десктоп */}
+        <div className="hidden w-full items-center lg:hidden">
           {!isSearchActive ? (
-            <div className="flex w-full items-center justify-between">
-              <Link
-                href="/"
-                onClick={() => onMenuToggle(false)}
-                aria-label="На главную"
-                className="-mt-1"
-              >
-                <Logo className="logo-brand-color h-[10px] w-auto" />
-              </Link>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => onSearchToggle(true)}
-                  aria-label="Поиск"
-                  className="p-2 text-gray-700"
-                >
-                  <SearchIcon className="h-6 w-6" />
-                </button>
-                <button
-                  onClick={() => setFloatingMenuOpen(true)}
-                  className="relative z-50 p-2 text-gray-700"
-                >
-                  <BurgerIcon className="h-7 w-7" />
-                </button>
-              </div>
-            </div>
+             <></> // Пустой фрагмент, так как логика выше уже всё отрисовала
           ) : (
             <div className="flex w-full items-center space-x-2">
               <button
@@ -92,17 +104,6 @@ export default function Header({
               </button>
             </div>
           )}
-        </div>
-        <div className="hidden items-center justify-between lg:flex">
-          <Link
-            href="/"
-            onClick={() => onMenuToggle(false)}
-            aria-label="На главную"
-            className="-mt-1"
-          >
-            <Logo className="logo-brand-color h-[10px] w-auto" />
-          </Link>
-          <DesktopNav user={user} />
         </div>
       </div>
     </header>
