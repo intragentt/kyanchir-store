@@ -23,7 +23,7 @@ model Product {
   updatedAt        DateTime          @updatedAt
   tags             Tag[]             @relation("ProductTags")
   moyskladId       String?           @unique
-  archived         Boolean           @default(false) // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+  archived         Boolean           @default(false)
 }
 
 model ProductVariant {
@@ -56,7 +56,7 @@ model Image {
 
 model ProductSize {
   id               String      @id @default(cuid())
-  code             String?     // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+  code             String?
   article          String?
   moySkladHref     String?
   moySkladType     String      @default("variant")
@@ -68,8 +68,8 @@ model ProductSize {
   price            Int?
   oldPrice         Int?
   orderItems       OrderItem[]
-  moyskladId       String?          
-  archived         Boolean           @default(false) // <-- ДОБАВЬТЕ ЭТУ СТРОКУ
+  moyskladId       String?
+  archived         Boolean           @default(false)
 
   @@unique([productVariantId, sizeId])
 }
@@ -204,21 +204,23 @@ model UserRole {
 }
 
 model User {
-  id            String       @id @default(cuid())
-  name          String?
-  email         String?      @unique
-  emailVerified DateTime?
-  image         String?
-  telegramId    String?      @unique
-  phone         String?
-  passwordHash  String?
-  accounts      Account[]
-  sessions      Session[]
-  loginTokens   LoginToken[]
-  roleId        String
-  role          UserRole     @relation(fields: [roleId], references: [id])
-  bonusPoints   Int          @default(0)
-  orders        Order[]
+  id                   String                 @id @default(cuid())
+  name                 String?
+  email                String?                @unique
+  emailVerified        DateTime?
+  image                String?
+  telegramId           String?                @unique
+  phone                String?
+  passwordHash         String?
+  accounts             Account[]
+  sessions             Session[]
+  loginTokens          LoginToken[]
+  roleId               String
+  role                 UserRole               @relation(fields: [roleId], references: [id])
+  bonusPoints          Int                    @default(0)
+  orders               Order[]
+  // --- ИЗМЕНЕНИЕ: Добавлена связь с токенами сброса пароля ---
+  passwordResetTokens  PasswordResetToken[]
 }
 
 model Account {
@@ -262,6 +264,22 @@ model LoginToken {
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }
+
+// --- НАЧАЛО НОВОЙ МОДЕЛИ ---
+// Модель для хранения токенов сброса пароля
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+  userId    String? // Опциональная связь с пользователем
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([email, token])
+}
+// --- КОНЕЦ НОВОЙ МОДЕЛИ ---
+
 
 model AgentRole {
   id     String         @id @default(cuid())
@@ -356,9 +374,7 @@ model SystemSetting {
   updatedAt DateTime @updatedAt
 }
 
-// --- НАЧАЛО НОВОЙ МОДЕЛИ ДЛЯ СЧЕТЧИКА АРТИКУЛОВ ---
 model SkuSequence {
-  prefix     String @id @unique // e.g., "KYN-KP2-0925"
+  prefix     String @id @unique
   lastNumber Int    @default(0)
 }
-// --- КОНЕЦ НОВОЙ МОДЕЛИ ---
