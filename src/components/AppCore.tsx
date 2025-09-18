@@ -22,14 +22,11 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем список исключений ---
-  // Теперь все страницы, связанные с аутентификацией, будут без шапки.
   const isAuthPage =
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/reset-password');
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const { data: session } = useSession();
   const setUser = useAppStore((state) => state.setUser);
@@ -49,6 +46,18 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const SCROLL_DOWN_THRESHOLD = 50;
   const scrollUpAnchor = useRef<number | null>(null);
   const scrollDownAnchor = useRef<number | null>(null);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Железобетонный" Рестарт ---
+  // Этот useEffect выполняется ОДИН РАЗ при каждой загрузке/перезагрузке страницы.
+  useEffect(() => {
+    // 1. Принудительно возвращаем скролл в самый верх, отменяя попытки Safari его восстановить.
+    window.scrollTo(0, 0);
+    // 2. Сбрасываем состояние шапки в исходное положение.
+    setHeaderStatus('static');
+    // 3. Сбрасываем "память" о последней позиции скролла.
+    lastScrollY.current = 0;
+  }, [pathname]); // Зависимость от pathname, чтобы сброс происходил при смене страницы
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     if (window.Telegram?.WebApp) {
