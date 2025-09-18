@@ -68,7 +68,6 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
     0,
   );
 
-  // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
   const calculateTotalValue = () => {
     const totalValue = product.variants.reduce((sum, variant) => {
       const variantValue = variant.sizes.reduce((value, size) => {
@@ -77,10 +76,8 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
       }, 0);
       return sum + variantValue;
     }, 0);
-    // Возвращаем отформатированное значение
     return formatPrice(totalValue);
   };
-  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -159,41 +156,46 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
                 <span>{product.name}</span>
                 <PencilIcon className="h-3.5 w-3.5 text-gray-400 opacity-0 transition-opacity group-hover:opacity-100" />
               </Link>
-              <div
-                className="flex items-center gap-2 text-xs text-gray-500"
-                title={fullArticle}
-              >
-                <span className="font-mono">{shortArticle}</span>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    copy(fullArticle);
-                  }}
-                  className="text-gray-400 hover:text-indigo-600"
-                  title="Скопировать артикул"
+              <div className="flex items-center gap-4">
+                <div
+                  className="flex items-center gap-2 text-xs text-gray-500"
+                  title={fullArticle}
                 >
-                  {isCopied ? (
-                    <Check className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </button>
+                  <span className="font-mono">{shortArticle}</span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copy(fullArticle);
+                    }}
+                    className="text-gray-400 hover:text-indigo-600"
+                    title="Скопировать артикул"
+                  >
+                    {isCopied ? (
+                      <Check className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <div
+                  className="flex items-center"
+                  title={
+                    statusConfig[product.status.name]?.label ||
+                    product.status.name
+                  }
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      statusConfig[product.status.name]?.dotClassName
+                    }`}
+                  />
+                </div>
               </div>
             </div>
           </div>
         </td>
         <td className="px-6 py-4 text-xs">
           {product.categories.map((c) => c.name).join(' / ')}
-        </td>
-        <td className="px-6 py-4">
-          <span className="inline-flex items-center gap-x-2 rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                statusConfig[product.status.name]?.dotClassName
-              }`}
-            />
-            {statusConfig[product.status.name]?.label || product.status.name}
-          </span>
         </td>
         <td className="px-6 py-4 text-center text-sm">0 шт.</td>
         <td className="px-6 py-4 text-center text-sm">{totalStock} шт.</td>
@@ -211,22 +213,21 @@ export const ProductTableRow = ({ product }: ProductTableRowProps) => {
           </button>
         </td>
       </tr>
-
       {isExpanded && (
         <tr>
-          <td colSpan={9} className="p-0">
+          <td colSpan={8} className="p-0">
             <div className="bg-indigo-50/30">
               <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-100 text-xs uppercase text-gray-500">
-                    <th className="w-12 pl-8"></th> {/* Expander */}
-                    <th className="w-12 px-2 py-2"></th> {/* Checkbox */}
+                    <th className="w-12 pl-8"></th>
+                    <th className="w-12 px-2 py-2"></th>
                     <th className="px-6 py-2 text-left">Вариант</th>
                     <th className="w-40 px-6 py-2 text-center">Бронь</th>
                     <th className="w-40 px-6 py-2 text-center">Склад</th>
                     <th className="w-40 px-6 py-2 text-center">Старая сумма</th>
                     <th className="w-40 px-6 py-2 text-center">Сумма</th>
-                    <th className="w-[112px] px-6 py-2"></th> {/* Delete */}
+                    <th className="w-[112px] px-6 py-2"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
