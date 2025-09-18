@@ -1,4 +1,4 @@
-// Местоположение: src/app/login/page.tsx
+// Местоположение: src/app/(auth)/login/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,21 +7,35 @@ import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
 import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
 import ClearIcon from '@/components/icons/ClearIcon';
-
-const validateEmail = (email: string) => {
-  const re =
-    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  return re.test(String(email).toLowerCase());
-};
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новые иконки ---
+import { EyeIcon } from '@/components/icons/EyeIcon';
+import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Новые состояния для UX ---
+  const [rememberMe, setRememberMe] = useState(true); // "Запомнить меня" включено по умолчанию
+  const [showPassword, setShowPassword] = useState(false); // Пароль по умолчанию скрыт
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика "Запомнить меня" ---
+  useEffect(() => {
+    // При загрузке страницы, проверяем, есть ли сохраненный email
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    if (rememberedEmail) {
+      setEmail(rememberedEmail);
+      // Убираем галочку, если email был сохранен, но пользователь хочет его забыть
+      setRememberMe(true);
+    }
+  }, []);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     if (searchParams.get('status') === 'registered') {
@@ -40,6 +54,14 @@ export default function LoginPage() {
       setIsLoading(false);
       return;
     }
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Управление localStorage при логине ---
+    if (rememberMe) {
+      localStorage.setItem('rememberedEmail', email);
+    } else {
+      localStorage.removeItem('rememberedEmail');
+    }
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     try {
       const validateRes = await fetch('/api/auth/validate-credentials', {
@@ -122,33 +144,55 @@ export default function LoginPage() {
                 </button>
               )}
             </div>
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Поле пароля с "глазом" --- */}
             <div className="relative">
               <input
                 id="password"
                 name="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-16 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
                 placeholder="Пароль"
               />
-              {password && (
-                <button
-                  type="button"
-                  onClick={() => setPassword('')}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  aria-label="Очистить поле Пароль"
-                >
-                  <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
-                </button>
-              )}
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                {password && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="mr-2"
+                      aria-label={
+                        showPassword ? 'Скрыть пароль' : 'Показать пароль'
+                      }
+                    >
+                      {showPassword ? (
+                        <EyeOffIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                      ) : (
+                        <EyeIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPassword('')}
+                      aria-label="Очистить поле Пароль"
+                    >
+                      <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="flex items-center justify-between">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Управляемый чекбокс --- */}
               <div className="flex items-center">
                 <input
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <label
@@ -158,6 +202,7 @@ export default function LoginPage() {
                   Запомнить меня
                 </label>
               </div>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
             <button
               type="submit"
@@ -170,7 +215,6 @@ export default function LoginPage() {
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
             )}
           </form>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
           <div className="text-center font-body">
             <Link
               href={
@@ -183,7 +227,6 @@ export default function LoginPage() {
               Забыли пароль?
             </Link>
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <div className="flex items-center gap-x-3">
             <div className="h-px w-full bg-zinc-200" />
             <div className="font-body text-sm font-medium text-zinc-400">
