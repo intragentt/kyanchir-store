@@ -14,9 +14,7 @@ import TruckIcon from './icons/TruckIcon';
 import HeartIcon from './icons/HeartIcon';
 import CloseIcon from './icons/CloseIcon';
 import QuestionMarkIcon from './icons/QuestionMarkIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем нашу новую заглушку ---
 import AvatarPlaceholder from './AvatarPlaceholder';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -64,6 +62,7 @@ export default function FloatingMenuOverlay({
               <Link href="/" onClick={onClose}>
                 <Logo className="logo-brand-color h-5 w-auto" />
               </Link>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Новая панель инструментов --- */}
               <div className="flex items-center">
                 <button
                   aria-label="Активировать поиск"
@@ -72,6 +71,14 @@ export default function FloatingMenuOverlay({
                 >
                   <SearchIcon className="h-6 w-6 text-gray-800" />
                 </button>
+                <Link
+                  href="/profile/settings"
+                  onClick={onClose}
+                  aria-label="Настройки"
+                  className="p-2"
+                >
+                  <SettingsIcon className="h-6 w-6 text-gray-800" />
+                </Link>
                 <button
                   aria-label="Дополнительное меню"
                   className="p-2"
@@ -80,6 +87,7 @@ export default function FloatingMenuOverlay({
                   <QuestionMarkIcon className="h-7 w-7 text-gray-800" />
                 </button>
               </div>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </>
           ) : (
             <div className="flex w-full items-center space-x-2">
@@ -108,13 +116,12 @@ export default function FloatingMenuOverlay({
 
       <div className="flex-grow overflow-y-auto p-6">
         {isAuthenticated ? (
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанный блок аватара с условной логикой ---
           <div className="flex items-center space-x-4">
             <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
               {user?.image ? (
                 <Image
                   src={user.image}
-                  alt="Аватар пользователя"
+                  alt="Аватар"
                   fill
                   sizes="64px"
                   className="object-cover"
@@ -132,15 +139,8 @@ export default function FloatingMenuOverlay({
                 {user?.name || 'Личный кабинет'}
               </Link>
               <p className="truncate text-sm text-gray-500">{user?.email}</p>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем отсюда "Настройки" --- */}
               <div className="flex items-center space-x-4 pt-2">
-                <Link
-                  href="/profile/settings"
-                  onClick={onClose}
-                  className="flex items-center gap-2 text-base font-medium text-gray-700 transition-colors hover:text-black"
-                >
-                  <SettingsIcon className="h-5 w-5" />
-                  <span>Настройки</span>
-                </Link>
                 <button
                   onClick={() => {
                     onClose();
@@ -151,10 +151,10 @@ export default function FloatingMenuOverlay({
                   Выход
                 </button>
               </div>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           </div>
         ) : (
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           <Link
             href="/login"
             onClick={onClose}
