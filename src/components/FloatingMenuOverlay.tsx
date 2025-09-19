@@ -201,7 +201,6 @@ export default function FloatingMenuOverlay({
           <div
             className={`mt-6 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью перестроенный аккордеон доставки --- */}
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
               className="flex w-full items-center justify-between p-4"
@@ -212,16 +211,16 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем текст на зеленый кружок-индикатор --- */}
               <div className="flex items-center space-x-2">
-                {!isDeliveryOpen && (
-                  <p className="text-xs font-medium text-green-600">В пути</p>
-                )}
+                <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
                   isOpen={isDeliveryOpen}
                   direction="down"
                   className="h-5 w-5 text-gray-400"
                 />
               </div>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </button>
             {isDeliveryOpen && (
               <div className="animate-in fade-in px-4 pb-4 duration-300">
@@ -244,7 +243,6 @@ export default function FloatingMenuOverlay({
                 </div>
               </div>
             )}
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
 
           <div className="mt-10 flex items-center space-x-3">
