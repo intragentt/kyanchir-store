@@ -29,20 +29,19 @@ const StatusStep = ({
 }) => {
   const isDone = status === 'done';
   const isCurrent = status === 'current';
-  const colors = isDone || isCurrent ? 'text-indigo-600' : 'text-gray-400';
-  const circleColors = isDone || isCurrent ? 'bg-indigo-600' : 'bg-gray-200';
+  const textColor = isDone || isCurrent ? 'text-indigo-600' : 'text-gray-400';
+  const circleColor = isDone || isCurrent ? 'bg-indigo-600' : 'bg-gray-200';
 
   return (
-    <div className="relative flex-1 text-center">
-      <div
-        className={`absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 ${isDone ? 'bg-indigo-600' : 'bg-gray-200'}`}
-      ></div>
-      <div className={`relative mx-auto h-3 w-3 rounded-full ${circleColors}`}>
+    <div className="flex flex-1 flex-col items-center text-center">
+      <div className={`h-3 w-3 rounded-full ${circleColor}`}>
         {isCurrent && (
-          <div className="absolute inset-0.5 rounded-full bg-white"></div>
+          <div className="h-full w-full rounded-full bg-white p-0.5">
+            <div className="h-full w-full rounded-full bg-indigo-600"></div>
+          </div>
         )}
       </div>
-      <span className={`mt-2 block text-[10px] font-medium ${colors}`}>
+      <span className={`mt-2 block text-[10px] font-medium ${textColor}`}>
         {label}
       </span>
     </div>
@@ -202,7 +201,7 @@ export default function FloatingMenuOverlay({
 
           {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью перестроенный аккордеон доставки --- */}
           <div
-            className={`mt-6 rounded-lg border ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
+            className={`mt-6 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
@@ -223,15 +222,19 @@ export default function FloatingMenuOverlay({
             {isDeliveryOpen && (
               <div className="animate-in fade-in px-4 pb-4 duration-300">
                 <div className="font-body">
-                  <div className="flex justify-between">
+                  <div className="flex items-baseline justify-between">
                     <p className="text-sm font-semibold text-gray-800">
                       Заказ #337
                     </p>
                     <p className="text-xs font-medium text-green-600">В пути</p>
                   </div>
-                  <p className="mt-2 text-sm text-gray-600">Розовая пижама</p>
+                  <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
-                <div className="mt-4 flex items-start justify-between space-x-2">
+                <div className="relative mt-6 flex items-center">
+                  <div className="absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 bg-gray-200">
+                    <div className="h-full w-1/3 bg-indigo-600"></div>{' '}
+                    {/* Закрашиваем 1/3 пути */}
+                  </div>
                   <StatusStep label="Обработка" status="done" />
                   <StatusStep label="В пути" status="current" />
                   <StatusStep label="Ожидает" status="pending" />
