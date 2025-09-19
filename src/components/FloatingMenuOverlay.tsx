@@ -33,12 +33,13 @@ const StatusStep = ({
   const circleColor = isDone || isCurrent ? 'bg-indigo-600' : 'bg-gray-200';
 
   return (
-    <div className="flex flex-1 flex-col items-center text-center">
-      <div className={`h-3 w-3 rounded-full ${circleColor}`}>
+    <div className="relative flex-1 text-center">
+      <div
+        className={`absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 ${isDone ? 'bg-indigo-600' : 'bg-gray-200'}`}
+      ></div>
+      <div className={`relative mx-auto h-3 w-3 rounded-full ${circleColor}`}>
         {isCurrent && (
-          <div className="h-full w-full rounded-full bg-white p-0.5">
-            <div className="h-full w-full rounded-full bg-indigo-600"></div>
-          </div>
+          <div className="absolute inset-0.5 rounded-full bg-white"></div>
         )}
       </div>
       <span className={`mt-2 block text-[10px] font-medium ${textColor}`}>
@@ -203,9 +204,9 @@ export default function FloatingMenuOverlay({
           <div
             className={`mt-6 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
-            <button
-              onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
+            <div
               className="flex w-full items-center justify-between p-4"
+              onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
             >
               <div className="flex items-center space-x-3">
                 <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -218,7 +219,7 @@ export default function FloatingMenuOverlay({
                 direction="down"
                 className="h-5 w-5 text-gray-400"
               />
-            </button>
+            </div>
             {isDeliveryOpen && (
               <div className="animate-in fade-in px-4 pb-4 duration-300">
                 <div className="font-body">
