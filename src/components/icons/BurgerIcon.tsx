@@ -9,7 +9,7 @@ export default function BurgerIcon(props: React.SVGProps<SVGSVGElement>) {
       // --- ИЗМЕНЕНИЕ 1: Приводим viewBox к стандарту 24x24 ---
       viewBox="0 0 24 24"
       // --- ИЗМЕНЕНИЕ 2: Приводим strokeWidth к стандарту 1.5 для этого набора ---
-      strokeWidth={1.5}
+      strokeWidth={1.2}
       stroke="currentColor"
       {...props}
     >
