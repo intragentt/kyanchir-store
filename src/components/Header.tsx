@@ -29,9 +29,7 @@ export default function Header({
 
   return (
     <header className={`w-full bg-white ${className}`}>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем вертикальные отступы --- */}
-      <div className="container mx-auto flex h-full items-center justify-between px-6 py-4 lg:px-8 xl:px-12">
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+      <div className="container mx-auto flex h-full items-center justify-between p-6 sm:px-6 lg:px-8 xl:px-12">
         {!isSearchActive ? (
           <div className="flex w-full items-center justify-between">
             <Link
@@ -41,21 +39,23 @@ export default function Header({
             >
               <Logo className="logo-brand-color h-5 w-auto" />
             </Link>
-            <div className="flex items-center space-x-2">
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем space-x и задаем отступ вручную --- */}
+            <div className="flex items-center">
               <button
                 onClick={() => onSearchToggle(true)}
                 aria-label="Поиск"
-                className="p-2 text-gray-700"
+                className="p-2"
               >
                 <SearchIcon className="h-6 w-6" />
               </button>
               <button
                 onClick={() => setFloatingMenuOpen(true)}
-                className="relative z-50 p-2 text-gray-700"
+                className="relative z-50 p-2"
               >
                 <BurgerIcon className="h-7 w-7" />
               </button>
             </div>
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
         ) : (
           <div className="flex w-full items-center space-x-2">
