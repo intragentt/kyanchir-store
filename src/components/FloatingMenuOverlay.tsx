@@ -1,4 +1,4 @@
-// Местоположение: src/components/FloatingMenuOverlay.tsx
+// src/components/FloatingMenuOverlay.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -179,27 +179,9 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
-          <div className="mt-10">
-            <button
-              onClick={() => setIsCartOpen(!isCartOpen)}
-              className="flex w-full items-center justify-between"
-            >
-              <div className="flex items-center space-x-3">
-                <CartIcon className="h-6 w-6 flex-none text-gray-800" />
-                <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
-                  Корзина
-                </div>
-              </div>
-              <ChevronIcon
-                isOpen={isCartOpen}
-                direction="right"
-                className="h-5 w-5 text-gray-400"
-              />
-            </button>
-          </div>
-
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Блоки "Доставка" и "Корзина" поменялись местами --- */}
           <div
-            className={`mt-6 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
+            className={`mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
@@ -211,7 +193,6 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем текст на зеленый кружок-индикатор --- */}
               <div className="flex items-center space-x-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
@@ -220,7 +201,6 @@ export default function FloatingMenuOverlay({
                   className="h-5 w-5 text-gray-400"
                 />
               </div>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </button>
             {isDeliveryOpen && (
               <div className="animate-in fade-in px-4 pb-4 duration-300">
@@ -244,6 +224,26 @@ export default function FloatingMenuOverlay({
               </div>
             )}
           </div>
+
+          <div className="mt-6">
+            <button
+              onClick={() => setIsCartOpen(!isCartOpen)}
+              className="flex w-full items-center justify-between"
+            >
+              <div className="flex items-center space-x-3">
+                <CartIcon className="h-6 w-6 flex-none text-gray-800" />
+                <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+                  Корзина
+                </div>
+              </div>
+              <ChevronIcon
+                isOpen={isCartOpen}
+                direction="down"
+                className="h-5 w-5 text-gray-400"
+              />
+            </button>
+          </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex items-center space-x-3">
             <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
