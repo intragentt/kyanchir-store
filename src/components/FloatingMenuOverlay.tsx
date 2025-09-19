@@ -62,7 +62,7 @@ export default function FloatingMenuOverlay({
               <Link href="/" onClick={onClose}>
                 <Logo className="logo-brand-color h-5 w-auto" />
               </Link>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Новая панель инструментов --- */}
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем "Настройки" из шапки --- */}
               <div className="flex items-center">
                 <button
                   aria-label="Активировать поиск"
@@ -71,14 +71,6 @@ export default function FloatingMenuOverlay({
                 >
                   <SearchIcon className="h-6 w-6 text-gray-800" />
                 </button>
-                <Link
-                  href="/profile/settings"
-                  onClick={onClose}
-                  aria-label="Настройки"
-                  className="p-2"
-                >
-                  <SettingsIcon className="h-6 w-6 text-gray-800" />
-                </Link>
                 <button
                   aria-label="Дополнительное меню"
                   className="p-2"
@@ -116,45 +108,57 @@ export default function FloatingMenuOverlay({
 
       <div className="flex-grow overflow-y-auto p-6">
         {isAuthenticated ? (
-          <div className="flex items-center space-x-4">
-            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
-              {user?.image ? (
-                <Image
-                  src={user.image}
-                  alt="Аватар"
-                  fill
-                  sizes="64px"
-                  className="object-cover"
-                />
-              ) : (
-                <AvatarPlaceholder />
-              )}
-            </div>
-            <div className="flex flex-col">
-              <Link
-                href="/profile"
-                onClick={onClose}
-                className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
-              >
-                {user?.name || 'Личный кабинет'}
-              </Link>
-              <p className="truncate text-sm text-gray-500">{user?.email}</p>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем отсюда "Настройки" --- */}
-              <div className="flex items-center space-x-4 pt-2">
-                <button
-                  onClick={() => {
-                    onClose();
-                    signOut({ callbackUrl: '/' });
-                  }}
-                  className="text-base font-medium text-red-600 transition-colors hover:text-red-800"
-                >
-                  Выход
-                </button>
+          // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью перестроенный блок пользователя ---
+          <div className="flex w-full items-center justify-between">
+            {/* Левая часть: Аватар + Информация */}
+            <div className="flex items-center space-x-4">
+              <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
+                {user?.image ? (
+                  <Image
+                    src={user.image}
+                    alt="Аватар"
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <AvatarPlaceholder />
+                )}
               </div>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+              <div className="flex flex-col">
+                <Link
+                  href="/profile"
+                  onClick={onClose}
+                  className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
+                >
+                  {user?.name || 'Личный кабинет'}
+                </Link>
+                <p className="truncate text-sm text-gray-500">{user?.email}</p>
+                <div className="flex items-center pt-2">
+                  <button
+                    onClick={() => {
+                      onClose();
+                      signOut({ callbackUrl: '/' });
+                    }}
+                    className="text-base font-medium text-red-600 transition-colors hover:text-red-800"
+                  >
+                    Выход
+                  </button>
+                </div>
+              </div>
             </div>
+            {/* Правая часть: Иконка Настроек */}
+            <Link
+              href="/profile/settings"
+              onClick={onClose}
+              aria-label="Настройки"
+              className="p-2"
+            >
+              <SettingsIcon className="h-6 w-6 text-gray-800" />
+            </Link>
           </div>
         ) : (
+          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           <Link
             href="/login"
             onClick={onClose}
