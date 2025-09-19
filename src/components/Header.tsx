@@ -21,9 +21,7 @@ export default function Header({
   className = '',
   isSearchActive,
   onSearchToggle,
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем опечатку ---
   isMenuOpen,
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   onMenuToggle,
 }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,7 +29,9 @@ export default function Header({
 
   return (
     <header className={`w-full bg-white ${className}`}>
-      <div className="container mx-auto flex h-full items-center justify-between p-6 sm:px-6 lg:px-8 xl:px-12">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем вертикальные отступы --- */}
+      <div className="container mx-auto flex h-full items-center justify-between px-6 py-4 lg:px-8 xl:px-12">
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         {!isSearchActive ? (
           <div className="flex w-full items-center justify-between">
             <Link
