@@ -1,22 +1,39 @@
-// Местоположение: src/components/icons/ChevronIcon.tsx
+// Местоположение: /src/components/icons/ChevronIcon.tsx
 import React from 'react';
 
 interface ChevronIconProps extends React.SVGProps<SVGSVGElement> {
   isOpen: boolean;
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем опцию направления ---
+  direction?: 'down' | 'right';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
-export default function ChevronIcon({ isOpen, ...props }: ChevronIconProps) {
+export default function ChevronIcon({
+  isOpen,
+  direction = 'down', // По умолчанию стрелка смотрит вниз
+  ...props
+}: ChevronIconProps) {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" логика поворота ---
+  const rotationClass =
+    direction === 'down'
+      ? // Логика для стрелки ВНИЗ/ВВЕРХ
+        isOpen
+        ? 'rotate-180' // Открыто (вверх)
+        : 'rotate-0' // Закрыто (вниз)
+      : // Логика для стрелки ВПРАВО/ВНИЗ
+        isOpen
+        ? 'rotate-0' // Открыто (вниз)
+        : '-rotate-90'; // Закрыто (вправо)
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
       viewBox="0 0 24 24"
-      strokeWidth={2}
+      strokeWidth={1.5} // Используем более изящную толщину
       stroke="currentColor"
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-      // Добавляем классы для плавной трансформации
-      className={`transition-transform duration-300 ease-in-out ${isOpen ? 'rotate-180' : 'rotate-0'}`}
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+      className={`transition-transform duration-300 ease-in-out ${rotationClass}`}
       {...props}
     >
       <path
