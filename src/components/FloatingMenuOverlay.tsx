@@ -14,8 +14,8 @@ import TruckIcon from './icons/TruckIcon';
 import HeartIcon from './icons/HeartIcon';
 import CloseIcon from './icons/CloseIcon';
 import QuestionMarkIcon from './icons/QuestionMarkIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем ShortLogo ---
-import ShortLogo from './icons/ShortLogo';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем нашу новую заглушку ---
+import AvatarPlaceholder from './AvatarPlaceholder';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
@@ -108,18 +108,20 @@ export default function FloatingMenuOverlay({
 
       <div className="flex-grow overflow-y-auto p-6">
         {isAuthenticated ? (
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанный блок аватара ---
+          // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанный блок аватара с условной логикой ---
           <div className="flex items-center space-x-4">
-            <div className="relative h-16 w-16 flex-shrink-0 rounded-full border-[1.2px] border-gray-200 bg-gray-100">
-              <Image
-                src={user?.image || '/placeholder.png'}
-                alt="Аватар пользователя"
-                fill
-                className="rounded-full object-cover"
-              />
-              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/5">
-                <ShortLogo className="h-7 w-auto text-white/80" />
-              </div>
+            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
+              {user?.image ? (
+                <Image
+                  src={user.image}
+                  alt="Аватар пользователя"
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              ) : (
+                <AvatarPlaceholder />
+              )}
             </div>
             <div className="flex flex-col">
               <Link
