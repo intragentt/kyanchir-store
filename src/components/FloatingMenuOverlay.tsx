@@ -179,13 +179,13 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлены отрицательные отступы для компенсации родительского padding --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убран negative margin, отступы управляются асимметрично --- */}
           <div
-            className={`-mx-4 mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
+            className={`mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
-              className="flex w-full items-center justify-between p-4"
+              className="flex w-full items-center justify-between py-4 pr-4"
             >
               <div className="flex items-center space-x-3">
                 <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -203,7 +203,7 @@ export default function FloatingMenuOverlay({
               </div>
             </button>
             {isDeliveryOpen && (
-              <div className="animate-in fade-in px-4 pb-4 duration-300">
+              <div className="animate-in fade-in pb-4 pr-4 duration-300">
                 <div className="font-body">
                   <div className="flex items-baseline justify-between">
                     <p className="text-sm font-semibold text-gray-800">
