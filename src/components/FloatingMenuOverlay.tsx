@@ -19,7 +19,6 @@ import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
 import ChevronIcon from './icons/ChevronIcon';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанный компонент трекера ---
 const StatusStep = ({
   label,
   status,
@@ -48,7 +47,6 @@ const StatusStep = ({
     </div>
   );
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -200,13 +198,13 @@ export default function FloatingMenuOverlay({
             </button>
           </div>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью перестроенный аккордеон доставки --- */}
           <div
             className={`mt-6 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
-            <div
-              className="flex w-full items-center justify-between p-4"
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью перестроенный аккордеон доставки --- */}
+            <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
+              className="flex w-full items-center justify-between p-4"
             >
               <div className="flex items-center space-x-3">
                 <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -214,12 +212,17 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
-              <ChevronIcon
-                isOpen={isDeliveryOpen}
-                direction="down"
-                className="h-5 w-5 text-gray-400"
-              />
-            </div>
+              <div className="flex items-center space-x-2">
+                {!isDeliveryOpen && (
+                  <p className="text-xs font-medium text-green-600">В пути</p>
+                )}
+                <ChevronIcon
+                  isOpen={isDeliveryOpen}
+                  direction="down"
+                  className="h-5 w-5 text-gray-400"
+                />
+              </div>
+            </button>
             {isDeliveryOpen && (
               <div className="animate-in fade-in px-4 pb-4 duration-300">
                 <div className="font-body">
@@ -227,14 +230,12 @@ export default function FloatingMenuOverlay({
                     <p className="text-sm font-semibold text-gray-800">
                       Заказ #337
                     </p>
-                    <p className="text-xs font-medium text-green-600">В пути</p>
                   </div>
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
                 <div className="relative mt-6 flex items-center">
                   <div className="absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 bg-gray-200">
-                    <div className="h-full w-1/3 bg-indigo-600"></div>{' '}
-                    {/* Закрашиваем 1/3 пути */}
+                    <div className="h-full w-1/3 bg-indigo-600"></div>
                   </div>
                   <StatusStep label="Обработка" status="done" />
                   <StatusStep label="В пути" status="current" />
@@ -243,8 +244,8 @@ export default function FloatingMenuOverlay({
                 </div>
               </div>
             )}
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex items-center space-x-3">
             <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
