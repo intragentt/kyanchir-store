@@ -17,8 +17,9 @@ import AvatarPlaceholder from './AvatarPlaceholder';
 import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
-// --- ИЗМЕНЕНИЕ: Используем существующий ChevronIcon ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новую иконку ---
 import ChevronIcon from './icons/ChevronIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -30,9 +31,10 @@ export default function FloatingMenuOverlay({
   onClose,
 }: FloatingMenuOverlayProps) {
   const [isSearchModeActive, setIsSearchModeActive] = useState(false);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Состояния для "аккордеонов" ---
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isDeliveryOpen, setIsDeliveryOpen] = useState(false);
-  const [isHelpOpen, setIsHelpOpen] = useState(false); // Возвращаем для совместимости
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
   const { setIsSearchActive } = useStickyHeader();
@@ -152,6 +154,7 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Новая структура с "аккордеонами" --- */}
           <div className="mt-10">
             <button
               onClick={() => setIsCartOpen(!isCartOpen)}
@@ -168,6 +171,7 @@ export default function FloatingMenuOverlay({
                 className="h-5 w-5 -rotate-90 text-gray-400"
               />
             </button>
+            {/* Сюда можно будет добавить контент корзины, который будет открываться */}
           </div>
 
           <div className="mt-6">
@@ -186,7 +190,9 @@ export default function FloatingMenuOverlay({
                 className="h-5 w-5 text-gray-400"
               />
             </button>
+            {/* Сюда можно будет добавить контент доставки, который будет открываться */}
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex items-center space-x-3">
             <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
