@@ -16,6 +16,9 @@ import CloseIcon from './icons/CloseIcon';
 import AvatarPlaceholder from './AvatarPlaceholder';
 import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новую иконку ---
+import CartIcon from './icons/CartIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -93,7 +96,6 @@ export default function FloatingMenuOverlay({
 
       <div className="flex-grow overflow-y-auto p-6 pt-0">
         {isAuthenticated ? (
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Финальная версия блока пользователя ---
           <div className="mt-4 flex w-full items-start justify-between">
             <div className="flex items-center space-x-4">
               <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
@@ -136,7 +138,6 @@ export default function FloatingMenuOverlay({
             </Link>
           </div>
         ) : (
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           <Link
             href="/login"
             onClick={onClose}
@@ -146,7 +147,6 @@ export default function FloatingMenuOverlay({
           </Link>
         )}
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновленный порядок и состав меню --- */}
         <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
           Корзина
         </div>
@@ -156,7 +156,6 @@ export default function FloatingMenuOverlay({
             Доставка
           </div>
         </div>
-
         <div className="mt-10 flex items-center space-x-3">
           <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
           <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
@@ -203,6 +202,14 @@ export default function FloatingMenuOverlay({
           </div>
           <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
             Помощь
+          </div>
+        </div>
+
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем иконку к Корзине --- */}
+        <div className="mt-10 flex items-center space-x-3">
+          <CartIcon className="h-6 w-6 flex-none text-gray-800" />
+          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+            Корзина
           </div>
         </div>
         {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
