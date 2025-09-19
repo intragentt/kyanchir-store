@@ -29,7 +29,9 @@ export default function Header({
 
   return (
     <header className={`w-full bg-white ${className}`}>
-      <div className="container mx-auto flex h-full items-center justify-between p-6 sm:px-6 lg:px-8 xl:px-12">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем горизонтальные отступы для мобильных --- */}
+      <div className="container mx-auto flex h-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         {!isSearchActive ? (
           <div className="flex w-full items-center justify-between">
             <Link
@@ -39,7 +41,6 @@ export default function Header({
             >
               <Logo className="logo-brand-color h-5 w-auto" />
             </Link>
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем space-x и задаем отступ вручную --- */}
             <div className="flex items-center">
               <button
                 onClick={() => onSearchToggle(true)}
@@ -55,7 +56,6 @@ export default function Header({
                 <BurgerIcon className="h-7 w-7" />
               </button>
             </div>
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
         ) : (
           <div className="flex w-full items-center space-x-2">
