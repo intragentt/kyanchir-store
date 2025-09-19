@@ -15,9 +15,6 @@ import HeartIcon from './icons/HeartIcon';
 import CloseIcon from './icons/CloseIcon';
 import QuestionMarkIcon from './icons/QuestionMarkIcon';
 import AvatarPlaceholder from './AvatarPlaceholder';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новую иконку ---
-import LogoutIcon from './icons/LogoutIcon';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -45,7 +42,7 @@ export default function FloatingMenuOverlay({
 
   return (
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white duration-300">
-      <div className="flex-shrink-0 p-6">
+      <div className="flex-shrink-0 border-b border-gray-200 p-6">
         {isHelpOpen && (
           <div className="animate-in slide-in-from-top-5 mb-8 flex flex-col space-y-3 duration-300">
             <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
@@ -65,7 +62,7 @@ export default function FloatingMenuOverlay({
               <Link href="/" onClick={onClose}>
                 <Logo className="logo-brand-color h-5 w-auto" />
               </Link>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем "Настройки" из шапки --- */}
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Новая панель инструментов --- */}
               <div className="flex items-center">
                 <button
                   aria-label="Активировать поиск"
@@ -74,6 +71,14 @@ export default function FloatingMenuOverlay({
                 >
                   <SearchIcon className="h-6 w-6 text-gray-800" />
                 </button>
+                <Link
+                  href="/profile/settings"
+                  onClick={onClose}
+                  aria-label="Настройки"
+                  className="p-2"
+                >
+                  <SettingsIcon className="h-6 w-6 text-gray-800" />
+                </Link>
                 <button
                   aria-label="Дополнительное меню"
                   className="p-2"
@@ -109,61 +114,47 @@ export default function FloatingMenuOverlay({
         </div>
       </div>
 
-      <div className="flex-grow overflow-y-auto p-6 pt-0">
+      <div className="flex-grow overflow-y-auto p-6">
         {isAuthenticated ? (
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Финальная, идеально сбалансированная версия ---
-          <div className="flex w-full items-start justify-between">
-            {/* Левая часть: Аватар + Информация */}
-            <div className="flex items-center space-x-4">
-              <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
-                {user?.image ? (
-                  <Image
-                    src={user.image}
-                    alt="Аватар"
-                    fill
-                    sizes="64px"
-                    className="object-cover"
-                  />
-                ) : (
-                  <AvatarPlaceholder />
-                )}
-              </div>
-              <div className="flex flex-col">
-                <Link
-                  href="/profile"
-                  onClick={onClose}
-                  className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
-                >
-                  {user?.name || 'Личный кабинет'}
-                </Link>
-                <p className="truncate text-sm text-gray-500">{user?.email}</p>
-              </div>
+          <div className="flex items-center space-x-4">
+            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
+              {user?.image ? (
+                <Image
+                  src={user.image}
+                  alt="Аватар"
+                  fill
+                  sizes="64px"
+                  className="object-cover"
+                />
+              ) : (
+                <AvatarPlaceholder />
+              )}
             </div>
-
-            {/* Правая часть: Панель инструментов (Настройки + Выход) */}
-            <div className="flex flex-col items-center space-y-2 pt-1">
+            <div className="flex flex-col">
               <Link
-                href="/profile/settings"
+                href="/profile"
                 onClick={onClose}
-                aria-label="Настройки"
-                className="p-2"
+                className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
               >
-                <SettingsIcon className="h-6 w-6 text-gray-800" />
+                {user?.name || 'Личный кабинет'}
               </Link>
-              <button
-                onClick={() => {
-                  onClose();
-                  signOut({ callbackUrl: '/' });
-                }}
-                aria-label="Выход"
-                className="p-2"
-              >
-                <LogoutIcon className="h-6 w-6 text-red-600" />
-              </button>
+              <p className="truncate text-sm text-gray-500">{user?.email}</p>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем отсюда "Настройки" --- */}
+              <div className="flex items-center space-x-4 pt-2">
+                <button
+                  onClick={() => {
+                    onClose();
+                    signOut({ callbackUrl: '/' });
+                  }}
+                  className="text-base font-medium text-red-600 transition-colors hover:text-red-800"
+                >
+                  Выход
+                </button>
+              </div>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           </div>
         ) : (
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           <Link
             href="/login"
             onClick={onClose}
