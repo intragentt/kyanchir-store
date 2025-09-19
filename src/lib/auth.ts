@@ -5,7 +5,6 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
-import type { UserRole } from '@prisma/client';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -21,7 +20,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.toLowerCase() },
           include: { role: true },
         });
 
@@ -46,18 +45,11 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.token) return null;
         const loginToken = await prisma.loginToken.findUnique({
           where: { token: credentials.token },
+          include: { user: { include: { role: true } } },
         });
-        if (
-          !loginToken ||
-          !loginToken.userId ||
-          loginToken.expires < new Date()
-        )
+        if (!loginToken || !loginToken.user || loginToken.expires < new Date())
           return null;
-        const user = await prisma.user.findUnique({
-          where: { id: loginToken.userId },
-          include: { role: true },
-        });
-        return user || null;
+        return loginToken.user;
       },
     }),
     CredentialsProvider({
@@ -72,7 +64,7 @@ export const authOptions: NextAuthOptions = {
         const verificationToken = await prisma.verificationToken.findUnique({
           where: {
             identifier_token: {
-              identifier: credentials.email,
+              identifier: credentials.email.toLowerCase(),
               token: credentials.token,
             },
           },
@@ -80,14 +72,14 @@ export const authOptions: NextAuthOptions = {
         if (!verificationToken || verificationToken.expires < new Date())
           return null;
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.toLowerCase() },
           include: { role: true },
         });
         if (user) {
           await prisma.verificationToken.delete({
             where: {
               identifier_token: {
-                identifier: credentials.email,
+                identifier: credentials.email.toLowerCase(),
                 token: credentials.token,
               },
             },
@@ -104,29 +96,21 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем универсальное имя переменной ---
   secret: process.env.AUTH_SECRET,
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        // @ts-ignore
-        if (user.role) {
-          // @ts-ignore
-          token.role = user.role;
-        }
+        token.role = user.role;
+        token.bonusPoints = user.bonusPoints;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        // @ts-ignore
-        if (token.role) {
-          // @ts-ignore
-          session.user.role = token.role;
-        }
+        session.user.role = token.role;
+        session.user.bonusPoints = token.bonusPoints;
       }
       return session;
     },

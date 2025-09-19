@@ -13,8 +13,12 @@ import SettingsIcon from './icons/SettingsIcon';
 import TruckIcon from './icons/TruckIcon';
 import HeartIcon from './icons/HeartIcon';
 import CloseIcon from './icons/CloseIcon';
+import QuestionMarkIcon from './icons/QuestionMarkIcon';
 import AvatarPlaceholder from './AvatarPlaceholder';
-import ReceiptIcon from './icons/ReceiptIcon';
+import LogoutIcon from './icons/LogoutIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем ShortLogo для плашки ---
+import ShortLogo from './icons/ShortLogo';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -25,6 +29,7 @@ export default function FloatingMenuOverlay({
   isOpen,
   onClose,
 }: FloatingMenuOverlayProps) {
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSearchModeActive, setIsSearchModeActive] = useState(false);
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
@@ -42,7 +47,19 @@ export default function FloatingMenuOverlay({
   return (
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white duration-300">
       <div className="flex-shrink-0 p-6">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью перестроенная шапка меню --- */}
+        {isHelpOpen && (
+          <div className="animate-in slide-in-from-top-5 mb-8 flex flex-col space-y-3 duration-300">
+            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              Политика и Конфиденциальность
+            </div>
+            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              Что такое K-койны?
+            </div>
+            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              Как определить размер?
+            </div>
+          </div>
+        )}
         <div className="flex w-full items-center justify-between">
           {!isSearchModeActive ? (
             <>
@@ -57,13 +74,12 @@ export default function FloatingMenuOverlay({
                 >
                   <SearchIcon className="h-6 w-6 text-gray-800" />
                 </button>
-                {/* Иконка "?" заменена на иконку закрытия */}
                 <button
-                  aria-label="Закрыть меню"
+                  aria-label="Дополнительное меню"
                   className="p-2"
-                  onClick={onClose}
+                  onClick={() => setIsHelpOpen(!isHelpOpen)}
                 >
-                  <CloseIcon className="h-7 w-7 text-gray-800" />
+                  <QuestionMarkIcon className="h-7 w-7 text-gray-800" />
                 </button>
               </div>
             </>
@@ -90,13 +106,11 @@ export default function FloatingMenuOverlay({
             </div>
           )}
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
 
       <div className="flex-grow overflow-y-auto p-6 pt-0">
         {isAuthenticated ? (
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Финальная версия блока пользователя ---
-          <div className="flex w-full items-center justify-between">
+          <div className="flex w-full items-start justify-between">
             <div className="flex items-center space-x-4">
               <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
                 {user?.image ? (
@@ -120,19 +134,39 @@ export default function FloatingMenuOverlay({
                   {user?.name || 'Личный кабинет'}
                 </Link>
                 <p className="truncate text-sm text-gray-500">{user?.email}</p>
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем плашку "К-койны" --- */}
+                <div className="mt-2 inline-flex items-center space-x-2 self-start rounded-md bg-gray-100 px-2.5 py-1">
+                  <span className="font-body text-sm font-semibold text-gray-800">
+                    {user?.bonusPoints ?? 275}
+                  </span>
+                  <ShortLogo className="h-4 w-auto text-[#6B80C5]" />
+                </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             </div>
-            <Link
-              href="/profile/settings"
-              onClick={onClose}
-              aria-label="Настройки"
-              className="p-2"
-            >
-              <SettingsIcon className="h-6 w-6 text-gray-800" />
-            </Link>
+
+            <div className="flex flex-col items-center space-y-2 pt-1">
+              <Link
+                href="/profile/settings"
+                onClick={onClose}
+                aria-label="Настройки"
+                className="p-2"
+              >
+                <SettingsIcon className="h-6 w-6 text-gray-800" />
+              </Link>
+              <button
+                onClick={() => {
+                  onClose();
+                  signOut({ callbackUrl: '/' });
+                }}
+                aria-label="Выход"
+                className="p-2"
+              >
+                <LogoutIcon className="h-6 w-6 text-red-600" />
+              </button>
+            </div>
           </div>
         ) : (
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           <Link
             href="/login"
             onClick={onClose}
@@ -148,16 +182,6 @@ export default function FloatingMenuOverlay({
             Избранное
           </div>
         </div>
-
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "Купленные товары" --- */}
-        <div className="mt-6 flex items-center space-x-3">
-          <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
-          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
-            Купленные товары
-          </div>
-        </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-
         <div className="mt-6 flex items-center space-x-3">
           <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
           <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
@@ -181,15 +205,7 @@ export default function FloatingMenuOverlay({
             сертификаты
           </div>
         </div>
-
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Расширяем блок помощи --- */}
         <div className="mt-10 flex flex-col space-y-4">
-          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
-            Что такое К-койны?
-          </div>
-          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
-            Как определить размер?
-          </div>
           <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
             Политика
           </div>
@@ -200,8 +216,6 @@ export default function FloatingMenuOverlay({
             Помощь
           </div>
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-
         <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
           Корзина
         </div>
