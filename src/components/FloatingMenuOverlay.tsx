@@ -179,9 +179,9 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Скорректированы отступы для выравнивания по левому краю --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлены отрицательные отступы для компенсации родительского padding --- */}
           <div
-            className={`mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
+            className={`-mx-4 mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
