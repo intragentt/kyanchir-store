@@ -19,7 +19,7 @@ import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
 import ChevronIcon from './icons/ChevronIcon';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем вспомогательный компонент для трекера ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанный компонент трекера ---
 const StatusStep = ({
   label,
   status,
@@ -29,19 +29,20 @@ const StatusStep = ({
 }) => {
   const isDone = status === 'done';
   const isCurrent = status === 'current';
-  const colors =
-    isDone || isCurrent
-      ? 'bg-indigo-600 text-indigo-600'
-      : 'bg-gray-200 text-gray-400';
+  const colors = isDone || isCurrent ? 'text-indigo-600' : 'text-gray-400';
+  const circleColors = isDone || isCurrent ? 'bg-indigo-600' : 'bg-gray-200';
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="relative flex-1 text-center">
       <div
-        className={`relative flex h-3 w-3 items-center justify-center rounded-full ${colors}`}
-      >
-        {isCurrent && <div className="h-1.5 w-1.5 rounded-full bg-white"></div>}
+        className={`absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 ${isDone ? 'bg-indigo-600' : 'bg-gray-200'}`}
+      ></div>
+      <div className={`relative mx-auto h-3 w-3 rounded-full ${circleColors}`}>
+        {isCurrent && (
+          <div className="absolute inset-0.5 rounded-full bg-white"></div>
+        )}
       </div>
-      <span className={`mt-1 text-center text-[10px] font-medium ${colors}`}>
+      <span className={`mt-2 block text-[10px] font-medium ${colors}`}>
         {label}
       </span>
     </div>
@@ -199,10 +200,13 @@ export default function FloatingMenuOverlay({
             </button>
           </div>
 
-          <div className="mt-6">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью перестроенный аккордеон доставки --- */}
+          <div
+            className={`mt-6 rounded-lg border ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
+          >
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
-              className="flex w-full items-center justify-between"
+              className="flex w-full items-center justify-between p-4"
             >
               <div className="flex items-center space-x-3">
                 <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -216,29 +220,27 @@ export default function FloatingMenuOverlay({
                 className="h-5 w-5 text-gray-400"
               />
             </button>
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "фейковый" заказ внутрь аккордеона --- */}
             {isDeliveryOpen && (
-              <div className="animate-in fade-in ml-9 mt-4 rounded-lg border border-gray-200 p-4 duration-300">
+              <div className="animate-in fade-in px-4 pb-4 duration-300">
                 <div className="font-body">
-                  <p className="text-sm font-semibold text-gray-800">
-                    Заказ #337
-                  </p>
-                  <p className="text-xs text-green-600">Статус: В пути</p>
-                  <p className="mt-2 text-sm text-gray-600">"Розовая пижама"</p>
+                  <div className="flex justify-between">
+                    <p className="text-sm font-semibold text-gray-800">
+                      Заказ #337
+                    </p>
+                    <p className="text-xs font-medium text-green-600">В пути</p>
+                  </div>
+                  <p className="mt-2 text-sm text-gray-600">Розовая пижама</p>
                 </div>
-                <div className="mt-4 flex items-center">
+                <div className="mt-4 flex items-start justify-between space-x-2">
                   <StatusStep label="Обработка" status="done" />
-                  <div className="h-0.5 w-full flex-grow bg-indigo-600"></div>
                   <StatusStep label="В пути" status="current" />
-                  <div className="h-0.5 w-full flex-grow bg-gray-200"></div>
                   <StatusStep label="Ожидает" status="pending" />
-                  <div className="h-0.5 w-full flex-grow bg-gray-200"></div>
                   <StatusStep label="Получен" status="pending" />
                 </div>
               </div>
             )}
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex items-center space-x-3">
             <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
