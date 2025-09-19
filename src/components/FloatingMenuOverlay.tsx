@@ -13,8 +13,9 @@ import SettingsIcon from './icons/SettingsIcon';
 import TruckIcon from './icons/TruckIcon';
 import HeartIcon from './icons/HeartIcon';
 import CloseIcon from './icons/CloseIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем ChevronIcon на QuestionMarkIcon ---
 import QuestionMarkIcon from './icons/QuestionMarkIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем ShortLogo ---
+import ShortLogo from './icons/ShortLogo';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
@@ -71,7 +72,6 @@ export default function FloatingMenuOverlay({
                 >
                   <SearchIcon className="h-6 w-6 text-gray-800" />
                 </button>
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Ставим новую иконку --- */}
                 <button
                   aria-label="Дополнительное меню"
                   className="p-2"
@@ -79,7 +79,6 @@ export default function FloatingMenuOverlay({
                 >
                   <QuestionMarkIcon className="h-7 w-7 text-gray-800" />
                 </button>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             </>
           ) : (
@@ -109,14 +108,19 @@ export default function FloatingMenuOverlay({
 
       <div className="flex-grow overflow-y-auto p-6">
         {isAuthenticated ? (
+          // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанный блок аватара ---
           <div className="flex items-center space-x-4">
-            <Image
-              src={user?.image || '/placeholder.png'}
-              alt="Аватар"
-              width={64}
-              height={64}
-              className="h-16 w-16 flex-shrink-0 rounded-full object-cover"
-            />
+            <div className="relative h-16 w-16 flex-shrink-0 rounded-full border-[1.2px] border-gray-200 bg-gray-100">
+              <Image
+                src={user?.image || '/placeholder.png'}
+                alt="Аватар пользователя"
+                fill
+                className="rounded-full object-cover"
+              />
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/5">
+                <ShortLogo className="h-7 w-auto text-white/80" />
+              </div>
+            </div>
             <div className="flex flex-col">
               <Link
                 href="/profile"
@@ -148,6 +152,7 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
         ) : (
+          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           <Link
             href="/login"
             onClick={onClose}
