@@ -179,13 +179,13 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Блоки "Доставка" и "Корзина" поменялись местами --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Изменена структура отступов для корректного justify-between --- */}
           <div
-            className={`mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
+            className={`mt-10 rounded-lg border p-4 transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
-              className="flex w-full items-center justify-between p-4"
+              className="flex w-full items-center justify-between"
             >
               <div className="flex items-center space-x-3">
                 <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -203,7 +203,7 @@ export default function FloatingMenuOverlay({
               </div>
             </button>
             {isDeliveryOpen && (
-              <div className="animate-in fade-in px-4 pb-4 duration-300">
+              <div className="animate-in fade-in pt-4 duration-300">
                 <div className="font-body">
                   <div className="flex items-baseline justify-between">
                     <p className="text-sm font-semibold text-gray-800">
@@ -224,6 +224,7 @@ export default function FloatingMenuOverlay({
               </div>
             )}
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-6">
             <button
@@ -243,7 +244,6 @@ export default function FloatingMenuOverlay({
               />
             </button>
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex items-center space-x-3">
             <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
