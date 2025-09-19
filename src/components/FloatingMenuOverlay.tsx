@@ -16,9 +16,7 @@ import CloseIcon from './icons/CloseIcon';
 import AvatarPlaceholder from './AvatarPlaceholder';
 import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новую иконку ---
 import CartIcon from './icons/CartIcon';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -45,7 +43,10 @@ export default function FloatingMenuOverlay({
 
   return (
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white duration-300">
-      <div className="flex-shrink-0 p-6">
+      {/* --- ШАПКА МЕНЮ --- */}
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Синхронизируем отступы с основной шапкой --- */}
+      <div className="flex-shrink-0 px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <div className="flex w-full items-center justify-between">
           {!isSearchModeActive ? (
             <>
@@ -147,8 +148,11 @@ export default function FloatingMenuOverlay({
           </Link>
         )}
 
-        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
-          Корзина
+        <div className="mt-10 flex items-center space-x-3">
+          <CartIcon className="h-6 w-6 flex-none text-gray-800" />
+          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+            Корзина
+          </div>
         </div>
         <div className="mt-6 flex items-center space-x-3">
           <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -204,15 +208,6 @@ export default function FloatingMenuOverlay({
             Помощь
           </div>
         </div>
-
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем иконку к Корзине --- */}
-        <div className="mt-10 flex items-center space-x-3">
-          <CartIcon className="h-6 w-6 flex-none text-gray-800" />
-          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
-            Корзина
-          </div>
-        </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
     </div>
   );
