@@ -17,36 +17,8 @@ import AvatarPlaceholder from './AvatarPlaceholder';
 import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новую иконку ---
 import ChevronIcon from './icons/ChevronIcon';
-
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Вспомогательный компонент для трекера статуса ---
-const StatusStep = ({
-  label,
-  status,
-}: {
-  label: string;
-  status: 'done' | 'current' | 'pending';
-}) => {
-  const isDone = status === 'done';
-  const isCurrent = status === 'current';
-  const colors =
-    isDone || isCurrent
-      ? 'bg-indigo-600 text-indigo-600'
-      : 'bg-gray-200 text-gray-400';
-
-  return (
-    <div className="flex flex-col items-center">
-      <div
-        className={`relative flex h-3 w-3 items-center justify-center rounded-full ${colors}`}
-      >
-        {isCurrent && <div className="h-1.5 w-1.5 rounded-full bg-white"></div>}
-      </div>
-      <span className={`mt-1 text-center text-[10px] font-medium ${colors}`}>
-        {label}
-      </span>
-    </div>
-  );
-};
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
@@ -59,8 +31,10 @@ export default function FloatingMenuOverlay({
   onClose,
 }: FloatingMenuOverlayProps) {
   const [isSearchModeActive, setIsSearchModeActive] = useState(false);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Состояния для "аккордеонов" ---
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isDeliveryOpen, setIsDeliveryOpen] = useState(false);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
   const { setIsSearchActive } = useStickyHeader();
@@ -129,21 +103,19 @@ export default function FloatingMenuOverlay({
           {isAuthenticated ? (
             <div className="flex w-full items-start justify-between">
               <div className="flex items-center space-x-4">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Увеличиваем аватар --- */}
-                <div className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
+                <div className="relative h-[68px] w-[68px] flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
                   {user?.image ? (
                     <Image
                       src={user.image}
                       alt="Аватар"
                       fill
-                      sizes="72px"
+                      sizes="68px"
                       className="object-cover"
                     />
                   ) : (
                     <AvatarPlaceholder />
                   )}
                 </div>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <div className="flex flex-col">
                   <Link
                     href="/profile"
@@ -182,6 +154,7 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Новая структура с "аккордеонами" --- */}
           <div className="mt-10">
             <button
               onClick={() => setIsCartOpen(!isCartOpen)}
@@ -195,13 +168,12 @@ export default function FloatingMenuOverlay({
               </div>
               <ChevronIcon
                 isOpen={isCartOpen}
-                direction="right"
-                className="h-5 w-5 text-gray-400"
+                className="h-5 w-5 -rotate-90 text-gray-400"
               />
             </button>
+            {/* Сюда можно будет добавить контент корзины, который будет открываться */}
           </div>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем "аккордеон" с трекером --- */}
           <div className="mt-6">
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
@@ -215,30 +187,10 @@ export default function FloatingMenuOverlay({
               </div>
               <ChevronIcon
                 isOpen={isDeliveryOpen}
-                direction="down"
                 className="h-5 w-5 text-gray-400"
               />
             </button>
-            {isDeliveryOpen && (
-              <div className="animate-in fade-in ml-9 mt-4 rounded-lg border border-gray-200 p-4 duration-300">
-                <div className="font-body">
-                  <p className="text-sm font-semibold text-gray-800">
-                    Заказ #337
-                  </p>
-                  <p className="text-xs text-green-600">Статус: В пути</p>
-                  <p className="mt-2 text-sm text-gray-600">"Розовая пижама"</p>
-                </div>
-                <div className="mt-4 flex items-center">
-                  <StatusStep label="Обработка" status="done" />
-                  <div className="h-0.5 w-full flex-grow bg-indigo-600"></div>
-                  <StatusStep label="В пути" status="current" />
-                  <div className="h-0.5 w-full flex-grow bg-gray-200"></div>
-                  <StatusStep label="Ожидает" status="pending" />
-                  <div className="h-0.5 w-full flex-grow bg-gray-200"></div>
-                  <StatusStep label="Получен" status="pending" />
-                </div>
-              </div>
-            )}
+            {/* Сюда можно будет добавить контент доставки, который будет открываться */}
           </div>
           {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
