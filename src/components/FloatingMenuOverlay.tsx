@@ -14,7 +14,12 @@ import TruckIcon from './icons/TruckIcon';
 import HeartIcon from './icons/HeartIcon';
 import CloseIcon from './icons/CloseIcon';
 import AvatarPlaceholder from './AvatarPlaceholder';
-import ReceiptIcon from './icons/ReceiptIcon'; // Убедимся, что ReceiptIcon импортирован
+import ReceiptIcon from './icons/ReceiptIcon';
+import ShortLogo from './icons/ShortLogo';
+import CartIcon from './icons/CartIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новую иконку ---
+import ChevronIcon from './icons/ChevronIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -26,6 +31,10 @@ export default function FloatingMenuOverlay({
   onClose,
 }: FloatingMenuOverlayProps) {
   const [isSearchModeActive, setIsSearchModeActive] = useState(false);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Состояния для "аккордеонов" ---
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isDeliveryOpen, setIsDeliveryOpen] = useState(false);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
   const { setIsSearchActive } = useStickyHeader();
@@ -41,8 +50,7 @@ export default function FloatingMenuOverlay({
 
   return (
     <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white duration-300">
-      <div className="flex-shrink-0 p-6">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью перестроенная шапка меню --- */}
+      <div className="flex-shrink-0 px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
         <div className="flex w-full items-center justify-between">
           {!isSearchModeActive ? (
             <>
@@ -57,7 +65,6 @@ export default function FloatingMenuOverlay({
                 >
                   <SearchIcon className="h-6 w-6 text-gray-800" />
                 </button>
-                {/* "?" заменена на иконку закрытия */}
                 <button
                   aria-label="Закрыть меню"
                   className="p-2"
@@ -90,117 +97,156 @@ export default function FloatingMenuOverlay({
             </div>
           )}
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
-
-      <div className="flex-grow overflow-y-auto p-6 pt-0">
-        {isAuthenticated ? (
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Финальная версия блока пользователя ---
-          <div className="flex w-full items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
-                {user?.image ? (
-                  <Image
-                    src={user.image}
-                    alt="Аватар"
-                    fill
-                    sizes="64px"
-                    className="object-cover"
-                  />
-                ) : (
-                  <AvatarPlaceholder />
-                )}
+      <div className="flex flex-grow flex-col overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 xl:px-12">
+        <div className="flex-grow">
+          {isAuthenticated ? (
+            <div className="flex w-full items-start justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="relative h-[68px] w-[68px] flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
+                  {user?.image ? (
+                    <Image
+                      src={user.image}
+                      alt="Аватар"
+                      fill
+                      sizes="68px"
+                      className="object-cover"
+                    />
+                  ) : (
+                    <AvatarPlaceholder />
+                  )}
+                </div>
+                <div className="flex flex-col">
+                  <Link
+                    href="/profile"
+                    onClick={onClose}
+                    className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
+                  >
+                    {user?.name || 'Личный кабинет'}
+                  </Link>
+                  <p className="truncate text-sm text-gray-500">
+                    {user?.email}
+                  </p>
+                  <div className="mt-2 inline-flex items-center space-x-2 self-start rounded-md bg-gray-100 px-2.5 py-1">
+                    <span className="font-body text-sm font-semibold text-gray-800">
+                      {user?.bonusPoints ?? 0}
+                    </span>
+                    <ShortLogo className="h-4 w-auto text-[#6B80C5]" />
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <Link
-                  href="/profile"
-                  onClick={onClose}
-                  className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
-                >
-                  {user?.name || 'Личный кабинет'}
-                </Link>
-                <p className="truncate text-sm text-gray-500">{user?.email}</p>
-              </div>
+              <Link
+                href="/profile/settings"
+                onClick={onClose}
+                aria-label="Настройки"
+                className="p-2"
+              >
+                <SettingsIcon className="h-6 w-6 text-gray-800" />
+              </Link>
             </div>
+          ) : (
             <Link
-              href="/profile/settings"
+              href="/login"
               onClick={onClose}
-              aria-label="Настройки"
-              className="p-2"
+              className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
             >
-              <SettingsIcon className="h-6 w-6 text-gray-800" />
+              Вход / Регистрация
             </Link>
-          </div>
-        ) : (
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-          <Link
-            href="/login"
-            onClick={onClose}
-            className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg"
-          >
-            Вход / Регистрация
-          </Link>
-        )}
+          )}
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновленный порядок и состав меню --- */}
-        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
-          Корзина
-        </div>
-        <div className="mt-6 flex items-center space-x-3">
-          <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
-          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
-            Избранное
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Новая структура с "аккордеонами" --- */}
+          <div className="mt-10">
+            <button
+              onClick={() => setIsCartOpen(!isCartOpen)}
+              className="flex w-full items-center justify-between"
+            >
+              <div className="flex items-center space-x-3">
+                <CartIcon className="h-6 w-6 flex-none text-gray-800" />
+                <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+                  Корзина
+                </div>
+              </div>
+              <ChevronIcon
+                isOpen={isCartOpen}
+                direction="right"
+                className="h-5 w-5 text-gray-400"
+              />
+            </button>
+            {/* Сюда можно будет добавить контент корзины, который будет открываться */}
           </div>
-        </div>
-        <div className="mt-6 flex items-center space-x-3">
-          <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
-          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
-            Купленные товары
-          </div>
-        </div>
-        <div className="mt-6 flex items-center space-x-3">
-          <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
-          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
-            Доставка
-          </div>
-        </div>
 
-        <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
-          Магазин
-        </div>
-        <div className="mt-4 flex flex-col space-y-3">
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
-            пижамы
+          <div className="mt-6">
+            <button
+              onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
+              className="flex w-full items-center justify-between"
+            >
+              <div className="flex items-center space-x-3">
+                <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
+                <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+                  Доставка
+                </div>
+              </div>
+              <ChevronIcon
+                isOpen={isDeliveryOpen}
+                direction="down"
+                className="h-5 w-5 text-gray-400"
+              />
+            </button>
+            {/* Сюда можно будет добавить контент доставки, который будет открываться */}
           </div>
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
-            нижнее белье
-          </div>
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
-            для дома
-          </div>
-          <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
-            сертификаты
-          </div>
-        </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
-        <div className="mt-10 flex flex-col space-y-4">
-          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
-            Что такое К-койны?
+          <div className="mt-10 flex items-center space-x-3">
+            <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
+            <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+              Избранное
+            </div>
           </div>
-          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
-            Как определить размер?
+          <div className="mt-6 flex items-center space-x-3">
+            <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
+            <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+              Купленные товары
+            </div>
           </div>
-          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
-            Политика
+          <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
+            Магазин
           </div>
-          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
-            Конфиденциальность
+          <div className="mt-4 flex flex-col space-y-3">
+            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              пижамы
+            </div>
+            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              нижнее белье
+            </div>
+            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              для дома
+            </div>
+            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              сертификаты
+            </div>
           </div>
-          <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
-            Помощь
+          <div className="mt-10 flex flex-col space-y-4">
+            <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
+              Что такое К-койны?
+            </div>
+            <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
+              Как определить размер?
+            </div>
+            <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
+              Помощь
+            </div>
           </div>
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+        <div className="mt-auto flex-shrink-0 border-t border-gray-200 pt-6">
+          <div className="flex items-center justify-center space-x-6">
+            <div className="cursor-pointer font-body text-sm font-medium text-gray-500 transition-colors hover:text-black">
+              Политика
+            </div>
+            <div className="cursor-pointer font-body text-sm font-medium text-gray-500 transition-colors hover:text-black">
+              Конфиденциальность
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
