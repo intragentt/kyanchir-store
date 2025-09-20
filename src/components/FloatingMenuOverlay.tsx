@@ -17,7 +17,6 @@ import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переработанный StatusStep для нового дизайна ---
 const StatusStep = ({
   label,
   status,
@@ -55,7 +54,6 @@ const StatusStep = ({
     </div>
   );
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
@@ -85,6 +83,7 @@ const AdminIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ChevronIcon теперь рендерит разные SVG вместо вращения ---
 const ChevronIcon = ({
   isOpen,
   direction,
@@ -111,25 +110,43 @@ const ChevronIcon = ({
       </svg>
     );
   }
-  // direction === 'down'
-  return (
-    <svg
-      className={`${className} transform transition-transform duration-200 ${
-        isOpen ? '-rotate-180' : ''
-      }`}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M19 9l-7 7-7-7"
-      />
-    </svg>
-  );
+
+  // Для direction === 'down', мы выбираем иконку в зависимости от состояния isOpen
+  if (isOpen) {
+    return (
+      <svg
+        className={className}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M5 15l7-7 7 7"
+        />
+      </svg>
+    );
+  } else {
+    return (
+      <svg
+        className={className}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M19 9l-7 7-7-7"
+        />
+      </svg>
+    );
+  }
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -304,7 +321,6 @@ export default function FloatingMenuOverlay({
                   </div>
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
                 <div className="relative mt-8">
                   <div className="absolute left-2 right-2 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-gray-200">
                     <div
@@ -323,7 +339,6 @@ export default function FloatingMenuOverlay({
                     />
                   </div>
                 </div>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             )}
           </div>
