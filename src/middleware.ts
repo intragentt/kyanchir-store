@@ -9,7 +9,6 @@ const MAIN_DOMAIN = 'kyanchir.ru';
 const ADMIN_ROLES = ['ADMIN', 'MANAGEMENT'];
 
 export async function middleware(req: NextRequest) {
-  // Используем канонический способ получения URL и hostname
   const url = req.nextUrl.clone();
   const { hostname, pathname } = url;
 
@@ -22,48 +21,46 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // --- ШАГ 1: ОПРЕДЕЛЕНИЕ ЛИЧНОСТИ ---
-  // Получаем токен. Это единственный источник правды о пользователе.
+  // Получаем токен ОДИН РАЗ
   const token = await getToken({ req, secret: process.env.AUTH_SECRET });
   const isUserAdmin =
     token && ADMIN_ROLES.includes((token.role as { name: string })?.name);
 
-  // --- ШАГ 2: МАРШРУТИЗАЦИЯ И ЗАЩИТА ---
-  // Логика построена от самого специфичного случая к самому общему.
-
-  // Сценарий 1: Пользователь на АДМИНСКОМ домене.
-  if (hostname === ADMIN_DOMAIN) {
-    // Если он не админ, или пытается открыть что-то кроме админки — безусловный редирект на основной сайт.
-    // Это правило защищает админский домен и исправляет неверные URL.
-    if (!isUserAdmin || !pathname.startsWith('/admin')) {
-      url.hostname = MAIN_DOMAIN;
-      return NextResponse.redirect(url);
-    }
-    // Если он админ и находится в /admin, пропускаем его.
-    return NextResponse.next();
-  }
-
-  // Сценарий 2: Пользователь на ОСНОВНОМ домене.
+  // --- Сценарий 1: Пользователь на ОСНОВНОМ домене ---
   if (hostname === MAIN_DOMAIN) {
-    // Если он админ и пытается зайти в /admin...
-    if (pathname.startsWith('/admin') && isUserAdmin) {
-      // ...перенаправляем его на правильный домен.
-      url.hostname = ADMIN_DOMAIN;
-      return NextResponse.redirect(url);
-    }
-    // Если он не админ (или гость) и пытается зайти в /admin...
-    if (pathname.startsWith('/admin') && !isUserAdmin) {
-      // ...показываем 404.
+    // Если он пытается получить доступ к /admin...
+    if (pathname.startsWith('/admin')) {
+      // ...и он админ...
+      if (isUserAdmin) {
+        // ...перенаправляем его на админский домен, УДАЛЯЯ /admin из пути.
+        const newPath = pathname.replace('/admin', '') || '/';
+        url.hostname = ADMIN_DOMAIN;
+        url.pathname = newPath;
+        return NextResponse.redirect(url);
+      }
+      // ...а если он НЕ админ (или гость), показываем 404, чтобы скрыть админку.
       return NextResponse.rewrite(new URL('/404', req.url));
     }
-    // Если он не залогинен и пытается зайти в профиль...
+
+    // Если он пытается зайти в профиль и не залогинен, отправляем на логин.
     if (pathname.startsWith('/profile') && !token) {
-      // ...отправляем на логин.
       return NextResponse.redirect(new URL('/login', req.url));
     }
   }
 
-  // Если ни одно из правил не сработало, пользователь может пройти.
+  // --- Сценарий 2: Пользователь на АДМИНСКОМ домене ---
+  if (hostname === ADMIN_DOMAIN) {
+    // Если он НЕ админ (включая гостей), безусловно отправляем его на страницу входа.
+    // Админский домен - только для админов.
+    if (!isUserAdmin) {
+      const loginUrl = new URL('/login', `https://${MAIN_DOMAIN}`);
+      // Сохраняем URL, на который он хотел попасть, для редиректа после логина
+      loginUrl.searchParams.set('callbackUrl', url.href);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Если ни одно из правил не сработало, пропускаем.
   return NextResponse.next();
 }
 
