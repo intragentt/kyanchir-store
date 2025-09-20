@@ -47,12 +47,12 @@ const StatusStep = ({
   );
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена иконка админа ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Откалибрована позиция буквы "А" ---
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
-    width="24" // Увеличим размер для лучшей кликабельности и вида
+    width="24"
     height="24"
-    viewBox="0 0 14 12" // Немного изменим viewBox для центровки
+    viewBox="0 0 14 12"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className={className}
@@ -62,8 +62,8 @@ const AdminIcon = ({ className }: { className?: string }) => (
       fill="#6B80C5"
     />
     <text
-      x="6.5"
-      y="6.5"
+      x="7"
+      y="7"
       dominantBaseline="middle"
       textAnchor="middle"
       fill="white"
