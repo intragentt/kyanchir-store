@@ -17,7 +17,7 @@ import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлена опция выравнивания текста ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переработанный StatusStep с абсолютным позиционированием текста ---
 const StatusStep = ({
   label,
   status,
@@ -31,20 +31,24 @@ const StatusStep = ({
   const isCurrent = status === 'current';
   const textColor = isDone || isCurrent ? 'text-gray-800' : 'text-gray-400';
   const circleColor = isDone || isCurrent ? 'bg-gray-800' : 'bg-gray-200';
-  const alignClass = {
-    left: 'text-left',
-    center: 'text-center',
-    right: 'text-right',
+
+  // Определяем классы для позиционирования текста
+  const positionClasses = {
+    left: 'left-0',
+    center: 'left-1/2 -translate-x-1/2',
+    right: 'right-0',
   }[align];
 
   return (
-    <div className={`relative flex-1 ${alignClass}`}>
+    <div className="relative flex-1">
       <div className={`relative mx-auto h-3 w-3 rounded-full ${circleColor}`}>
         {isCurrent && (
           <div className="absolute inset-0.5 rounded-full bg-white"></div>
         )}
       </div>
-      <span className={`mt-2 block text-[10px] font-medium ${textColor}`}>
+      <span
+        className={`whitespace-nowrap absolute mt-2 block text-[10px] font-medium ${textColor} ${positionClasses}`}
+      >
         {label}
       </span>
     </div>
@@ -280,7 +284,7 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
-              <div className="-mr-6 flex items-center space-x-2">
+              <div className="flex items-center space-x-2 -mr-6">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
                   isOpen={isDeliveryOpen}
@@ -299,7 +303,6 @@ export default function FloatingMenuOverlay({
                   </div>
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
                 <div className="relative mt-6 px-2">
                   <div className="absolute left-0 top-1.5 w-full">
                     <div className="mx-auto h-0.5 w-3/4 bg-gray-200">
@@ -317,7 +320,6 @@ export default function FloatingMenuOverlay({
                     />
                   </div>
                 </div>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             )}
           </div>
