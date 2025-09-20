@@ -17,6 +17,7 @@ import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переработанный StatusStep для идеального выравнивания ---
 const StatusStep = ({
   label,
   status,
@@ -43,17 +44,24 @@ const StatusStep = ({
     right: 'right-0',
   }[align];
 
+  const justifyClass = {
+    left: 'justify-start',
+    center: 'justify-center',
+    right: 'justify-end',
+  }[align];
+
   return (
-    <div className="relative flex-1">
-      <div className={`relative mx-auto ${circleClasses}`}></div>
+    <div className={`relative flex flex-1 ${justifyClass}`}>
+      <div className={`relative ${circleClasses}`}></div>
       <span
-        className={`absolute mt-2 block whitespace-nowrap text-[10px] font-medium ${textColor} ${positionClasses}`}
+        className={`whitespace-nowrap absolute mt-2 block text-[10px] font-medium ${textColor} ${positionClasses}`}
       >
         {label}
       </span>
     </div>
   );
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
@@ -299,7 +307,7 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
-              <div className="-mr-6 flex items-center space-x-2">
+              <div className="flex items-center space-x-2 -mr-6">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
                   isOpen={isDeliveryOpen}
@@ -318,17 +326,20 @@ export default function FloatingMenuOverlay({
                   </div>
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
                 <div className="relative mt-8">
-                  <div className="absolute left-2 right-2 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-gray-200">
+                  <div className="absolute left-2 right-2 top-1/2 h-1.5 -translate-y-[55%] rounded-full bg-gray-200">
                     <div
                       className="h-full rounded-full bg-gray-800"
                       style={{ width: '33.33%' }}
                     ></div>
                   </div>
-                  <div className="relative flex justify-between">
-                    {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Текст "Обработка" изменен на "Обработан" --- */}
-                    <StatusStep label="Обработан" status="done" align="left" />
-                    {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+                  <div className="relative flex">
+                    <StatusStep
+                      label="Обработан"
+                      status="done"
+                      align="left"
+                    />
                     <StatusStep label="В пути" status="current" />
                     <StatusStep label="Ожидает" status="pending" />
                     <StatusStep
@@ -338,6 +349,7 @@ export default function FloatingMenuOverlay({
                     />
                   </div>
                 </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             )}
           </div>
