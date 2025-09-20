@@ -3,15 +3,17 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+// --- КОНСТАНТЫ ---
 const ADMIN_DOMAIN = 'admin.kyanchir.ru';
 const MAIN_DOMAIN = 'kyanchir.ru';
 const ADMIN_ROLES = ['ADMIN', 'MANAGEMENT'];
 
 export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  const hostname = req.headers.get('host')!;
+  // Используем канонический способ получения URL и hostname
+  const url = req.nextUrl.clone();
+  const { hostname, pathname } = url;
 
-  // Игнорируем служебные запросы
+  // Игнорируем служебные файлы
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
@@ -20,48 +22,48 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // --- ШАГ 1: МАРШРУТИЗАЦИЯ ДОМЕНОВ ---
-  // Эта логика гарантирует, что пользователь всегда находится на правильном домене.
-
-  // Если запрос к /admin пришел на ОСНОВНОЙ домен...
-  if (hostname === MAIN_DOMAIN && pathname.startsWith('/admin')) {
-    // ...немедленно перенаправляем его на АДМИНСКИЙ домен.
-    return NextResponse.redirect(new URL(pathname, `https://${ADMIN_DOMAIN}`));
-  }
-
-  // Если запрос к НЕ-/admin страницам пришел на АДМИНСКИЙ домен...
-  if (hostname === ADMIN_DOMAIN && !pathname.startsWith('/admin')) {
-    // ...немедленно возвращаем его на ОСНОВНОЙ домен.
-    return NextResponse.redirect(new URL(pathname, `https://${MAIN_DOMAIN}`));
-  }
-
-  // --- ШАГ 2: ПРОВЕРКА ДОСТУПА ---
-  // Этот код выполнится ТОЛЬКО если пользователь уже на правильном домене.
-
+  // --- ШАГ 1: ОПРЕДЕЛЕНИЕ ЛИЧНОСТИ ---
+  // Получаем токен. Это единственный источник правды о пользователе.
   const token = await getToken({ req, secret: process.env.AUTH_SECRET });
-  const isAuthenticated = !!token;
-  const userRole = (token?.role as { name: string } | undefined)?.name;
-  const isUserAdmin = isAuthenticated && ADMIN_ROLES.includes(userRole!);
+  const isUserAdmin =
+    token && ADMIN_ROLES.includes((token.role as { name: string })?.name);
 
-  // Если мы на админском домене (а мы знаем, что путь начинается с /admin)...
+  // --- ШАГ 2: МАРШРУТИЗАЦИЯ И ЗАЩИТА ---
+  // Логика построена от самого специфичного случая к самому общему.
+
+  // Сценарий 1: Пользователь на АДМИНСКОМ домене.
   if (hostname === ADMIN_DOMAIN) {
-    // ...и у пользователя нет прав админа (включая случай, когда он не залогинен)...
-    if (!isUserAdmin) {
-      // ...отправляем его на страницу входа на ОСНОВНОМ домене.
-      return NextResponse.redirect(new URL('/login', `https://${MAIN_DOMAIN}`));
+    // Если он не админ, или пытается открыть что-то кроме админки — безусловный редирект на основной сайт.
+    // Это правило защищает админский домен и исправляет неверные URL.
+    if (!isUserAdmin || !pathname.startsWith('/admin')) {
+      url.hostname = MAIN_DOMAIN;
+      return NextResponse.redirect(url);
     }
+    // Если он админ и находится в /admin, пропускаем его.
+    return NextResponse.next();
   }
 
-  // Если мы на основном домене и путь защищен...
-  if (hostname === MAIN_DOMAIN && pathname.startsWith('/profile')) {
-    // ...а пользователь не залогинен...
-    if (!isAuthenticated) {
-      // ...отправляем его на страницу входа.
+  // Сценарий 2: Пользователь на ОСНОВНОМ домене.
+  if (hostname === MAIN_DOMAIN) {
+    // Если он админ и пытается зайти в /admin...
+    if (pathname.startsWith('/admin') && isUserAdmin) {
+      // ...перенаправляем его на правильный домен.
+      url.hostname = ADMIN_DOMAIN;
+      return NextResponse.redirect(url);
+    }
+    // Если он не админ (или гость) и пытается зайти в /admin...
+    if (pathname.startsWith('/admin') && !isUserAdmin) {
+      // ...показываем 404.
+      return NextResponse.rewrite(new URL('/404', req.url));
+    }
+    // Если он не залогинен и пытается зайти в профиль...
+    if (pathname.startsWith('/profile') && !token) {
+      // ...отправляем на логин.
       return NextResponse.redirect(new URL('/login', req.url));
     }
   }
 
-  // Если все проверки пройдены, разрешаем доступ.
+  // Если ни одно из правил не сработало, пользователь может пройти.
   return NextResponse.next();
 }
 
