@@ -83,7 +83,6 @@ const AdminIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ChevronIcon теперь рендерит разные SVG вместо вращения ---
 const ChevronIcon = ({
   isOpen,
   direction,
@@ -111,7 +110,6 @@ const ChevronIcon = ({
     );
   }
 
-  // Для direction === 'down', мы выбираем иконку в зависимости от состояния isOpen
   if (isOpen) {
     return (
       <svg
@@ -146,7 +144,6 @@ const ChevronIcon = ({
     );
   }
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -329,7 +326,9 @@ export default function FloatingMenuOverlay({
                     ></div>
                   </div>
                   <div className="relative flex justify-between">
-                    <StatusStep label="Обработка" status="done" align="left" />
+                    {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Текст "Обработка" изменен на "Обработан" --- */}
+                    <StatusStep label="Обработан" status="done" align="left" />
+                    {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                     <StatusStep label="В пути" status="current" />
                     <StatusStep label="Ожидает" status="pending" />
                     <StatusStep
