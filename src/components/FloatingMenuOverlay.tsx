@@ -179,13 +179,13 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убран negative margin, отступы управляются асимметрично --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Стиль "карточки" применен ко всем элементам --- */}
           <div
             className={`mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
-              className="flex w-full items-center justify-between py-4 pr-4"
+              className="flex w-full items-center justify-between p-4"
             >
               <div className="flex items-center space-x-3">
                 <TruckIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -203,7 +203,7 @@ export default function FloatingMenuOverlay({
               </div>
             </button>
             {isDeliveryOpen && (
-              <div className="animate-in fade-in pb-4 pr-4 duration-300">
+              <div className="animate-in fade-in px-4 pb-4 duration-300">
                 <div className="font-body">
                   <div className="flex items-baseline justify-between">
                     <p className="text-sm font-semibold text-gray-800">
@@ -224,12 +224,13 @@ export default function FloatingMenuOverlay({
               </div>
             )}
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
-          <div className="mt-6">
+          <div
+            className={`mt-6 rounded-lg border transition-colors ${isCartOpen ? 'border-gray-200' : 'border-transparent'}`}
+          >
             <button
               onClick={() => setIsCartOpen(!isCartOpen)}
-              className="flex w-full items-center justify-between"
+              className="flex w-full items-center justify-between p-4"
             >
               <div className="flex items-center space-x-3">
                 <CartIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -245,18 +246,21 @@ export default function FloatingMenuOverlay({
             </button>
           </div>
 
-          <div className="mt-10 flex items-center space-x-3">
+          <div className="mt-10 flex cursor-pointer items-center space-x-3 rounded-lg border border-transparent p-4 transition-colors hover:border-gray-200">
             <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               Избранное
             </div>
           </div>
-          <div className="mt-6 flex items-center space-x-3">
+
+          <div className="mt-6 flex cursor-pointer items-center space-x-3 rounded-lg border border-transparent p-4 transition-colors hover:border-gray-200">
             <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               Купленные товары
             </div>
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
           <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
             Магазин
           </div>
