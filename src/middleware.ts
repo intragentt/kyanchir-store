@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-// --- КОНСТАНТЫ ---
 const ADMIN_DOMAIN = 'admin.kyanchir.ru';
 const MAIN_DOMAIN = 'kyanchir.ru';
 const ADMIN_ROLES = ['ADMIN', 'MANAGEMENT'];
@@ -26,19 +25,24 @@ export async function middleware(req: NextRequest) {
   const isUserAdmin =
     token && ADMIN_ROLES.includes((token.role as { name: string })?.name);
 
-  // --- Сценарий 1: Пользователь на ОСНОВНОМ домене ---
+  // --- Сценарий 1: Пользователь зашел на АДМИНСКИЙ домен ---
+  if (hostname === ADMIN_DOMAIN) {
+    // Если он НЕ админ (включая гостей), отправляем его на страницу входа.
+    if (!isUserAdmin) {
+      const loginUrl = new URL('/login', `https://${MAIN_DOMAIN}`);
+      loginUrl.searchParams.set('callbackUrl', url.href);
+      return NextResponse.redirect(loginUrl);
+    }
+    // Если он АДМИН, "переписываем" URL, чтобы он видел контент из папки /admin.
+    // Пример: admin.kyanchir.ru/dashboard -> /app/admin/dashboard
+    url.pathname = `/admin${pathname}`;
+    return NextResponse.rewrite(url);
+  }
+
+  // --- Сценарий 2: Пользователь зашел на ОСНОВНОЙ домен ---
   if (hostname === MAIN_DOMAIN) {
-    // Если он пытается получить доступ к /admin...
+    // Если он пытается зайти в /admin, это запрещено на основном домене.
     if (pathname.startsWith('/admin')) {
-      // ...и он админ...
-      if (isUserAdmin) {
-        // ...перенаправляем его на админский домен, УДАЛЯЯ /admin из пути.
-        const newPath = pathname.replace('/admin', '') || '/';
-        url.hostname = ADMIN_DOMAIN;
-        url.pathname = newPath;
-        return NextResponse.redirect(url);
-      }
-      // ...а если он НЕ админ (или гость), показываем 404, чтобы скрыть админку.
       return NextResponse.rewrite(new URL('/404', req.url));
     }
 
@@ -48,19 +52,6 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // --- Сценарий 2: Пользователь на АДМИНСКОМ домене ---
-  if (hostname === ADMIN_DOMAIN) {
-    // Если он НЕ админ (включая гостей), безусловно отправляем его на страницу входа.
-    // Админский домен - только для админов.
-    if (!isUserAdmin) {
-      const loginUrl = new URL('/login', `https://${MAIN_DOMAIN}`);
-      // Сохраняем URL, на который он хотел попасть, для редиректа после логина
-      loginUrl.searchParams.set('callbackUrl', url.href);
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-
-  // Если ни одно из правил не сработало, пропускаем.
   return NextResponse.next();
 }
 
