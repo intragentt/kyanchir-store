@@ -17,20 +17,28 @@ import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлена опция выравнивания текста ---
 const StatusStep = ({
   label,
   status,
+  align = 'center',
 }: {
   label: string;
   status: 'done' | 'current' | 'pending';
+  align?: 'left' | 'center' | 'right';
 }) => {
   const isDone = status === 'done';
   const isCurrent = status === 'current';
   const textColor = isDone || isCurrent ? 'text-gray-800' : 'text-gray-400';
   const circleColor = isDone || isCurrent ? 'bg-gray-800' : 'bg-gray-200';
+  const alignClass = {
+    left: 'text-left',
+    center: 'text-center',
+    right: 'text-right',
+  }[align];
 
   return (
-    <div className="relative flex-1 text-center">
+    <div className={`relative flex-1 ${alignClass}`}>
       <div className={`relative mx-auto h-3 w-3 rounded-full ${circleColor}`}>
         {isCurrent && (
           <div className="absolute inset-0.5 rounded-full bg-white"></div>
@@ -42,6 +50,7 @@ const StatusStep = ({
     </div>
   );
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
@@ -291,19 +300,21 @@ export default function FloatingMenuOverlay({
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
                 {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
-                <div className="relative mt-6">
-                  {/* Слой с полосой */}
+                <div className="relative mt-6 px-2">
                   <div className="absolute left-0 top-1.5 w-full">
                     <div className="mx-auto h-0.5 w-3/4 bg-gray-200">
                       <div className="h-full w-1/3 bg-gray-800"></div>
                     </div>
                   </div>
-                  {/* Слой с кружками и текстом */}
                   <div className="relative flex">
-                    <StatusStep label="Обработка" status="done" />
+                    <StatusStep label="Обработка" status="done" align="left" />
                     <StatusStep label="В пути" status="current" />
                     <StatusStep label="Ожидает" status="pending" />
-                    <StatusStep label="Получен" status="pending" />
+                    <StatusStep
+                      label="Получен"
+                      status="pending"
+                      align="right"
+                    />
                   </div>
                 </div>
                 {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
