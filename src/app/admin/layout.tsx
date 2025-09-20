@@ -1,9 +1,10 @@
-// Местоположение: src/app/admin/layout.tsx (НОВЫЙ ФАЙЛ)
+// Местоположение: src/app/admin/layout.tsx (ОБНОВЛЕННЫЙ ФАЙЛ)
 
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth'; // Наш главный инструмент аутентификации
+import AdminHeader from '@/components/admin/AdminHeader'; // <-- Импортируем нашу новую шапку
 
-// Определяем роли админов, чтобы не дублировать код
+// Определяем роли админов
 const ADMIN_ROLES = ['ADMIN', 'MANAGEMENT'];
 
 interface AdminLayoutProps {
@@ -12,8 +13,10 @@ interface AdminLayoutProps {
 
 /**
  * Это корневой Layout для всей админ-панели.
- * Он является "главным охранником", который проверяет доступ КО ВСЕМ страницам внутри /admin.
- * Эта проверка происходит на сервере, где у нас есть 100% надёжный доступ к сессии.
+ * Он выполняет две ключевые задачи:
+ * 1. ЗАЩИТА: Проверяет права доступа ко всем страницам внутри /admin.
+ * 2. ИЗОЛЯЦИЯ: Рендерит специальный, изолированный UI (шапку и фон) только для админки,
+ *    полностью игнорируя общую шапку и футер основного сайта.
  */
 export default async function AdminLayout({ children }: AdminLayoutProps) {
   const session = await auth(); // Получаем сессию на сервере
@@ -22,13 +25,16 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
   const isUserAdmin =
     session?.user && ADMIN_ROLES.includes(session.user.role?.name);
 
-  // Если у пользователя нет прав админа...
+  // Если у пользователя нет прав админа, показываем 404.
   if (!isUserAdmin) {
-    // ...показываем страницу 404.
-    // Это лучший способ скрыть существование админки от посторонних.
     notFound();
   }
 
-  // Если все проверки пройдены, показываем запрошенную страницу.
-  return <>{children}</>;
+  // Если все проверки пройдены, рендерим изолированный макет админки.
+  return (
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      <AdminHeader /> {/* <-- ИСПОЛЬЗУЕМ ФИКСИРОВАННУЮ ШАПКУ АДМИНКИ */}
+      <main className="flex-grow">{children}</main>
+    </div>
+  );
 }
