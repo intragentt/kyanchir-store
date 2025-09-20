@@ -146,3 +146,11 @@ body:has(.mobile-sticky-footer) {
   height: env(safe-area-inset-top);
   background: #fff; /* всегда белая вставка для статус-бара */
 }
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

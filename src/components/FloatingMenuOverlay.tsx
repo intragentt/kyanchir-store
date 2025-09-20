@@ -271,7 +271,6 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Смещение индикатора --- */}
               <div className="-mr-4 flex items-center space-x-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
@@ -280,7 +279,6 @@ export default function FloatingMenuOverlay({
                   className="h-5 w-5 text-gray-400"
                 />
               </div>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </button>
             {isDeliveryOpen && (
               <div className="animate-in fade-in px-4 pb-4 duration-300">
@@ -292,7 +290,6 @@ export default function FloatingMenuOverlay({
                   </div>
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
                 <div className="relative mt-6 flex items-start">
                   <div className="absolute left-1.5 right-1.5 top-1.5 h-0.5 bg-gray-200">
                     <div className="h-full w-1/3 bg-gray-800"></div>
@@ -302,7 +299,6 @@ export default function FloatingMenuOverlay({
                   <StatusStep label="Ожидает" status="pending" />
                   <StatusStep label="Получен" status="pending" />
                 </div>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             )}
           </div>
@@ -347,25 +343,28 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
 
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Магазин" обернут в карточку с горизонтальным скроллом --- */}
           <div className="mt-10 rounded-lg border border-gray-200 p-4">
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               Магазин
             </div>
-            <div className="mt-4 flex flex-col space-y-3">
-              <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+            {/* Горизонтальный контейнер для категорий */}
+            <div className="scrollbar-hide mt-4 flex items-center space-x-3 overflow-x-auto pb-2">
+              <div className="flex-shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-1.5 font-body text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
                 пижамы
               </div>
-              <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              <div className="flex-shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-1.5 font-body text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
                 нижнее белье
               </div>
-              <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              <div className="flex-shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-1.5 font-body text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
                 для дома
               </div>
-              <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+              <div className="flex-shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-1.5 font-body text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
                 сертификаты
               </div>
             </div>
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex flex-col space-y-4">
             <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
