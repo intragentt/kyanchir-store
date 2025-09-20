@@ -47,7 +47,6 @@ const StatusStep = ({
   );
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Скорректирован размер и позиция буквы "А" ---
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
     width="24"
@@ -75,7 +74,6 @@ const AdminIcon = ({ className }: { className?: string }) => (
     </text>
   </svg>
 );
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -88,14 +86,16 @@ export default function FloatingMenuOverlay({
 }: FloatingMenuOverlayProps) {
   const [isSearchModeActive, setIsSearchModeActive] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isDeliveryOpen, setIsDeliveryOpen] = useState(false);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Доставка" теперь по умолчанию открыта ---
+  const [isDeliveryOpen, setIsDeliveryOpen] = useState(true);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
   const { setIsSearchActive } = useStickyHeader();
 
-  if (!isOpen) {
-    return null;
-  }
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Компонент больше не уничтожается, а скрывается ---
+  // Мы убрали `if (!isOpen) return null;`
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSearchClick = () => {
     onClose();
@@ -103,7 +103,11 @@ export default function FloatingMenuOverlay({
   };
 
   return (
-    <div className="animate-in fade-in fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white duration-300">
+    <div
+      className={`fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white transition-opacity duration-300 ease-in-out ${
+        isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+      }`}
+    >
       <div className="flex-shrink-0 px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
         <div className="flex w-full items-center justify-between">
           {!isSearchModeActive ? (
