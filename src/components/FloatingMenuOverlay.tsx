@@ -16,9 +16,10 @@ import AvatarPlaceholder from './AvatarPlaceholder';
 import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: ChevronIcon больше не импортируется, а определяется здесь ---
+// --- ChevronIcon определяется локально, импорт не нужен ---
 // import ChevronIcon from './icons/ChevronIcon';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Нейтральная цветовая схема для трекера ---
 const StatusStep = ({
   label,
   status,
@@ -28,14 +29,11 @@ const StatusStep = ({
 }) => {
   const isDone = status === 'done';
   const isCurrent = status === 'current';
-  const textColor = isDone || isCurrent ? 'text-indigo-600' : 'text-gray-400';
-  const circleColor = isDone || isCurrent ? 'bg-indigo-600' : 'bg-gray-200';
+  const textColor = isDone || isCurrent ? 'text-gray-800' : 'text-gray-400';
+  const circleColor = isDone || isCurrent ? 'bg-gray-800' : 'bg-gray-200';
 
   return (
     <div className="relative flex-1 text-center">
-      <div
-        className={`absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 ${isDone ? 'bg-indigo-600' : 'bg-gray-200'}`}
-      ></div>
       <div className={`relative mx-auto h-3 w-3 rounded-full ${circleColor}`}>
         {isCurrent && (
           <div className="absolute inset-0.5 rounded-full bg-white"></div>
@@ -47,6 +45,7 @@ const StatusStep = ({
     </div>
   );
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
@@ -76,7 +75,6 @@ const AdminIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Создана новая, исправленная версия ChevronIcon ---
 const ChevronIcon = ({
   isOpen,
   direction,
@@ -122,7 +120,6 @@ const ChevronIcon = ({
     </svg>
   );
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -236,7 +233,6 @@ export default function FloatingMenuOverlay({
                   </div>
                 </div>
               </div>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Иконки админа и настроек поменялись местами --- */}
               <div className="flex flex-col items-center">
                 <Link
                   href="/profile/settings"
@@ -257,7 +253,6 @@ export default function FloatingMenuOverlay({
                   </Link>
                 )}
               </div>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           ) : (
             <Link
@@ -280,7 +275,8 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Смещение индикатора --- */}
+              <div className="-mr-2.5 flex items-center space-x-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
                   isOpen={isDeliveryOpen}
@@ -288,6 +284,7 @@ export default function FloatingMenuOverlay({
                   className="h-5 w-5 text-gray-400"
                 />
               </div>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </button>
             {isDeliveryOpen && (
               <div className="animate-in fade-in px-4 pb-4 duration-300">
@@ -299,15 +296,17 @@ export default function FloatingMenuOverlay({
                   </div>
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
-                <div className="relative mt-6 flex items-center">
-                  <div className="absolute left-0 top-1/2 h-0.5 w-full -translate-y-1/2 bg-gray-200">
-                    <div className="h-full w-1/3 bg-indigo-600"></div>
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
+                <div className="relative mt-6 flex items-center px-1.5">
+                  <div className="absolute left-3 right-3 top-1/2 h-0.5 -translate-y-1/2 bg-gray-200">
+                    <div className="h-full w-1/3 bg-gray-800"></div>
                   </div>
                   <StatusStep label="Обработка" status="done" />
                   <StatusStep label="В пути" status="current" />
                   <StatusStep label="Ожидает" status="pending" />
                   <StatusStep label="Получен" status="pending" />
                 </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             )}
           </div>
@@ -352,23 +351,28 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
 
-          <div className="mt-10 font-body text-base font-semibold text-gray-800 md:text-lg">
-            Магазин
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Магазин" обернут в карточку --- */}
+          <div className="mt-10 rounded-lg border border-gray-200 p-4">
+            <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+              Магазин
+            </div>
+            <div className="mt-4 flex flex-col space-y-3">
+              <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+                пижамы
+              </div>
+              <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+                нижнее белье
+              </div>
+              <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+                для дома
+              </div>
+              <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+                сертификаты
+              </div>
+            </div>
           </div>
-          <div className="mt-4 flex flex-col space-y-3">
-            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
-              пижамы
-            </div>
-            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
-              нижнее белье
-            </div>
-            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
-              для дома
-            </div>
-            <div className="cursor-pointer font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
-              сертификаты
-            </div>
-          </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
           <div className="mt-10 flex flex-col space-y-4">
             <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
               Что такое К-койны?
