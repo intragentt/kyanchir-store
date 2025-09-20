@@ -6,6 +6,15 @@ import prisma from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Определение общего домена для cookie ---
+// Мы определяем общий домен '.kyanchir.ru'. Точка в начале — это "wildcard",
+// которая делает cookie доступными для всех субдоменов (www, admin и т.д.).
+// В режиме разработки (когда мы работаем на localhost) это значение будет undefined,
+// чтобы next-auth использовал стандартное поведение.
+const cookieDomain =
+  process.env.NODE_ENV === 'production' ? '.kyanchir.ru' : undefined;
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
@@ -115,6 +124,39 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Конфигурация cookie для субдоменов ---
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        domain: cookieDomain,
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        sameSite: 'lax',
+        path: '/',
+        domain: cookieDomain,
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        domain: cookieDomain,
+        secure: process.env.NODE_ENV === 'production',
+      },
+    },
+  },
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 };
 
 export const auth = () => getServerSession(authOptions);
