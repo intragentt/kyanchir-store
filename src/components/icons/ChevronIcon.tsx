@@ -1,46 +1,65 @@
-// Местоположение: /src/components/icons/ChevronIcon.tsx
 import React from 'react';
 
-interface ChevronIconProps extends React.SVGProps<SVGSVGElement> {
-  isOpen: boolean;
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем опцию направления ---
-  direction?: 'down' | 'right';
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-}
-
-export default function ChevronIcon({
+const ChevronIcon = ({
   isOpen,
-  direction = 'down', // По умолчанию стрелка смотрит вниз
-  ...props
-}: ChevronIconProps) {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Умная" логика поворота ---
-  const rotationClass =
-    direction === 'down'
-      ? // Логика для стрелки ВНИЗ/ВВЕРХ
-        isOpen
-        ? 'rotate-180' // Открыто (вверх)
-        : 'rotate-0' // Закрыто (вниз)
-      : // Логика для стрелки ВПРАВО/ВНИЗ
-        isOpen
-        ? 'rotate-0' // Открыто (вниз)
-        : '-rotate-90'; // Закрыто (вправо)
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  direction,
+  className,
+}: {
+  isOpen: boolean;
+  direction: 'down' | 'right';
+  className?: string;
+}) => {
+  if (direction === 'right') {
+    return (
+      <svg
+        className={className}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 5l7 7-7 7"
+        />
+      </svg>
+    );
+  }
 
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      strokeWidth={1.5} // Используем более изящную толщину
-      stroke="currentColor"
-      className={`transition-transform duration-300 ease-in-out ${rotationClass}`}
-      {...props}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-      />
-    </svg>
-  );
-}
+  if (isOpen) {
+    return (
+      <svg
+        className={className}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M5 15l7-7 7 7"
+        />
+      </svg>
+    );
+  } else {
+    return (
+      <svg
+        className={className}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M19 9l-7 7-7-7"
+        />
+      </svg>
+    );
+  }
+};
+
+export default ChevronIcon;
