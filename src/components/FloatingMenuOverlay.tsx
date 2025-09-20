@@ -179,10 +179,8 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "История заказов" переименована и перемещена --- */}
-          <div
-            className={`mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
-          >
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Всем карточкам добавлена постоянная обводка --- */}
+          <div className="mt-10 rounded-lg border border-gray-200 transition-colors">
             <button
               onClick={() => setIsDeliveryOpen(!isDeliveryOpen)}
               className="flex w-full items-center justify-between p-4"
@@ -225,16 +223,14 @@ export default function FloatingMenuOverlay({
             )}
           </div>
 
-          <div className="mt-6 flex cursor-pointer items-center space-x-3 rounded-lg border border-transparent p-4 transition-colors hover:border-gray-200">
+          <div className="mt-6 flex cursor-pointer items-center space-x-3 rounded-lg border border-gray-200 p-4 transition-colors">
             <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               История заказов
             </div>
           </div>
 
-          <div
-            className={`mt-6 rounded-lg border transition-colors ${isCartOpen ? 'border-gray-200' : 'border-transparent'}`}
-          >
+          <div className="mt-6 rounded-lg border border-gray-200 transition-colors">
             <button
               onClick={() => setIsCartOpen(!isCartOpen)}
               className="flex w-full items-center justify-between p-4"
@@ -253,7 +249,7 @@ export default function FloatingMenuOverlay({
             </button>
           </div>
 
-          <div className="mt-10 flex cursor-pointer items-center space-x-3 rounded-lg border border-transparent p-4 transition-colors hover:border-gray-200">
+          <div className="mt-10 flex cursor-pointer items-center space-x-3 rounded-lg border border-gray-200 p-4 transition-colors">
             <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               Избранное
