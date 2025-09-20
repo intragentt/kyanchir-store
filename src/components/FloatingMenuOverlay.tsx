@@ -271,7 +271,7 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
-              <div className="-mr-4 flex items-center space-x-2">
+              <div className="-mr-6 flex items-center space-x-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
                   isOpen={isDeliveryOpen}
@@ -290,15 +290,23 @@ export default function FloatingMenuOverlay({
                   </div>
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
-                <div className="relative mt-6 flex items-start">
-                  <div className="absolute left-1.5 right-1.5 top-1.5 h-0.5 bg-gray-200">
-                    <div className="h-full w-1/3 bg-gray-800"></div>
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
+                <div className="relative mt-6">
+                  {/* Слой с полосой */}
+                  <div className="absolute left-0 top-1.5 w-full">
+                    <div className="mx-auto h-0.5 w-3/4 bg-gray-200">
+                      <div className="h-full w-1/3 bg-gray-800"></div>
+                    </div>
                   </div>
-                  <StatusStep label="Обработка" status="done" />
-                  <StatusStep label="В пути" status="current" />
-                  <StatusStep label="Ожидает" status="pending" />
-                  <StatusStep label="Получен" status="pending" />
+                  {/* Слой с кружками и текстом */}
+                  <div className="relative flex">
+                    <StatusStep label="Обработка" status="done" />
+                    <StatusStep label="В пути" status="current" />
+                    <StatusStep label="Ожидает" status="pending" />
+                    <StatusStep label="Получен" status="pending" />
+                  </div>
                 </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             )}
           </div>
@@ -343,7 +351,6 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Категории преобразованы в минималистичный слайдер --- */}
           <div className="mt-10 rounded-lg border border-gray-200 p-4">
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               Магазин
@@ -366,7 +373,6 @@ export default function FloatingMenuOverlay({
               </div>
             </div>
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex flex-col space-y-4">
             <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
