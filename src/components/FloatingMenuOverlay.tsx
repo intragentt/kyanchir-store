@@ -343,23 +343,25 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Магазин" обернут в карточку с горизонтальным скроллом --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Категории преобразованы в минималистичный слайдер --- */}
           <div className="mt-10 rounded-lg border border-gray-200 p-4">
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               Магазин
             </div>
-            {/* Горизонтальный контейнер для категорий */}
-            <div className="scrollbar-hide mt-4 flex items-center space-x-3 overflow-x-auto pb-2">
-              <div className="flex-shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-1.5 font-body text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
+            <div className="scrollbar-hide mt-4 flex items-center space-x-4 overflow-x-auto pb-2">
+              <div className="flex-shrink-0 cursor-pointer whitespace-nowrap font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
+                Все товары
+              </div>
+              <div className="flex-shrink-0 cursor-pointer whitespace-nowrap font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
                 пижамы
               </div>
-              <div className="flex-shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-1.5 font-body text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
+              <div className="flex-shrink-0 cursor-pointer whitespace-nowrap font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
                 нижнее белье
               </div>
-              <div className="flex-shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-1.5 font-body text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
+              <div className="flex-shrink-0 cursor-pointer whitespace-nowrap font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
                 для дома
               </div>
-              <div className="flex-shrink-0 cursor-pointer rounded-full bg-gray-100 px-4 py-1.5 font-body text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200">
+              <div className="flex-shrink-0 cursor-pointer whitespace-nowrap font-body text-base font-medium text-gray-600 transition-colors hover:text-black">
                 сертификаты
               </div>
             </div>
