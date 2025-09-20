@@ -47,7 +47,6 @@ const StatusStep = ({
   );
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Откалибрована позиция буквы "А" ---
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
     width="24"
@@ -75,7 +74,6 @@ const AdminIcon = ({ className }: { className?: string }) => (
     </text>
   </svg>
 );
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -108,9 +106,11 @@ export default function FloatingMenuOverlay({
         <div className="flex w-full items-center justify-between">
           {!isSearchModeActive ? (
             <>
-              <Link href="/" onClick={onClose}>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Ссылка на логотипе стала абсолютной --- */}
+              <Link href="https://kyanchir.ru" onClick={onClose}>
                 <Logo className="logo-brand-color h-5 w-auto" />
               </Link>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <div className="flex items-center">
                 <button
                   aria-label="Активировать поиск"
