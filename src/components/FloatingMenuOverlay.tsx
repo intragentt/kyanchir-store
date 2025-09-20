@@ -86,16 +86,10 @@ export default function FloatingMenuOverlay({
 }: FloatingMenuOverlayProps) {
   const [isSearchModeActive, setIsSearchModeActive] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: "Доставка" теперь по умолчанию открыта ---
   const [isDeliveryOpen, setIsDeliveryOpen] = useState(true);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
   const { setIsSearchActive } = useStickyHeader();
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Компонент больше не уничтожается, а скрывается ---
-  // Мы убрали `if (!isOpen) return null;`
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSearchClick = () => {
     onClose();
@@ -274,6 +268,7 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
 
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлен UI для "Корзины" --- */}
           <div className="mt-6 rounded-lg border border-gray-200 transition-colors">
             <button
               onClick={() => setIsCartOpen(!isCartOpen)}
@@ -285,13 +280,21 @@ export default function FloatingMenuOverlay({
                   Корзина
                 </div>
               </div>
-              <ChevronIcon
-                isOpen={isCartOpen}
-                direction="down"
-                className="h-5 w-5 text-gray-400"
-              />
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-sm text-gray-500">
+                  <span>3</span>
+                  <span className="text-gray-300">·</span>
+                  <span>2 478 RUB</span>
+                </div>
+                <ChevronIcon
+                  isOpen={isCartOpen}
+                  direction="right"
+                  className="h-5 w-5 text-gray-400"
+                />
+              </div>
             </button>
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex cursor-pointer items-center space-x-3 rounded-lg border border-gray-200 p-4 transition-colors">
             <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
