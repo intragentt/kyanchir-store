@@ -16,7 +16,8 @@ import AvatarPlaceholder from './AvatarPlaceholder';
 import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
-import ChevronIcon from './icons/ChevronIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: ChevronIcon больше не импортируется, а определяется здесь ---
+// import ChevronIcon from './icons/ChevronIcon';
 
 const StatusStep = ({
   label,
@@ -47,7 +48,6 @@ const StatusStep = ({
   );
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Скорректирован размер и позиция буквы "А" ---
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
     width="24"
@@ -63,7 +63,7 @@ const AdminIcon = ({ className }: { className?: string }) => (
     />
     <text
       x="7"
-      y="6.2"
+      y="5.8"
       dominantBaseline="middle"
       textAnchor="middle"
       fill="white"
@@ -75,6 +75,53 @@ const AdminIcon = ({ className }: { className?: string }) => (
     </text>
   </svg>
 );
+
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Создана новая, исправленная версия ChevronIcon ---
+const ChevronIcon = ({
+  isOpen,
+  direction,
+  className,
+}: {
+  isOpen: boolean;
+  direction: 'down' | 'right';
+  className?: string;
+}) => {
+  if (direction === 'right') {
+    return (
+      <svg
+        className={className}
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 5l7 7-7 7"
+        />
+      </svg>
+    );
+  }
+  // direction === 'down'
+  return (
+    <svg
+      className={`${className} transform transition-transform duration-200 ${
+        isOpen ? '-rotate-180' : ''
+      }`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M19 9l-7 7-7-7"
+      />
+    </svg>
+  );
+};
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
@@ -189,18 +236,8 @@ export default function FloatingMenuOverlay({
                   </div>
                 </div>
               </div>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Иконки админа и настроек теперь расположены вертикально --- */}
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Иконки админа и настроек поменялись местами --- */}
               <div className="flex flex-col items-center">
-                {user?.role?.name === 'ADMIN' && (
-                  <Link
-                    href="https://admin.kyanchir.ru/dashboard"
-                    onClick={onClose}
-                    aria-label="Админ-панель"
-                    className="p-2" // p-2 is fine for vertical stacking too
-                  >
-                    <AdminIcon className="h-6 w-6" />
-                  </Link>
-                )}
                 <Link
                   href="/profile/settings"
                   onClick={onClose}
@@ -209,6 +246,16 @@ export default function FloatingMenuOverlay({
                 >
                   <SettingsIcon className="h-6 w-6 text-gray-800" />
                 </Link>
+                {user?.role?.name === 'ADMIN' && (
+                  <Link
+                    href="https://admin.kyanchir.ru/dashboard"
+                    onClick={onClose}
+                    aria-label="Админ-панель"
+                    className="p-2"
+                  >
+                    <AdminIcon className="h-6 w-6" />
+                  </Link>
+                )}
               </div>
               {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
@@ -272,7 +319,6 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлен UI для "Корзины" --- */}
           <div className="mt-6 rounded-lg border border-gray-200 transition-colors">
             <button
               onClick={() => setIsCartOpen(!isCartOpen)}
@@ -298,7 +344,6 @@ export default function FloatingMenuOverlay({
               </div>
             </button>
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex cursor-pointer items-center space-x-3 rounded-lg border border-gray-200 p-4 transition-colors">
             <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
@@ -352,4 +397,3 @@ export default function FloatingMenuOverlay({
 }
 
 FloatingMenuOverlay.displayName = 'FloatingMenuOverlay';
-
