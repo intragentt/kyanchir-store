@@ -17,7 +17,7 @@ import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переработанный StatusStep с абсолютным позиционированием текста ---
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переработанный StatusStep для нового дизайна ---
 const StatusStep = ({
   label,
   status,
@@ -27,12 +27,17 @@ const StatusStep = ({
   status: 'done' | 'current' | 'pending';
   align?: 'left' | 'center' | 'right';
 }) => {
-  const isDone = status === 'done';
-  const isCurrent = status === 'current';
-  const textColor = isDone || isCurrent ? 'text-gray-800' : 'text-gray-400';
-  const circleColor = isDone || isCurrent ? 'bg-gray-800' : 'bg-gray-200';
+  const textColor = status === 'pending' ? 'text-gray-400' : 'text-gray-800';
 
-  // Определяем классы для позиционирования текста
+  let circleClasses = 'h-4 w-4 rounded-full ';
+  if (status === 'done') {
+    circleClasses += 'bg-gray-800';
+  } else if (status === 'current') {
+    circleClasses += 'bg-white border-2 border-gray-800';
+  } else {
+    circleClasses += 'bg-gray-200';
+  }
+
   const positionClasses = {
     left: 'left-0',
     center: 'left-1/2 -translate-x-1/2',
@@ -41,13 +46,9 @@ const StatusStep = ({
 
   return (
     <div className="relative flex-1">
-      <div className={`relative mx-auto h-3 w-3 rounded-full ${circleColor}`}>
-        {isCurrent && (
-          <div className="absolute inset-0.5 rounded-full bg-white"></div>
-        )}
-      </div>
+      <div className={`relative mx-auto ${circleClasses}`}></div>
       <span
-        className={`whitespace-nowrap absolute mt-2 block text-[10px] font-medium ${textColor} ${positionClasses}`}
+        className={`absolute mt-2 block whitespace-nowrap text-[10px] font-medium ${textColor} ${positionClasses}`}
       >
         {label}
       </span>
@@ -284,7 +285,7 @@ export default function FloatingMenuOverlay({
                   Доставка
                 </div>
               </div>
-              <div className="flex items-center space-x-2 -mr-6">
+              <div className="-mr-6 flex items-center space-x-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
                   isOpen={isDeliveryOpen}
@@ -303,13 +304,15 @@ export default function FloatingMenuOverlay({
                   </div>
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
-                <div className="relative mt-6 px-2">
-                  <div className="absolute left-0 top-1.5 w-full">
-                    <div className="mx-auto h-0.5 w-3/4 bg-gray-200">
-                      <div className="h-full w-1/3 bg-gray-800"></div>
-                    </div>
+                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
+                <div className="relative mt-8">
+                  <div className="absolute left-2 right-2 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-gray-200">
+                    <div
+                      className="h-full rounded-full bg-gray-800"
+                      style={{ width: '33.33%' }}
+                    ></div>
                   </div>
-                  <div className="relative flex">
+                  <div className="relative flex justify-between">
                     <StatusStep label="Обработка" status="done" align="left" />
                     <StatusStep label="В пути" status="current" />
                     <StatusStep label="Ожидает" status="pending" />
@@ -320,6 +323,7 @@ export default function FloatingMenuOverlay({
                     />
                   </div>
                 </div>
+                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             )}
           </div>
