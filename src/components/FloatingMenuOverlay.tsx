@@ -16,10 +16,7 @@ import AvatarPlaceholder from './AvatarPlaceholder';
 import ReceiptIcon from './icons/ReceiptIcon';
 import ShortLogo from './icons/ShortLogo';
 import CartIcon from './icons/CartIcon';
-// --- ChevronIcon определяется локально, импорт не нужен ---
-// import ChevronIcon from './icons/ChevronIcon';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Нейтральная цветовая схема для трекера ---
 const StatusStep = ({
   label,
   status,
@@ -45,7 +42,6 @@ const StatusStep = ({
     </div>
   );
 };
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
@@ -276,7 +272,7 @@ export default function FloatingMenuOverlay({
                 </div>
               </div>
               {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Смещение индикатора --- */}
-              <div className="-mr-2.5 flex items-center space-x-2">
+              <div className="-mr-4 flex items-center space-x-2">
                 <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
                 <ChevronIcon
                   isOpen={isDeliveryOpen}
@@ -297,8 +293,8 @@ export default function FloatingMenuOverlay({
                   <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
                 </div>
                 {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновлена разметка трекера --- */}
-                <div className="relative mt-6 flex items-center px-1.5">
-                  <div className="absolute left-3 right-3 top-1/2 h-0.5 -translate-y-1/2 bg-gray-200">
+                <div className="relative mt-6 flex items-start">
+                  <div className="absolute left-1.5 right-1.5 top-1.5 h-0.5 bg-gray-200">
                     <div className="h-full w-1/3 bg-gray-800"></div>
                   </div>
                   <StatusStep label="Обработка" status="done" />
@@ -351,7 +347,6 @@ export default function FloatingMenuOverlay({
             </div>
           </div>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Магазин" обернут в карточку --- */}
           <div className="mt-10 rounded-lg border border-gray-200 p-4">
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               Магазин
@@ -371,7 +366,6 @@ export default function FloatingMenuOverlay({
               </div>
             </div>
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-10 flex flex-col space-y-4">
             <div className="cursor-pointer font-body text-base font-semibold text-gray-800 md:text-lg">
