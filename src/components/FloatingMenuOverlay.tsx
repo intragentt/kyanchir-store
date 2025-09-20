@@ -176,18 +176,18 @@ export default function FloatingMenuOverlay({
                 </div>
               </div>
               <div className="flex items-center">
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Исправлено сравнение типа роли --- */}
                 {user?.role?.name === 'ADMIN' && (
+                  // --- НАЧАЛО ИЗМЕНЕНИЙ: Ссылка на админку стала абсолютной ---
                   <Link
-                    href="/admin"
+                    href="https://admin.kyanchir.ru"
                     onClick={onClose}
                     aria-label="Админ-панель"
                     className="p-2"
                   >
                     <AdminIcon className="h-6 w-6 text-gray-800" />
                   </Link>
+                  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
                 )}
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
                 <Link
                   href="/profile/settings"
                   onClick={onClose}
