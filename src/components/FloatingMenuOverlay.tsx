@@ -179,7 +179,7 @@ export default function FloatingMenuOverlay({
             </Link>
           )}
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Стиль "карточки" применен ко всем элементам --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "История заказов" переименована и перемещена --- */}
           <div
             className={`mt-10 rounded-lg border transition-colors ${isDeliveryOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
@@ -225,6 +225,13 @@ export default function FloatingMenuOverlay({
             )}
           </div>
 
+          <div className="mt-6 flex cursor-pointer items-center space-x-3 rounded-lg border border-transparent p-4 transition-colors hover:border-gray-200">
+            <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
+            <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+              История заказов
+            </div>
+          </div>
+
           <div
             className={`mt-6 rounded-lg border transition-colors ${isCartOpen ? 'border-gray-200' : 'border-transparent'}`}
           >
@@ -250,13 +257,6 @@ export default function FloatingMenuOverlay({
             <HeartIcon className="h-6 w-6 flex-none text-gray-800" />
             <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
               Избранное
-            </div>
-          </div>
-
-          <div className="mt-6 flex cursor-pointer items-center space-x-3 rounded-lg border border-transparent p-4 transition-colors hover:border-gray-200">
-            <ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />
-            <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
-              Купленные товары
             </div>
           </div>
           {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
