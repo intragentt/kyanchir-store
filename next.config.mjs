@@ -47,6 +47,13 @@ const nextConfig = {
   // Если пользователь попал на "старую улицу", мы вежливо "телепортируем" его на новую.
   async redirects() {
     return [
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: Редирект для админ-панели ---
+      {
+        source: '/admin/:path*',
+        destination: 'https://admin.kyanchir.ru/:path*',
+        permanent: true,
+      },
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       {
         source: '/help',
         destination: '/support',
