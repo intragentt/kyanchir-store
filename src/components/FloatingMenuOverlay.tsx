@@ -47,6 +47,7 @@ const StatusStep = ({
   );
 };
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Скорректирован размер и позиция буквы "А" ---
 const AdminIcon = ({ className }: { className?: string }) => (
   <svg
     width="24"
@@ -62,11 +63,11 @@ const AdminIcon = ({ className }: { className?: string }) => (
     />
     <text
       x="7"
-      y="6"
+      y="6.2"
       dominantBaseline="middle"
       textAnchor="middle"
       fill="white"
-      fontSize="5.1"
+      fontSize="4.3"
       fontWeight="bold"
       fontFamily="sans-serif"
     >
@@ -74,6 +75,7 @@ const AdminIcon = ({ className }: { className?: string }) => (
     </text>
   </svg>
 );
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -187,13 +189,14 @@ export default function FloatingMenuOverlay({
                   </div>
                 </div>
               </div>
-              <div className="flex items-center">
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Иконки админа и настроек теперь расположены вертикально --- */}
+              <div className="flex flex-col items-center">
                 {user?.role?.name === 'ADMIN' && (
                   <Link
                     href="https://admin.kyanchir.ru/dashboard"
                     onClick={onClose}
                     aria-label="Админ-панель"
-                    className="p-2"
+                    className="p-2" // p-2 is fine for vertical stacking too
                   >
                     <AdminIcon className="h-6 w-6" />
                   </Link>
@@ -207,6 +210,7 @@ export default function FloatingMenuOverlay({
                   <SettingsIcon className="h-6 w-6 text-gray-800" />
                 </Link>
               </div>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           ) : (
             <Link
@@ -284,7 +288,7 @@ export default function FloatingMenuOverlay({
                 <div className="flex items-center space-x-2 text-sm text-gray-500">
                   <span>3</span>
                   <span className="text-gray-300">·</span>
-                  <span>2 478 RUB</span>
+                  <span>7 497 RUB</span>
                 </div>
                 <ChevronIcon
                   isOpen={isCartOpen}
@@ -348,3 +352,4 @@ export default function FloatingMenuOverlay({
 }
 
 FloatingMenuOverlay.displayName = 'FloatingMenuOverlay';
+
