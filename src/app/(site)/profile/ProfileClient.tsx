@@ -39,7 +39,6 @@ export default function ProfileClient({
       if (result.error) {
         setError(result.error);
       } else if (result.success) {
-        // --- ИЗМЕНЕНИЕ: Установлено конкретное строковое сообщение ---
         setSuccess('Профиль успешно обновлен.');
         setUser((prevUser) => ({ ...prevUser, name, surname }));
         setIsEditingName(false);
@@ -64,7 +63,6 @@ export default function ProfileClient({
       if (result.error) {
         setError(result.error);
       } else if (result.success) {
-        // --- ИЗМЕНЕНИЕ: Установлено конкретное строковое сообщение ---
         setSuccess('Пароль успешно изменен.');
       }
     });
@@ -105,7 +103,9 @@ export default function ProfileClient({
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-0 px-4 pb-8 pt-6">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем max-w-2xl на container для унификации с шапкой ---
+    <div className="container mx-auto space-y-0 px-4 pb-8 pt-6">
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="mb-4 rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
