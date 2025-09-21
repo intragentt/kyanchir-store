@@ -8,13 +8,13 @@ import ShortLogo from '../icons/ShortLogo';
 import AdminIcon from '../icons/AdminIcon';
 import AvatarPlaceholder from '../AvatarPlaceholder';
 
-// Предполагаемый базовый тип для пользователя.
-// Если у вас есть глобальный тип, лучше импортировать его.
+// Обновленный тип пользователя
 interface UserSession {
   name?: string | null;
   email?: string | null;
   image?: string | null;
   bonusPoints?: number | null;
+  emailVerified?: Date | null; // <-- ДОБАВЛЕНО: Поле для статуса верификации
   role?: {
     name?: string | null;
   } | null;
@@ -51,6 +51,23 @@ const AuthenticatedView = ({ user, onClose }: AuthenticatedViewProps) => {
             {user?.name || 'Личный кабинет'}
           </Link>
           <p className="truncate text-sm text-gray-500">{user?.email}</p>
+
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Блок статуса email --- */}
+          {!user.emailVerified && (
+            <Link
+              href="/profile"
+              onClick={onClose}
+              className="mt-1.5 flex cursor-pointer items-center space-x-1.5"
+              aria-label="Перейти в профиль для подтверждения email"
+            >
+              <div className="h-2 w-2 flex-shrink-0 rounded-full bg-yellow-400"></div>
+              <span className="text-xs font-medium text-yellow-600">
+                Email не подтвержден
+              </span>
+            </Link>
+          )}
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
           <div className="mt-2 inline-flex items-center space-x-2 self-start rounded-md bg-gray-100 px-2.5 py-1">
             <span className="font-body text-sm font-semibold text-gray-800">
               {user?.bonusPoints ?? 0}
