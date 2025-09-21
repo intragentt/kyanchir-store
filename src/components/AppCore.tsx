@@ -1,13 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useAppStore } from '@/store/useAppStore';
-import {
-  StickyHeaderContext,
-  HeaderStatus,
-} from '@/context/StickyHeaderContext';
 import { FooterProvider } from '@/context/FooterContext';
 import DynamicHeroSection from '@/components/DynamicHeroSection';
 import ConditionalHeader from '@/components/ConditionalHeader';
@@ -16,7 +12,6 @@ import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
-// --- ИЗМЕНЕНИЕ: Импортируем Header для рендеринга статичной версии ---
 import Header from './Header';
 
 export default function AppCore({ children }: { children: React.ReactNode }) {
@@ -30,27 +25,31 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/reset-password');
 
   const { data: session } = useSession();
-  const setUser = useAppStore((state) => state.setUser);
+  const {
+    setUser,
+    isSearchActive,
+    setSearchActive,
+    isFloatingMenuOpen,
+    setFloatingMenuOpen,
+  } = useAppStore((state) => ({
+    setUser: state.setUser,
+    isSearchActive: state.isSearchActive,
+    setSearchActive: state.setSearchActive,
+    isFloatingMenuOpen: state.isFloatingMenuOpen,
+    setFloatingMenuOpen: state.setFloatingMenuOpen,
+  }));
 
   useEffect(() => {
     setUser(session?.user ?? null);
   }, [session, setUser]);
 
-  const [headerStatus, setHeaderStatus] = useState<HeaderStatus>('static');
-  const [headerHeight, setHeaderHeight] = useState(0);
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const lastScrollY = useRef(0);
   const scrollLockPosition = useRef(0);
   const isLockingScroll = useRef(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       window.scrollTo(0, 0);
-      setHeaderStatus('static');
-      lastScrollY.current = 0;
     }, 0);
-
     return () => clearTimeout(timer);
   }, [pathname]);
 
@@ -79,7 +78,7 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const originalStyle = window.getComputedStyle(document.body).overflow;
-    if (isSearchActive || isMenuOpen) {
+    if (isSearchActive || isFloatingMenuOpen) {
       if (!isLockingScroll.current) {
         scrollLockPosition.current = window.scrollY;
         document.body.style.overflow = 'hidden';
@@ -98,82 +97,36 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
         isLockingScroll.current = false;
       }
     }
-  }, [isSearchActive, isMenuOpen]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (isSearchActive || isMenuOpen || !isHomePage) return;
-      const currentScrollY = window.scrollY;
-
-      // Порог скролла, после которого начинает работать "умная" шапка.
-      // Должен быть больше высоты самой шапки.
-      const scrollThreshold = headerHeight > 0 ? headerHeight + 20 : 80;
-
-      if (currentScrollY <= scrollThreshold) {
-        setHeaderStatus('static');
-        lastScrollY.current = currentScrollY;
-        return;
-      }
-      if (currentScrollY > lastScrollY.current) {
-        if (headerStatus === 'pinned') {
-          setHeaderStatus('unpinned');
-        }
-      } else {
-        if (headerStatus !== 'pinned') {
-          setHeaderStatus('pinned');
-        }
-      }
-      if (Math.abs(currentScrollY - lastScrollY.current) > 5) {
-        lastScrollY.current = currentScrollY;
-      }
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [isHomePage, headerHeight, isSearchActive, isMenuOpen, headerStatus]);
-
-  const contextValue = {
-    headerStatus,
-    headerHeight,
-    setHeaderHeight,
-    isSearchActive,
-    setIsSearchActive,
-    isMenuOpen,
-    setIsMenuOpen,
-  };
+  }, [isSearchActive, isFloatingMenuOpen]);
 
   if (isAuthPage) {
     return <main>{children}</main>;
   }
 
   return (
-    <StickyHeaderContext.Provider value={contextValue}>
-      <FooterProvider>
-        <NetworkStatusManager />
-        <NotificationManager />
-        {/* Этот компонент теперь отвечает ТОЛЬКО за плавающий "клон" и шапки других страниц */}
-        <ConditionalHeader />
-        <SearchOverlay />
-        <main className="flex-grow">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Рендерим статичную версию шапки ТОЛЬКО на главной --- */}
-          {isHomePage && (
-            <div className="w-full bg-white">
-              <Header
-                isSearchActive={isSearchActive}
-                onSearchToggle={setIsSearchActive}
-                isMenuOpen={isMenuOpen}
-                onMenuToggle={setIsMenuOpen}
-              />
-            </div>
-          )}
-          {isHomePage && <DynamicHeroSection />}
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-          <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
-            {children}
+    <FooterProvider>
+      <NetworkStatusManager />
+      <NotificationManager />
+      <ConditionalHeader />
+      <SearchOverlay />
+      <main className="flex-grow">
+        {isHomePage && (
+          <div className="w-full bg-white">
+            <Header
+              isSearchActive={isSearchActive}
+              onSearchToggle={setSearchActive}
+              isMenuOpen={isFloatingMenuOpen}
+              onMenuToggle={setFloatingMenuOpen}
+            />
           </div>
-        </main>
-        <Footer />
-        <ClientInteractivity />
-      </FooterProvider>
-    </StickyHeaderContext.Provider>
+        )}
+        {isHomePage && <DynamicHeroSection />}
+        <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
+          {children}
+        </div>
+      </main>
+      <Footer />
+      <ClientInteractivity />
+    </FooterProvider>
   );
 }

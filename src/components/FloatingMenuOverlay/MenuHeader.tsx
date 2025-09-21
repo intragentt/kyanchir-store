@@ -2,7 +2,9 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useStickyHeader } from '@/context/StickyHeaderContext';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем старый контекст на Zustand ---
+import { useAppStore } from '@/store/useAppStore';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import Logo from '../icons/Logo';
 import SearchIcon from '../icons/SearchIcon';
 import CloseIcon from '../icons/CloseIcon';
@@ -13,11 +15,13 @@ interface MenuHeaderProps {
 
 const MenuHeader = ({ onClose }: MenuHeaderProps) => {
   const [isSearchModeActive, setIsSearchModeActive] = useState(false);
-  const { setIsSearchActive } = useStickyHeader();
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем функцию из хранилища ---
+  const setSearchActive = useAppStore((state) => state.setSearchActive);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSearchClick = () => {
     onClose();
-    setIsSearchActive(true);
+    setSearchActive(true);
   };
 
   return (
@@ -36,15 +40,13 @@ const MenuHeader = ({ onClose }: MenuHeaderProps) => {
               >
                 <SearchIcon className="h-6 w-6 text-gray-800" />
               </button>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний отступ справа у иконки закрытия --- */}
               <button
                 aria-label="Закрыть меню"
-                className="py-2 pl-2" // Заменено p-2 на py-2 pl-2
+                className="py-2 pl-2"
                 onClick={onClose}
               >
                 <CloseIcon className="h-7 w-7 text-gray-800" />
               </button>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           </>
         ) : (
