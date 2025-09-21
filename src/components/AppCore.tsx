@@ -147,8 +147,8 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
         <SearchOverlay />
         {isHomePage && <DynamicHeroSection />}
         <main className="flex-grow">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем вертикальный отступ py-6 --- */}
-          <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 xl:px-12">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Увеличиваем вертикальный отступ до py-12 --- */}
+          <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
             {children}
           </div>
           {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
