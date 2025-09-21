@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import ProductPageHeader from '@/components/layout/ProductPageHeader';
@@ -9,6 +9,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useStickyHeader } from '@/context/StickyHeaderContext';
 import { useSmartSticky } from '@/hooks/useSmartSticky';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанный контроллер для главной страницы ---
 const HomePageHeaderController = () => {
   const {
     headerStatus,
@@ -21,6 +22,7 @@ const HomePageHeaderController = () => {
   } = useStickyHeader();
   const originalHeaderRef = useRef<HTMLDivElement>(null);
 
+  // 1. Измеряем высоту оригинальной шапки, когда она в DOM
   useLayoutEffect(() => {
     if (originalHeaderRef.current && !isSearchActive && !isMenuOpen) {
       const height = originalHeaderRef.current.offsetHeight;
@@ -30,13 +32,22 @@ const HomePageHeaderController = () => {
     }
   }, [headerHeight, setHeaderHeight, isSearchActive, isMenuOpen]);
 
+  // 2. Определяем видимость "липкой" шапки
+  // Она видна, только когда статус 'pinned' (скролл вверх) или когда открыт поиск/меню
   const isStickyVisible =
     headerStatus === 'pinned' || isSearchActive || isMenuOpen;
+
+  // 3. Анимация включена всегда, кроме самого начального состояния 'static'
   const isTransitionEnabled =
     headerStatus !== 'static' || isSearchActive || isMenuOpen;
 
   return (
     <>
+      {/* 
+        Это оригинальная шапка. Она всегда в потоке документа.
+        Когда мы скроллим вниз, она просто уезжает вверх вместе со страницей.
+        Когда мы скроллим вверх, она остается за экраном, а вместо нее появляется "липкая" шапка.
+      */}
       <div ref={originalHeaderRef}>
         <Header
           isSearchActive={isSearchActive}
@@ -45,12 +56,18 @@ const HomePageHeaderController = () => {
           onMenuToggle={setIsMenuOpen}
         />
       </div>
+
+      {/* 
+        Это "липкая" шапка-клон. Она position: fixed.
+        Она появляется только при скролле вверх (когда status === 'pinned').
+      */}
       <div
         className={`fixed left-0 top-0 z-50 w-full ${
           isTransitionEnabled
             ? 'transition-transform duration-300 ease-in-out'
             : ''
         } ${isStickyVisible ? 'translate-y-0' : '-translate-y-full'} `}
+        style={{ height: headerHeight > 0 ? `${headerHeight}px` : undefined }}
       >
         <Header
           isSearchActive={isSearchActive}
@@ -62,6 +79,7 @@ const HomePageHeaderController = () => {
     </>
   );
 };
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const ProductPageHeaderController = () => {
   const originalHeaderRef = useRef<HTMLDivElement>(null);
@@ -121,7 +139,6 @@ export default function ConditionalHeader() {
     return <HomePageHeaderController />;
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Убрана нижняя граница ---
   return (
     <div className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md">
       <Header
@@ -132,5 +149,4 @@ export default function ConditionalHeader() {
       />
     </div>
   );
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }

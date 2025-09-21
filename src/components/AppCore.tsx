@@ -101,31 +101,42 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая, "инстаграмная" логика скролла ---
   useEffect(() => {
     const handleScroll = () => {
+      // Блокируем логику, если открыто меню/поиск или мы не на главной
       if (isSearchActive || isMenuOpen || !isHomePage) return;
       const currentScrollY = window.scrollY;
 
-      // Если мы у самого верха, шапка всегда статична
-      if (currentScrollY <= headerHeight) {
+      // Если мы у самого верха страницы, шапка всегда статична
+      if (currentScrollY <= 5) {
         setHeaderStatus('static');
         lastScrollY.current = currentScrollY;
         return;
       }
 
-      // Если скроллим вниз, прячем шапку
+      // Если скроллим вниз
       if (currentScrollY > lastScrollY.current) {
-        setHeaderStatus('unpinned');
-      } else {
-        // Если скроллим вверх, показываем шапку
-        setHeaderStatus('pinned');
+        // И шапка была "прилипшей", делаем ее "открепленной"
+        if (headerStatus === 'pinned') {
+          setHeaderStatus('unpinned');
+        }
+      }
+      // Если скроллим вверх
+      else {
+        // И шапка НЕ была "прилипшей", делаем ее "прилипшей"
+        if (headerStatus !== 'pinned') {
+          setHeaderStatus('pinned');
+        }
       }
 
-      // Обновляем позицию для следующего события скролла
-      lastScrollY.current = currentScrollY;
+      // Обновляем позицию для следующего события скролла,
+      // но только если разница не слишком маленькая (избегаем "дрожания" на iOS)
+      if (Math.abs(currentScrollY - lastScrollY.current) > 5) {
+        lastScrollY.current = currentScrollY;
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isHomePage, headerHeight, isSearchActive, isMenuOpen]);
+  }, [isHomePage, headerHeight, isSearchActive, isMenuOpen, headerStatus]); // Добавляем headerStatus в зависимости
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const contextValue = {
