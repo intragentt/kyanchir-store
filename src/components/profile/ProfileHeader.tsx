@@ -6,6 +6,7 @@ import Image from 'next/image';
 
 import AvatarPlaceholder from '@/components/AvatarPlaceholder';
 import ShortLogo from '@/components/icons/ShortLogo';
+import SettingsIcon from '../icons/SettingsIcon'; // <-- Импортируем иконку
 
 interface ProfileHeaderProps {
   user: User & { role?: { name?: string | null } | null };
@@ -23,7 +24,6 @@ const ProfileHeader = ({
   return (
     <div className="flex w-full items-start justify-between">
       <div className="flex items-center space-x-4">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Стили как в меню --- */}
         <div className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
           {user.image ? (
             <Image
@@ -63,7 +63,6 @@ const ProfileHeader = ({
               </button>
             )}
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-2 inline-flex items-center space-x-2 self-start rounded-md bg-gray-100 px-2.5 py-1">
             <span className="font-body text-sm font-semibold text-gray-800">
@@ -73,14 +72,17 @@ const ProfileHeader = ({
           </div>
         </div>
       </div>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем кнопку на иконку --- */}
       <div>
         <button
           onClick={onEditClick}
-          className="text-sm font-semibold text-indigo-600 hover:text-indigo-500"
+          className="p-2 text-gray-600 transition-colors hover:text-gray-900"
+          aria-label="Изменить профиль"
         >
-          Изменить
+          <SettingsIcon className="h-6 w-6" />
         </button>
       </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 };

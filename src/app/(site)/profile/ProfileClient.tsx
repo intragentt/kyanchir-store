@@ -9,7 +9,7 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import EditProfileForm from '@/components/profile/EditProfileForm';
 import EditPasswordForm from '@/components/profile/EditPasswordForm';
 import SignOutButton from './SignOutButton';
-import ProfileInfoBlock from '@/components/profile/ProfileInfoBlock'; // <-- Импортируем новый компонент
+import ProfileInfoBlock from '@/components/profile/ProfileInfoBlock';
 
 interface ProfileClientProps {
   user: User & { role?: { name?: string | null } | null };
@@ -32,26 +32,29 @@ export default function ProfileClient({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const handleUpdateProfile = () => {
-    // ... (существующая логика)
+    /* ... */
   };
-
   const handleUpdatePassword = async (
     currentPassword: string,
     newPassword: string,
   ) => {
-    // ... (существующая логика)
+    /* ... */
   };
-
   const handleSendVerificationEmail = async () => {
-    // ... (существующая логика)
+    /* ... */
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заглушки для новых кнопок ---
   const handleEditPhone = () =>
     alert('Функционал редактирования телефона в разработке.');
   const handleEditAddress = () =>
     alert('Функционал редактирования адреса в разработке.');
-  const handleSupport = () => router.push('/support'); // Предполагаем, что есть страница поддержки
+  const handleSupport = () => router.push('/support');
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заглушка для Telegram ---
+  const handleLinkTelegram = () =>
+    alert('Функционал привязки Telegram в разработке.');
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const handleDeleteAccount = () => {
     if (
       confirm(
@@ -61,10 +64,11 @@ export default function ProfileClient({
       alert('Функционал удаления аккаунта в разработке.');
     }
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшен отступ py-8 -> pt-4 pb-8 ---
+    <div className="mx-auto max-w-2xl space-y-6 px-4 pb-8 pt-4">
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
@@ -98,11 +102,20 @@ export default function ProfileClient({
         )}
       </div>
 
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый блок Telegram --- */}
+      <ProfileInfoBlock
+        title="Telegram"
+        buttonText="Привязать"
+        onButtonClick={handleLinkTelegram}
+      >
+        <p>Получайте уведомления о заказах</p>
+      </ProfileInfoBlock>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <EditPasswordForm onSave={handleUpdatePassword} isPending={isPending} />
       </div>
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новые блоки --- */}
       <ProfileInfoBlock
         title="Номер телефона"
         buttonText="Изменить"
@@ -126,13 +139,11 @@ export default function ProfileClient({
       >
         <p>Связаться с нами</p>
       </ProfileInfoBlock>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       <div className="mt-6">
         <SignOutButton />
       </div>
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Кнопка удаления аккаунта --- */}
       <div className="pt-4 text-center">
         <button
           onClick={handleDeleteAccount}
@@ -141,7 +152,6 @@ export default function ProfileClient({
           Удалить аккаунт
         </button>
       </div>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 }
