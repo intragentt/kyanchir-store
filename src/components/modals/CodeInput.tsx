@@ -63,13 +63,17 @@ export default function CodeInput({
       {code.map((digit, index) => (
         <input
           key={index}
-          ref={(el) => (inputsRef.current[index] = el)}
+          // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправлена ошибка типа ref ---
+          ref={(el) => {
+            inputsRef.current[index] = el;
+          }} // Используем блочное тело, чтобы избежать возврата значения
+          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
           type="text"
           maxLength={1}
           value={digit}
           onChange={(e) => handleChange(e, index)}
           onKeyDown={(e) => handleKeyDown(e, index)}
-          onPaste={index === 0 ? handlePaste : undefined} // Паст только в первом поле
+          onPaste={index === 0 ? handlePaste : undefined}
           className="h-14 w-12 rounded-lg border border-gray-300 text-center text-2xl font-semibold text-gray-800 transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
         />
       ))}
