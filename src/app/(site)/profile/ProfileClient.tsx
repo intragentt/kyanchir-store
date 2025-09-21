@@ -50,11 +50,8 @@ export default function ProfileClient({
   const handleSupport = () => router.push('/support');
   const handleLinkTelegram = () =>
     alert('Функционал привязки Telegram в разработке.');
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заглушка для нового блока ---
   const handleManageSessions = () =>
     alert('Функционал управления сессиями в разработке.');
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleDeleteAccount = () => {
     if (
@@ -67,8 +64,8 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убран верхний отступ pt-4 ---
-    <div className="mx-auto max-w-2xl space-y-6 px-4 pb-8">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшен отступ space-y-6 -> space-y-0 ---
+    <div className="mx-auto max-w-2xl space-y-0 px-4 pb-8">
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
@@ -81,7 +78,8 @@ export default function ProfileClient({
         </div>
       )}
 
-      <div>
+      {/* Главный блок профиля теперь имеет нижний разделитель */}
+      <div className="border-b border-gray-200 py-5">
         {isEditingName ? (
           <EditProfileForm
             user={user}
@@ -111,11 +109,12 @@ export default function ProfileClient({
         <p>Получайте уведомления о заказах</p>
       </ProfileInfoBlock>
 
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убран "карточный" стиль, добавлен разделитель --- */}
+      <div className="border-b border-gray-200 py-5">
         <EditPasswordForm onSave={handleUpdatePassword} isPending={isPending} />
       </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый блок Сессий --- */}
       <ProfileInfoBlock
         title="Активные сессии"
         buttonText="Управлять"
@@ -123,7 +122,6 @@ export default function ProfileClient({
       >
         <p>Просмотр и управление устройствами</p>
       </ProfileInfoBlock>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       <ProfileInfoBlock
         title="Номер телефона"
@@ -149,7 +147,9 @@ export default function ProfileClient({
         <p>Связаться с нами</p>
       </ProfileInfoBlock>
 
-      <div className="mt-6">
+      <div className="pt-8">
+        {' '}
+        {/* Увеличен отступ для кнопки Выйти */}
         <SignOutButton />
       </div>
 

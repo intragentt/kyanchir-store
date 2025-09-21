@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import SettingsIcon from '../icons/SettingsIcon'; // <-- Импортируем иконку
+import SettingsIcon from '../icons/SettingsIcon';
 
 interface ProfileInfoBlockProps {
   title: string;
@@ -22,19 +22,20 @@ const ProfileInfoBlock = ({
     ? 'text-red-600 hover:text-red-500'
     : 'text-indigo-600 hover:text-indigo-500';
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Умная кнопка (иконка или текст) ---
-  const isIconButton = ['Изменить', 'Привязать'].includes(buttonText);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  const isIconButton = ['Изменить', 'Привязать', 'Управлять'].includes(
+    buttonText,
+  );
 
   return (
-    <div className="rounded-lg border bg-white p-6 shadow-sm">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убран "карточный" стиль, добавлен разделитель ---
+    <div className="border-b border-gray-200 py-5">
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className="flex items-center justify-between">
         <div>
           <div className="font-body font-semibold text-gray-500">{title}</div>
           <div className="font-body text-lg text-gray-900">{children}</div>
         </div>
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Условный рендеринг кнопки --- */}
         {isIconButton ? (
           <button
             onClick={onButtonClick}
@@ -51,7 +52,6 @@ const ProfileInfoBlock = ({
             {buttonText}
           </button>
         )}
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
     </div>
   );
