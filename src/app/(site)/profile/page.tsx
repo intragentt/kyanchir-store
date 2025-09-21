@@ -1,8 +1,4 @@
-// Местоположение: src/app/profile/page.tsx
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Исправляем опечатку в пути: 'Page-container' -> 'PageContainer'
-import PageContainer from '@/components/layout/PageContainer';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+// Местоположение: src/app/(site)/profile/page.tsx
 import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
@@ -20,17 +16,18 @@ export default async function ProfilePage() {
     where: {
       id: session.user.id,
     },
+    include: {
+      role: true, // Включаем роль, чтобы она была доступна в ProfileClient
+    },
   });
 
   if (!user) {
     redirect('/login');
   }
 
-  return (
-    <main>
-      <PageContainer className="py-12">
-        <ProfileClient user={user} />
-      </PageContainer>
-    </main>
-  );
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем все обертки (main, PageContainer) ---
+  // Страница должна возвращать только сам компонент,
+  // так как AppCore уже предоставляет всю необходимую структуру.
+  return <ProfileClient user={user} />;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
