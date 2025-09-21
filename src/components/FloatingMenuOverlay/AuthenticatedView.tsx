@@ -26,6 +26,13 @@ interface AuthenticatedViewProps {
 }
 
 const AuthenticatedView = ({ user, onClose }: AuthenticatedViewProps) => {
+  // В будущем здесь будет логика для открытия модального окна
+  const handleVerificationClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Предотвращаем стандартный переход по ссылке
+    console.log('Verification process initiated...');
+    // TODO: 1. Call API to send code. 2. Open modal.
+  };
+
   return (
     <div className="flex w-full items-start justify-between">
       <div className="flex items-center space-x-4">
@@ -51,21 +58,24 @@ const AuthenticatedView = ({ user, onClose }: AuthenticatedViewProps) => {
             {user?.name || 'Личный кабинет'}
           </Link>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Email и кнопка подтверждения в одной строке --- */}
-          <div className="mt-0.5 flex items-center space-x-2">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Адаптивный блок для Email и кнопки --- */}
+          {/* По умолчанию - колонка, с sm (640px) - строка */}
+          <div className="mt-0.5 flex flex-col items-start sm:flex-row sm:items-center sm:space-x-2">
             <p className="truncate text-sm text-gray-500">{user?.email}</p>
             {!user.emailVerified && (
-              <Link
-                href="/profile"
-                onClick={onClose}
-                className="group flex flex-shrink-0 cursor-pointer items-center space-x-1.5 rounded-full bg-yellow-100 px-2 py-0.5 transition-colors hover:bg-yellow-200"
-                aria-label="Перейти в профиль для подтверждения email"
+              <button
+                onClick={handleVerificationClick}
+                className="group mt-1 flex flex-shrink-0 cursor-pointer items-center space-x-1.5 rounded-full bg-yellow-100 px-2 py-0.5 transition-colors hover:bg-yellow-200 sm:mt-0"
+                aria-label="Подтвердить Email"
               >
                 <div className="h-1.5 w-1.5 rounded-full bg-yellow-500"></div>
                 <span className="text-xs font-semibold text-yellow-800">
-                  Подтвердить
+                  {/* Текст для мобильных */}
+                  <span className="sm:hidden">Подтвердить Email</span>
+                  {/* Текст для десктопа */}
+                  <span className="hidden sm:inline">Подтвердить</span>
                 </span>
-              </Link>
+              </button>
             )}
           </div>
           {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
