@@ -36,13 +36,15 @@ const MenuHeader = ({ onClose }: MenuHeaderProps) => {
               >
                 <SearchIcon className="h-6 w-6 text-gray-800" />
               </button>
+              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний отступ справа у иконки закрытия --- */}
               <button
                 aria-label="Закрыть меню"
-                className="p-2"
+                className="py-2 pl-2" // Заменено p-2 на py-2 pl-2
                 onClick={onClose}
               >
                 <CloseIcon className="h-7 w-7 text-gray-800" />
               </button>
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           </>
         ) : (
