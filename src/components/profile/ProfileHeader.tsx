@@ -22,9 +22,7 @@ const ProfileHeader = ({
   isSendingEmail,
 }: ProfileHeaderProps) => {
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Встраиваем стили блока прямо сюда ---
     <div className="flex w-full items-start justify-between border-b border-gray-200 py-5">
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className="flex items-center space-x-4">
         <div className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
           {user.image ? (
@@ -40,9 +38,11 @@ const ProfileHeader = ({
           )}
         </div>
         <div className="flex flex-col">
-          <div className="font-body text-base font-semibold text-gray-800 md:text-lg">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Стили имени как в меню --- */}
+          <div className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg">
             {user.name || ''} {user.surname || ''}
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-0.5 flex flex-col items-start sm:flex-row sm:items-center sm:space-x-2">
             <p className="truncate text-sm text-gray-500">{user.email}</p>
@@ -74,15 +74,17 @@ const ProfileHeader = ({
           </div>
         </div>
       </div>
-      <div>
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью копируем структуру блока иконок из меню --- */}
+      <div className="flex flex-col items-center">
         <button
           onClick={onEditClick}
-          className="p-2 pr-0 text-gray-600 transition-colors hover:text-gray-900"
+          className="p-2" // Устанавливаем идентичный отступ
           aria-label="Изменить профиль"
         >
-          <SettingsIcon className="h-6 w-6" />
+          <SettingsIcon className="h-6 w-6 text-gray-800" />
         </button>
       </div>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 };
