@@ -64,8 +64,8 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшен отступ space-y-6 -> space-y-0 ---
-    <div className="mx-auto max-w-2xl space-y-0 px-4 pb-8">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлен отступ pt-24 для компенсации шапки ---
+    <div className="mx-auto max-w-2xl space-y-0 px-4 pb-8 pt-24">
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
@@ -78,7 +78,6 @@ export default function ProfileClient({
         </div>
       )}
 
-      {/* Главный блок профиля теперь имеет нижний разделитель */}
       <div className="border-b border-gray-200 py-5">
         {isEditingName ? (
           <EditProfileForm
@@ -109,11 +108,9 @@ export default function ProfileClient({
         <p>Получайте уведомления о заказах</p>
       </ProfileInfoBlock>
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убран "карточный" стиль, добавлен разделитель --- */}
       <div className="border-b border-gray-200 py-5">
         <EditPasswordForm onSave={handleUpdatePassword} isPending={isPending} />
       </div>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       <ProfileInfoBlock
         title="Активные сессии"
@@ -148,8 +145,6 @@ export default function ProfileClient({
       </ProfileInfoBlock>
 
       <div className="pt-8">
-        {' '}
-        {/* Увеличен отступ для кнопки Выйти */}
         <SignOutButton />
       </div>
 

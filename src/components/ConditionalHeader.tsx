@@ -13,13 +13,12 @@ export default function ConditionalHeader() {
   const isProductPage = pathname.startsWith('/product/');
 
   if (isProductPage) {
-    // Для страницы товара по-прежнему используется своя логика без фиксации
     return <ProductPageHeader />;
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Возвращаем "липкую" обертку для всех остальных страниц ---
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем sticky на fixed для абсолютной фиксации ---
   return (
-    <div className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md">
+    <div className="fixed left-0 right-0 top-0 z-50 w-full bg-white/80 backdrop-blur-md">
       <Header
         isSearchActive={isSearchActive}
         onSearchToggle={setIsSearchActive}
