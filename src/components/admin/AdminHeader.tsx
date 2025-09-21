@@ -1,8 +1,7 @@
-// Местоположение: src/components/admin/AdminHeader.tsx (НОВЫЙ ФАЙЛ)
 'use client';
 
 import Link from 'next/link';
-import Logo from '@/components/icons/Logo';
+import ShortLogo from '@/components/icons/ShortLogo'; // ИЗМЕНЕНИЕ: Импортируем ShortLogo
 import { useAppStore } from '@/store/useAppStore';
 import { signOut } from 'next-auth/react';
 import PageContainer from '../layout/PageContainer';
@@ -21,7 +20,8 @@ export default function AdminHeader() {
           <div className="flex items-center space-x-4">
             {/* Эта ссылка всегда ведет на главный сайт, разрывая цикл редиректов. */}
             <Link href="https://kyanchir.ru">
-              <Logo className="logo-brand-color h-5 w-auto" />
+              {/* ИЗМЕНЕНИЕ: Используем ShortLogo */}
+              <ShortLogo className="logo-brand-color h-5 w-auto" />
             </Link>
             <span className="text-sm font-semibold text-gray-500">
               Панель управления
