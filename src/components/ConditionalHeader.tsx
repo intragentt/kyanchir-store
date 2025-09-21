@@ -121,9 +121,9 @@ export default function ConditionalHeader() {
     return <HomePageHeaderController />;
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Делаем стандартную шапку фиксированной ---
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Убрана нижняя граница ---
   return (
-    <div className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md">
+    <div className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-md">
       <Header
         isSearchActive={isSearchActive}
         onSearchToggle={setIsSearchActive}

@@ -1,8 +1,7 @@
-// Местоположение: src/components/Header.tsx
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from 'next/link'; // Убедитесь, что импорт из 'next/link'
 import Logo from './icons/Logo';
 import CloseIcon from './icons/CloseIcon';
 import BurgerIcon from './icons/BurgerIcon';
@@ -29,18 +28,18 @@ export default function Header({
 
   return (
     <header className={`w-full bg-white ${className}`}>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем горизонтальные отступы для мобильных --- */}
       <div className="container mx-auto flex h-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         {!isSearchActive ? (
           <div className="flex w-full items-center justify-between">
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Логотип обернут в Link --- */}
             <Link
-              href="/"
+              href="/" // Эта ссылка всегда ведет на главную страницу
               onClick={() => onMenuToggle(false)}
               aria-label="На главную"
             >
               <Logo className="logo-brand-color h-5 w-auto" />
             </Link>
+            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="flex items-center">
               <button
                 onClick={() => onSearchToggle(true)}
