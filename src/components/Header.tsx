@@ -28,7 +28,9 @@ export default function Header({
 
   return (
     <header className={`w-full bg-white ${className}`}>
-      <div className="container mx-auto flex h-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем вертикальные отступы --- */}
+      <div className="container mx-auto flex h-full items-center justify-between px-4 pb-1.5 pt-3 sm:px-6 lg:px-8 xl:px-12">
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         {!isSearchActive ? (
           <div className="flex w-full items-center justify-between">
             <Link
@@ -46,30 +48,26 @@ export default function Header({
               >
                 <SearchIcon className="h-6 w-6" />
               </button>
-              {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний отступ справа --- */}
               <button
                 onClick={() => setFloatingMenuOpen(true)}
-                className="relative z-50 py-2 pl-2" // Заменено p-2 на py-2 pl-2
+                className="relative z-50 py-2 pl-2"
               >
                 <BurgerIcon className="h-7 w-7" />
               </button>
-              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             </div>
           </div>
         ) : (
           <div className="flex w-full items-center space-x-2">
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний отступ слева --- */}
             <button
               onClick={() => {
                 onSearchToggle(false);
                 setSearchQuery('');
               }}
               aria-label="Закрыть поиск"
-              className="py-2 pr-2 text-gray-700" // Заменено p-2 на py-2 pr-2
+              className="py-2 pr-2 text-gray-700"
             >
               <CloseIcon className="h-6 w-6" />
             </button>
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
             <div className="relative flex-grow">
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
                 <SearchIcon className="h-5 w-5 text-gray-400" />
@@ -83,14 +81,12 @@ export default function Header({
                 autoFocus
               />
             </div>
-            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний отступ справа --- */}
             <button
               onClick={() => setFloatingMenuOpen(true)}
-              className="relative z-50 py-2 pl-2 text-gray-700" // Заменено p-2 на py-2 pl-2
+              className="relative z-50 py-2 pl-2 text-gray-700"
             >
               <BurgerIcon className="h-7 w-7" />
             </button>
-            {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           </div>
         )}
       </div>
