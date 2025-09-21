@@ -1,9 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react'; // <-- Добавлен useState
 import { useAppStore } from '@/store/useAppStore';
 
-// Импортируем все наши новые модули
 import MenuHeader from './MenuHeader';
 import AuthenticatedView from './AuthenticatedView';
 import GuestView from './GuestView';
@@ -13,10 +12,9 @@ import MenuButton from './MenuButton';
 import ShopNavigation from './ShopNavigation';
 import InfoLinks from './InfoLinks';
 import MenuFooter from './MenuFooter';
-
-// Импортируем иконки, которые понадобятся для кнопок
 import HeartIcon from '../icons/HeartIcon';
 import ReceiptIcon from '../icons/ReceiptIcon';
+import VerificationModal from '../modals/VerificationModal'; // <-- ШАГ 1: Импортируем модальное окно
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;
@@ -30,49 +28,68 @@ export default function FloatingMenuOverlay({
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Управление состоянием модального окна ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const openVerificationModal = () => setIsModalOpen(true);
+  const closeVerificationModal = () => setIsModalOpen(false);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
-    <div
-      className={`fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white transition-opacity duration-300 ease-in-out ${
-        isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
-      }`}
-    >
-      <MenuHeader onClose={onClose} />
+    <>
+      {' '}
+      {/* Используем фрагмент, чтобы вернуть два корневых элемента */}
+      <div
+        className={`fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white transition-opacity duration-300 ease-in-out ${
+          isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+      >
+        <MenuHeader onClose={onClose} />
 
-      <div className="flex flex-grow flex-col overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 xl:px-12">
-        <div className="flex-grow">
-          {isAuthenticated && user ? (
-            <AuthenticatedView user={user} onClose={onClose} />
-          ) : (
-            <GuestView onClose={onClose} />
-          )}
+        <div className="flex flex-grow flex-col overflow-y-auto px-4 py-6 sm:px-6 lg:px-8 xl:px-12">
+          <div className="flex-grow">
+            {isAuthenticated && user ? (
+              // Передаем функцию для открытия модального окна
+              <AuthenticatedView
+                user={user}
+                onClose={onClose}
+                onVerifyClick={openVerificationModal}
+              />
+            ) : (
+              <GuestView onClose={onClose} />
+            )}
 
-          <DeliveryStatus />
+            <DeliveryStatus />
 
-          <MenuButton
-            href="/favorites"
-            onClick={onClose}
-            label="Избранное"
-            icon={<HeartIcon className="h-6 w-6 flex-none text-gray-800" />}
-            className="mt-6"
-          />
+            <MenuButton
+              href="/favorites"
+              onClick={onClose}
+              label="Избранное"
+              icon={<HeartIcon className="h-6 w-6 flex-none text-gray-800" />}
+              className="mt-6"
+            />
 
-          <CartSummary />
+            <CartSummary />
 
-          <MenuButton
-            href="/orders"
-            onClick={onClose}
-            label="История заказов"
-            icon={<ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />}
-            className="mt-10"
-          />
+            <MenuButton
+              href="/orders"
+              onClick={onClose}
+              label="История заказов"
+              icon={<ReceiptIcon className="h-6 w-6 flex-none text-gray-800" />}
+              className="mt-10"
+            />
 
-          <ShopNavigation />
-
-          <InfoLinks />
+            <ShopNavigation />
+            <InfoLinks />
+          </div>
+          <MenuFooter />
         </div>
-
-        <MenuFooter />
       </div>
-    </div>
+      {/* Рендерим модальное окно здесь, чтобы оно было поверх всего */}
+      <VerificationModal
+        isOpen={isModalOpen}
+        onClose={closeVerificationModal}
+        email={user?.email}
+      />
+    </>
   );
 }

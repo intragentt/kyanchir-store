@@ -1,8 +1,7 @@
 // Местоположение: src/store/useAppStore.ts
 import { create } from 'zustand';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-import { Session } from 'next-auth'; // Импортируем тип Session
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import { Session } from 'next-auth';
+import { getSession } from 'next-auth/react'; // <-- ШАГ 1: Импортируем getSession
 
 interface NotificationState {
   isVisible: boolean;
@@ -23,10 +22,9 @@ interface AppState {
   ) => void;
   hideNotification: () => void;
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  user: Session['user'] | null; // Используем официальный тип пользователя
+  user: Session['user'] | null;
   setUser: (user: Session['user'] | null) => void;
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  fetchUser: () => Promise<void>; // <-- ШАГ 2: Добавляем тип для новой функции
 
   isFloatingMenuOpen: boolean;
   setFloatingMenuOpen: (isOpen: boolean) => void;
@@ -59,6 +57,21 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   user: null,
   setUser: (user) => set({ user }),
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Реализация fetchUser ---
+  fetchUser: async () => {
+    try {
+      // Запрашиваем самую свежую сессию с сервера
+      const session = await getSession();
+      // Обновляем пользователя в нашем хранилище
+      set({ user: session?.user ?? null });
+    } catch (error) {
+      console.error('Failed to fetch user session:', error);
+      // В случае ошибки, очищаем данные пользователя
+      set({ user: null });
+    }
+  },
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   isFloatingMenuOpen: false,
   setFloatingMenuOpen: (isOpen) => set({ isFloatingMenuOpen: isOpen }),

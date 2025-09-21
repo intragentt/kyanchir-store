@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import SettingsIcon from '../icons/SettingsIcon';
@@ -8,7 +8,6 @@ import ShortLogo from '../icons/ShortLogo';
 import AdminIcon from '../icons/AdminIcon';
 import AvatarPlaceholder from '../AvatarPlaceholder';
 
-// Обновленный тип пользователя
 interface UserSession {
   name?: string | null;
   email?: string | null;
@@ -23,14 +22,42 @@ interface UserSession {
 interface AuthenticatedViewProps {
   user: UserSession;
   onClose: () => void;
+  onVerifyClick: () => void; // <-- ШАГ 1: Принимаем новую функцию
 }
 
-const AuthenticatedView = ({ user, onClose }: AuthenticatedViewProps) => {
-  // В будущем здесь будет логика для открытия модального окна
-  const handleVerificationClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Предотвращаем стандартный переход по ссылке
-    console.log('Verification process initiated...');
-    // TODO: 1. Call API to send code. 2. Open modal.
+const AuthenticatedView = ({
+  user,
+  onClose,
+  onVerifyClick,
+}: AuthenticatedViewProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleVerificationClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!user.email) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/auth/send-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || 'Не удалось отправить код.');
+      }
+
+      // --- ШАГ 2: Вызываем функцию открытия модального окна ---
+      onVerifyClick();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Произошла ошибка.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -57,29 +84,28 @@ const AuthenticatedView = ({ user, onClose }: AuthenticatedViewProps) => {
           >
             {user?.name || 'Личный кабинет'}
           </Link>
-
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Адаптивный блок для Email и кнопки --- */}
-          {/* По умолчанию - колонка, с sm (640px) - строка */}
           <div className="mt-0.5 flex flex-col items-start sm:flex-row sm:items-center sm:space-x-2">
             <p className="truncate text-sm text-gray-500">{user?.email}</p>
             {!user.emailVerified && (
               <button
                 onClick={handleVerificationClick}
-                className="group mt-1 flex flex-shrink-0 cursor-pointer items-center space-x-1.5 rounded-full bg-yellow-100 px-2 py-0.5 transition-colors hover:bg-yellow-200 sm:mt-0"
+                disabled={isLoading}
+                className="group mt-1 flex flex-shrink-0 cursor-pointer items-center space-x-1.5 rounded-full bg-yellow-100 px-2 py-0.5 transition-colors hover:bg-yellow-200 disabled:cursor-not-allowed disabled:opacity-50 sm:mt-0"
                 aria-label="Подтвердить Email"
               >
                 <div className="h-1.5 w-1.5 rounded-full bg-yellow-500"></div>
                 <span className="text-xs font-semibold text-yellow-800">
-                  {/* Текст для мобильных */}
-                  <span className="sm:hidden">Подтвердить Email</span>
-                  {/* Текст для десктопа */}
-                  <span className="hidden sm:inline">Подтвердить</span>
+                  <span className="sm:hidden">
+                    {isLoading ? 'Отправка...' : 'Подтвердить Email'}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {isLoading ? 'Отправка...' : 'Подтвердить'}
+                  </span>
                 </span>
               </button>
             )}
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-
+          {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
           <div className="mt-2 inline-flex items-center space-x-2 self-start rounded-md bg-gray-100 px-2.5 py-1">
             <span className="font-body text-sm font-semibold text-gray-800">
               {user?.bonusPoints ?? 0}

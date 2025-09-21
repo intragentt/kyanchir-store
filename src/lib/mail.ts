@@ -1,4 +1,3 @@
-// Местоположение: /src/lib/mail.ts
 import nodemailer from 'nodemailer';
 
 const {
@@ -31,7 +30,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новый HTML-шаблон ---
 export async function sendPasswordResetEmail(email: string, token: string) {
   if (!EMAIL_SERVER_HOST) {
     console.error(
@@ -74,4 +72,47 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   await transporter.sendMail(mailOptions);
   console.log(`[Mail] Письмо для сброса пароля отправлено на ${email}`);
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+// --- НАЧАЛО НОВОЙ ФУНКЦИИ ---
+// Эта функция будет отправлять код для подтверждения Email
+export async function sendVerificationCodeEmail(email: string, code: string) {
+  if (!EMAIL_SERVER_HOST) {
+    console.error(
+      'ERROR: Email server host is not configured. Cannot send email.',
+    );
+    throw new Error('Email service is not configured on the server.');
+  }
+
+  const mailOptions = {
+    from: EMAIL_FROM,
+    to: email,
+    subject: 'Код подтверждения для вашего аккаунта Kyanchir',
+    html: `
+      <div style="background-color: #f3f4f6; padding: 20px; font-family: Arial, sans-serif;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+          <div style="padding: 20px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+            <h1 style="font-size: 28px; font-weight: bold; color: #111827; margin: 0;">Kyanchir Store</h1>
+          </div>
+          <div style="padding: 30px; text-align: center;">
+            <h2 style="font-size: 22px; color: #1f2937; margin-top: 0;">Подтвердите ваш Email</h2>
+            <p style="color: #4b5563; line-height: 1.6;">
+              Ваш код для подтверждения электронной почты:
+            </p>
+            <div style="margin: 30px 0;">
+              <div style="background-color: #f3f4f6; color: #1f2937; padding: 14px 28px; border-radius: 6px; font-size: 24px; font-weight: bold; display: inline-block; letter-spacing: 5px;">
+                ${code}
+              </div>
+            </div>
+            <p style="color: #6b7280; font-size: 14px;">
+              Если вы не запрашивали это, просто проигнорируйте письмо. Код действителен в течение 10 минут.
+            </p>
+          </div>
+        </div>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+  console.log(`[Mail] Код подтверждения отправлен на ${email}`);
+}
+// --- КОНЕЦ НОВОЙ ФУНКЦИИ ---
