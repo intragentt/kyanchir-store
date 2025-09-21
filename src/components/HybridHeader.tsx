@@ -3,14 +3,12 @@
 import { useRef } from 'react';
 import Header from '@/components/Header';
 import { useAppStore } from '@/store/useAppStore';
-// --- ИЗМЕНЕНИЕ: Исправляем путь импорта на относительный ---
 import { useHybridHeader } from './hooks/useHybridHeader';
 
 export default function HybridHeader() {
   const headerRef = useRef<HTMLDivElement>(null);
   const { translateY } = useHybridHeader(headerRef);
 
-  // --- ИЗМЕНЕНИЕ: Получаем все состояние из Zustand, используем правильные имена ---
   const {
     isSearchActive,
     setSearchActive,
@@ -29,16 +27,19 @@ export default function HybridHeader() {
       className="fixed left-0 right-0 top-0 z-[100] will-change-transform"
       style={{
         transform: `translateY(${translateY}px)`,
+        // Используем transition из CSS для плавной анимации "примагничивания"
         transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Делаем шапку непрозрачной и добавляем тень --- */}
       <Header
         isSearchActive={isSearchActive}
         onSearchToggle={setSearchActive}
-        isMenuOpen={isFloatingMenuOpen} // <-- Используем isFloatingMenuOpen
-        onMenuToggle={setFloatingMenuOpen} // <-- Используем setFloatingMenuOpen
-        className="bg-white/80 backdrop-blur-md"
+        isMenuOpen={isFloatingMenuOpen}
+        onMenuToggle={setFloatingMenuOpen}
+        className="bg-white shadow-md"
       />
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 }
