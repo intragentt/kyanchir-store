@@ -3,13 +3,16 @@
 import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useAppStore } from '@/store/useAppStore';
-import CloseIcon from '../icons/CloseIcon';
+import Logo from '../icons/Logo'; // Импортируем логотип
+import CodeInput from './CodeInput'; // Импортируем наш новый компонент
 
 interface VerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   email: string | null | undefined;
 }
+
+const RESEND_COOLDOWN = 60; // 60 секунд
 
 export default function VerificationModal({
   isOpen,
@@ -19,25 +22,41 @@ export default function VerificationModal({
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const fetchUser = useAppStore((state) => state.fetchUser); // Для обновления сессии
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const fetchUser = useAppStore((state) => state.fetchUser);
 
+  // Таймер для повторной отправки кода
   useEffect(() => {
-    // Сбрасываем состояние при каждом открытии/закрытии
-    if (!isOpen) {
-      setCode('');
-      setError('');
-      setIsLoading(false);
+    let timer: NodeJS.Timeout;
+    if (resendCooldown > 0) {
+      timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
     }
-  }, [isOpen]);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
+  const handleResendCode = async () => {
+    if (!email || resendCooldown > 0) return;
+
+    // Можно добавить состояние загрузки и для этой кнопки
+    try {
+      const response = await fetch('/api/auth/send-verification-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) throw new Error('Не удалось отправить код.');
+      setResendCooldown(RESEND_COOLDOWN); // Запускаем таймер
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ошибка');
+    }
+  };
+
+  const handleFormSubmit = async () => {
+    if (!email || code.length < 6) return;
 
     setIsLoading(true);
     setError('');
 
-    // Используем signIn с 'email-code' провайдером, как в auth.ts
     const res = await signIn('email-code', {
       redirect: false,
       email,
@@ -45,62 +64,68 @@ export default function VerificationModal({
     });
 
     if (res?.ok) {
-      // Успех! Обновляем данные пользователя глобально и закрываем окно.
       await fetchUser();
       onClose();
     } else {
-      setError(res?.error || 'Неверный или устаревший код.');
+      setError('Неверный или устаревший код.');
     }
     setIsLoading(false);
   };
 
-  if (!isOpen) {
-    return null;
-  }
+  useEffect(() => {
+    if (!isOpen) {
+      setCode('');
+      setError('');
+      setIsLoading(false);
+      setResendCooldown(0);
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
 
   return (
-    // Оверлей
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-      {/* Контейнер модального окна */}
-      <div className="animate-in fade-in zoom-in-95 relative w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 p-2 text-gray-400 hover:text-gray-700"
-          aria-label="Закрыть"
-        >
-          <CloseIcon className="h-6 w-6" />
-        </button>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-50 px-4 backdrop-blur-sm">
+      <div className="animate-in fade-in zoom-in-95 relative w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg sm:p-10">
+        <div className="mx-auto mb-8 flex justify-center">
+          <Logo className="h-6 w-auto text-gray-800" />
+        </div>
 
-        <h2 className="mb-2 text-center text-2xl font-bold text-gray-800">
-          Подтвердите ваш email
+        <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+          Введите код подтверждения
         </h2>
-        <p className="mb-6 text-center text-sm text-gray-500">
-          Мы отправили код на <span className="font-semibold">{email}</span>
+        <p className="mt-2 text-sm text-gray-600 sm:text-base">
+          Мы отправили 6-значный код на{' '}
+          <span className="font-semibold text-gray-800">{email}</span>
         </p>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="Введите 6-значный код"
-            className="w-full rounded-lg border-gray-300 text-center text-lg tracking-[8px] focus:border-indigo-500 focus:ring-indigo-500"
-            maxLength={6}
-            autoFocus
+        <div className="mt-8">
+          <CodeInput
+            length={6}
+            onChange={setCode}
+            onComplete={handleFormSubmit}
           />
+        </div>
 
-          {error && (
-            <p className="mt-2 text-center text-sm text-red-600">{error}</p>
-          )}
+        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
+        <div className="mt-8 flex flex-col space-y-3">
           <button
-            type="submit"
+            onClick={handleFormSubmit}
             disabled={isLoading || code.length < 6}
-            className="mt-6 w-full rounded-lg bg-indigo-600 py-3 text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-indigo-400"
+            className="w-full rounded-lg bg-gray-800 py-3.5 text-base font-semibold text-white transition-colors hover:bg-gray-900 disabled:cursor-not-allowed disabled:bg-gray-400"
           >
             {isLoading ? 'Проверка...' : 'Подтвердить'}
           </button>
-        </form>
+          <button
+            onClick={handleResendCode}
+            disabled={resendCooldown > 0}
+            className="w-full rounded-lg py-3.5 text-sm font-semibold text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+          >
+            {resendCooldown > 0
+              ? `Отправить еще раз (${resendCooldown}с)`
+              : 'Отправить код еще раз'}
+          </button>
+        </div>
       </div>
     </div>
   );
