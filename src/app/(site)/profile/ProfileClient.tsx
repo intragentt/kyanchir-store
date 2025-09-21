@@ -64,8 +64,10 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлен отступ pt-24 для компенсации шапки ---
-    <div className="mx-auto max-w-2xl space-y-0 px-4 pb-8 pt-24">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Корректировка всех отступов ---
+    // pt-24 -> pt-12 (поднимаем контент)
+    // px-4 -> px-4 sm:px-6 lg:px-8 xl:px-12 (выравниваем по бокам)
+    <div className="mx-auto max-w-2xl space-y-0 px-4 pb-8 pt-12 sm:px-6 lg:px-8 xl:px-12">
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
