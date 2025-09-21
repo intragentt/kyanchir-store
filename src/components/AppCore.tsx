@@ -16,6 +16,8 @@ import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
+// --- ИЗМЕНЕНИЕ: Импортируем Header для рендеринга статичной версии ---
+import Header from './Header';
 
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -102,7 +104,12 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     const handleScroll = () => {
       if (isSearchActive || isMenuOpen || !isHomePage) return;
       const currentScrollY = window.scrollY;
-      if (currentScrollY <= 5) {
+
+      // Порог скролла, после которого начинает работать "умная" шапка.
+      // Должен быть больше высоты самой шапки.
+      const scrollThreshold = headerHeight > 0 ? headerHeight + 20 : 80;
+
+      if (currentScrollY <= scrollThreshold) {
         setHeaderStatus('static');
         lastScrollY.current = currentScrollY;
         return;
@@ -143,15 +150,26 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       <FooterProvider>
         <NetworkStatusManager />
         <NotificationManager />
+        {/* Этот компонент теперь отвечает ТОЛЬКО за плавающий "клон" и шапки других страниц */}
         <ConditionalHeader />
         <SearchOverlay />
-        {isHomePage && <DynamicHeroSection />}
         <main className="flex-grow">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Увеличиваем вертикальный отступ до py-12 --- */}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Рендерим статичную версию шапки ТОЛЬКО на главной --- */}
+          {isHomePage && (
+            <div className="w-full bg-white">
+              <Header
+                isSearchActive={isSearchActive}
+                onSearchToggle={setIsSearchActive}
+                isMenuOpen={isMenuOpen}
+                onMenuToggle={setIsMenuOpen}
+              />
+            </div>
+          )}
+          {isHomePage && <DynamicHeroSection />}
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
             {children}
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </main>
         <Footer />
         <ClientInteractivity />
