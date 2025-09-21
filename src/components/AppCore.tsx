@@ -42,14 +42,6 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const scrollLockPosition = useRef(0);
   const isLockingScroll = useRef(false);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем порог для более резкой анимации ---
-  const SCROLL_UP_THRESHOLD = 150; // Было 800
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
-  const SCROLL_DOWN_THRESHOLD = 50;
-  const scrollUpAnchor = useRef<number | null>(null);
-  const scrollDownAnchor = useRef<number | null>(null);
-
   useEffect(() => {
     const timer = setTimeout(() => {
       window.scrollTo(0, 0);
@@ -106,36 +98,35 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     }
   }, [isSearchActive, isMenuOpen]);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая, "инстаграмная" логика скролла ---
   useEffect(() => {
     const handleScroll = () => {
       if (isSearchActive || isMenuOpen || !isHomePage) return;
       const currentScrollY = window.scrollY;
-      const isScrollingDown = currentScrollY > lastScrollY.current;
 
-      if (isScrollingDown) {
-        if (currentScrollY > headerHeight) setHeaderStatus('unpinned');
-        scrollUpAnchor.current = null;
-        if (scrollDownAnchor.current === null)
-          scrollDownAnchor.current = currentScrollY;
-      } else {
-        if (scrollUpAnchor.current === null)
-          scrollUpAnchor.current = currentScrollY;
-        if (
-          currentScrollY < scrollUpAnchor.current - SCROLL_UP_THRESHOLD &&
-          currentScrollY > headerHeight
-        ) {
-          setHeaderStatus('pinned');
-        } else if (currentScrollY <= headerHeight) {
-          setHeaderStatus('static');
-        }
-        scrollDownAnchor.current = null;
+      // Если мы у самого верха, шапка всегда статична
+      if (currentScrollY <= headerHeight) {
+        setHeaderStatus('static');
+        lastScrollY.current = currentScrollY;
+        return;
       }
+
+      // Если скроллим вниз, прячем шапку
+      if (currentScrollY > lastScrollY.current) {
+        setHeaderStatus('unpinned');
+      } else {
+        // Если скроллим вверх, показываем шапку
+        setHeaderStatus('pinned');
+      }
+
+      // Обновляем позицию для следующего события скролла
       lastScrollY.current = currentScrollY;
     };
 
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [isHomePage, headerHeight, isSearchActive, isMenuOpen]);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const contextValue = {
     headerStatus,
