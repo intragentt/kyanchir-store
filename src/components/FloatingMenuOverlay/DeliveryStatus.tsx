@@ -20,9 +20,7 @@ const DeliveryStatus = () => {
             Доставка
           </div>
         </div>
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убран класс -mr-8 и добавлен space-x-3 --- */}
         <div className="flex items-center space-x-3">
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
           <ChevronIcon
             isOpen={isDeliveryOpen}
@@ -40,7 +38,9 @@ const DeliveryStatus = () => {
             <p className="mt-1 text-sm text-gray-600">Розовая пижама</p>
           </div>
           <div className="relative mt-8">
-            <div className="absolute left-2 right-2 top-1/2 h-1.5 -translate-y-[55%] rounded-full bg-gray-200">
+            {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем отступы у полосы --- */}
+            <div className="absolute left-0 right-0 top-1/2 h-1.5 -translate-y-[55%] rounded-full bg-gray-200">
+              {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               <div
                 className="h-full rounded-full bg-gray-800"
                 style={{ width: '33.33%' }}
