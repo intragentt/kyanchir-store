@@ -4,17 +4,13 @@ import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import ProductPageHeader from '@/components/layout/ProductPageHeader';
 import { useStickyHeader } from '@/context/StickyHeaderContext';
+import HomePageHeader from './HomePageHeader'; // <-- Импортируем наш новый компонент
 
 export default function ConditionalHeader() {
   const pathname = usePathname();
-  // Получаем статус шапки из нашего "мозга" (контекста)
-  const {
-    isSearchActive,
-    setIsSearchActive,
-    isMenuOpen,
-    setIsMenuOpen,
-    headerStatus, // <-- Эта переменная говорит, когда прятать шапку
-  } = useStickyHeader();
+  // Контекст все еще нужен для передачи пропсов в обычную шапку
+  const { isSearchActive, setIsSearchActive, isMenuOpen, setIsMenuOpen } =
+    useStickyHeader();
 
   const isProductPage = pathname.startsWith('/product/');
   const isHomePage = pathname === '/';
@@ -23,28 +19,13 @@ export default function ConditionalHeader() {
     return <ProductPageHeader />;
   }
 
-  // Логика ТОЛЬКО для главной страницы
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем новый изолированный компонент ---
+  // Если это главная страница, рендерим "умную" шапку
   if (isHomePage) {
-    // Формируем классы для анимации
-    const headerClasses = `
-      fixed left-0 right-0 top-0 z-50 w-full bg-white/80 backdrop-blur-md
-      transition-transform duration-300 ease-in-out
-      ${headerStatus === 'unpinned' ? '-translate-y-full' : 'translate-y-0'}
-    `; // ^^^ Вот эта строка и прячет шапку ПОЛНОСТЬЮ при скролле вниз
-
-    return (
-      <div className={headerClasses}>
-        <Header
-          isSearchActive={isSearchActive}
-          onSearchToggle={setIsSearchActive}
-          isMenuOpen={isMenuOpen}
-          onMenuToggle={setIsMenuOpen}
-        />
-      </div>
-    );
+    return <HomePageHeader />;
   }
 
-  // На ВСЕХ ОСТАЛЬНЫХ страницах (профиль и т.д.) шапка простая и статичная
+  // На всех остальных страницах рендерим простую статичную шапку
   return (
     <div className="w-full bg-white">
       <Header
@@ -55,4 +36,5 @@ export default function ConditionalHeader() {
       />
     </div>
   );
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
