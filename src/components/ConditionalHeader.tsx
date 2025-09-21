@@ -7,23 +7,34 @@ import { useStickyHeader } from '@/context/StickyHeaderContext';
 
 export default function ConditionalHeader() {
   const pathname = usePathname();
-  const { isSearchActive, setIsSearchActive, isMenuOpen, setIsMenuOpen } =
-    useStickyHeader();
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем статус шапки из контекста ---
+  const {
+    isSearchActive,
+    setIsSearchActive,
+    isMenuOpen,
+    setIsMenuOpen,
+    headerStatus, // <-- Получаем состояние
+  } = useStickyHeader();
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const isProductPage = pathname.startsWith('/product/');
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем проверку на главную страницу ---
   const isHomePage = pathname === '/';
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (isProductPage) {
     return <ProductPageHeader />;
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Рендерим шапку в зависимости от страницы ---
-  // Если это главная страница, используем "умную" прилипающую шапку
   if (isHomePage) {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем динамические классы для анимации ---
+    const headerClasses = `
+      fixed left-0 right-0 top-0 z-50 w-full bg-white/80 backdrop-blur-md
+      transition-transform duration-300 ease-in-out
+      ${headerStatus === 'unpinned' ? '-translate-y-full' : 'translate-y-0'}
+    `;
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     return (
-      <div className="fixed left-0 right-0 top-0 z-50 w-full bg-white/80 backdrop-blur-md">
+      <div className={headerClasses}>
         <Header
           isSearchActive={isSearchActive}
           onSearchToggle={setIsSearchActive}
@@ -34,8 +45,7 @@ export default function ConditionalHeader() {
     );
   }
 
-  // На всех остальных страницах (профиль, каталог и т.д.) используем обычную статичную шапку,
-  // которая прокручивается вместе с контентом и не "прыгает" в Safari.
+  // На всех остальных страницах (профиль, каталог и т.д.) используем обычную статичную шапку
   return (
     <div className="w-full bg-white">
       <Header
@@ -46,5 +56,4 @@ export default function ConditionalHeader() {
       />
     </div>
   );
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
