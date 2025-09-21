@@ -11,14 +11,33 @@ export default function ConditionalHeader() {
     useStickyHeader();
 
   const isProductPage = pathname.startsWith('/product/');
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем проверку на главную страницу ---
+  const isHomePage = pathname === '/';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (isProductPage) {
     return <ProductPageHeader />;
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем sticky на fixed для абсолютной фиксации ---
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Рендерим шапку в зависимости от страницы ---
+  // Если это главная страница, используем "умную" прилипающую шапку
+  if (isHomePage) {
+    return (
+      <div className="fixed left-0 right-0 top-0 z-50 w-full bg-white/80 backdrop-blur-md">
+        <Header
+          isSearchActive={isSearchActive}
+          onSearchToggle={setIsSearchActive}
+          isMenuOpen={isMenuOpen}
+          onMenuToggle={setIsMenuOpen}
+        />
+      </div>
+    );
+  }
+
+  // На всех остальных страницах (профиль, каталог и т.д.) используем обычную статичную шапку,
+  // которая прокручивается вместе с контентом и не "прыгает" в Safari.
   return (
-    <div className="fixed left-0 right-0 top-0 z-50 w-full bg-white/80 backdrop-blur-md">
+    <div className="w-full bg-white">
       <Header
         isSearchActive={isSearchActive}
         onSearchToggle={setIsSearchActive}
