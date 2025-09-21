@@ -1,13 +1,10 @@
 // Местоположение: src/components/SmartStickyCategoryFilter.tsx
-// Метафора: "Архитектор Full-Bleed Верстки".
-// Мы возвращаем правильную архитектуру для "клона": полноэкранная
-// белая подложка (`position: fixed`) и вложенный в нее `div.container`,
-// который выравнивает сам фильтр по основной сетке сайта.
-
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import CategoryFilter from './CategoryFilter';
 import { useSmartSticky } from './hooks/useSmartSticky';
-import { useStickyHeader } from '@/context/StickyHeaderContext';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем мертвый импорт ---
+// import { useStickyHeader } from '@/context/StickyHeaderContext';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 type Category = {
   id: string;
@@ -35,9 +32,12 @@ export default function SmartStickyCategoryFilter({
     setScrollLeft(scrollOffset);
   }, []);
 
-  const { headerStatus, headerHeight } = useStickyHeader();
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем логику из контекста на временную константу ---
+  // Так как StickyHeaderContext удален, мы временно используем
+  // предполагаемую высоту шапки. Это позволит компоненту работать.
+  const topOffset = 64; // Примерная высота шапки в пикселях
   const filterRef = useRef<HTMLDivElement>(null);
-  const topOffset = headerStatus === 'pinned' ? headerHeight : 0;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const { shouldRender, isTransitionEnabled, placeholderHeight, stickyStyles } =
     useSmartSticky(filterRef, workZoneRef, { headerHeight: topOffset });
@@ -61,7 +61,6 @@ export default function SmartStickyCategoryFilter({
     }
   }, [shouldRender, isTransitionEnabled]);
 
-  // Внешняя обертка теперь снова w-full, чтобы фон был на всю ширину.
   const stickyWrapperClasses = [
     'fixed w-full z-40 bg-white',
     isTransitionEnabled ? 'transition-all duration-300 ease-in-out' : '',
@@ -72,7 +71,6 @@ export default function SmartStickyCategoryFilter({
 
   return (
     <>
-      {/* "Оригинальный" фильтр (без изменений) */}
       <div
         ref={filterRef}
         style={{ height: shouldRender ? placeholderHeight : 'auto' }}
@@ -87,15 +85,12 @@ export default function SmartStickyCategoryFilter({
         />
       </div>
 
-      {/* --- ОБНОВЛЕННЫЙ "Липкий клон" с Full-Bleed версткой --- */}
       {isMounted && (
-        // Шаг 1: Эта обертка — полноэкранная белая подложка.
         <div
           style={stickyStyles}
           className={`${stickyWrapperClasses} py-3`}
           aria-hidden="true"
         >
-          {/* Шаг 2: Внутрь добавляем стандартный контейнер для выравнивания контента. */}
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
             <CategoryFilter
               onSelectCategory={onSelectCategory}
