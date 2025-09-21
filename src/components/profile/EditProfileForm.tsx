@@ -31,21 +31,22 @@ const EditProfileForm = ({
   return (
     <div className="flex w-full items-start justify-between">
       <div className="flex items-center space-x-4">
-        {/* Аватар остается статичным во время редактирования */}
-        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-2 border-gray-200">
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Стили аватара как в меню --- */}
+        <div className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
           {user.image ? (
             <Image
               src={user.image}
               alt="Аватар"
               fill
-              sizes="80px"
+              sizes="72px"
               className="object-cover"
             />
           ) : (
             <AvatarPlaceholder />
           )}
         </div>
-        {/* Форма для ввода имени и фамилии */}
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
         <div className="flex flex-col gap-2">
           <input
             type="text"
@@ -63,7 +64,7 @@ const EditProfileForm = ({
           />
         </div>
       </div>
-      {/* Кнопки управления формой */}
+
       <div>
         <div className="flex flex-col gap-y-2">
           <button

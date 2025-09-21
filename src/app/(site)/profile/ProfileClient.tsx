@@ -4,10 +4,7 @@ import { useState, useTransition } from 'react';
 import type { User } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем наши новые Server Actions ---
 import { updateUserProfile, updateUserPassword } from './actions';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import EditProfileForm from '@/components/profile/EditProfileForm';
 import EditPasswordForm from '@/components/profile/EditPasswordForm';
@@ -33,7 +30,6 @@ export default function ProfileClient({
 
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Реализуем вызов Server Action ---
   const handleUpdateProfile = () => {
     setError(null);
     setSuccess(null);
@@ -47,7 +43,7 @@ export default function ProfileClient({
           result.data as User & { role?: { name: string | null } | null },
         );
         setIsEditingName(false);
-        router.refresh(); // Обновляем сессию и данные на всей странице
+        router.refresh();
       }
     });
   };
@@ -61,23 +57,18 @@ export default function ProfileClient({
     startTransition(async () => {
       const result = await updateUserPassword({ currentPassword, newPassword });
       if (result.error) {
-        // Ошибка будет показана внутри компонента EditPasswordForm
-        // Но мы можем захотеть обработать ее и здесь
         setError(result.error);
       } else if (result.success) {
         setSuccess('Пароль успешно изменен!');
-        // Компонент EditPasswordForm сам закроет форму при успехе
       }
     });
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSendVerificationEmail = async () => {
     setIsSendingEmail(true);
     setError(null);
     setSuccess(null);
     try {
-      // Этот API-маршрут мы оставили как есть, он работает
       const res = await fetch('/api/auth/send-verification-link', {
         method: 'POST',
       });
@@ -93,7 +84,9 @@ export default function ProfileClient({
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Упрощаем контейнер ---
+    <div className="mx-auto max-w-2xl space-y-8 px-4 py-8">
+      {/* Уведомления */}
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
@@ -105,7 +98,8 @@ export default function ProfileClient({
         </div>
       )}
 
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
+      {/* Блок Профиля: убрана обертка-карточка */}
+      <div>
         {isEditingName ? (
           <EditProfileForm
             user={user}
@@ -127,6 +121,7 @@ export default function ProfileClient({
         )}
       </div>
 
+      {/* Блок Пароля: остался в виде карточки для визуального разделения */}
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <EditPasswordForm onSave={handleUpdatePassword} isPending={isPending} />
       </div>
@@ -135,5 +130,6 @@ export default function ProfileClient({
         <SignOutButton />
       </div>
     </div>
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   );
 }
