@@ -146,13 +146,13 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
         <ConditionalHeader />
         <SearchOverlay />
         {isHomePage && <DynamicHeroSection />}
-        {/* --- НАЧАло ИЗМЕНЕНИЙ: Добавляем единый контейнер для всего контента --- */}
         <main className="flex-grow">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем вертикальный отступ py-6 --- */}
+          <div className="container mx-auto px-4 py-6 sm:px-6 lg:px-8 xl:px-12">
             {children}
           </div>
+          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         </main>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <Footer />
         <ClientInteractivity />
       </FooterProvider>
