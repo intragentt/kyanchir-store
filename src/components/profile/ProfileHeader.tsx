@@ -22,7 +22,9 @@ const ProfileHeader = ({
   isSendingEmail,
 }: ProfileHeaderProps) => {
   return (
-    <div className="flex w-full items-start justify-between">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Встраиваем стили блока прямо сюда ---
+    <div className="flex w-full items-start justify-between border-b border-gray-200 py-5">
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className="flex items-center space-x-4">
         <div className="relative h-[72px] w-[72px] flex-shrink-0 overflow-hidden rounded-full border-[1.2px] border-gray-200">
           {user.image ? (
@@ -73,15 +75,13 @@ const ProfileHeader = ({
         </div>
       </div>
       <div>
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний отступ справа --- */}
         <button
           onClick={onEditClick}
-          className="p-2 pr-0 text-gray-600 transition-colors hover:text-gray-900" // Заменено p-2 на p-2 pr-0
+          className="p-2 pr-0 text-gray-600 transition-colors hover:text-gray-900"
           aria-label="Изменить профиль"
         >
           <SettingsIcon className="h-6 w-6" />
         </button>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
     </div>
   );
