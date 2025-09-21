@@ -1,127 +1,83 @@
-// Местоположение: src/app/profile/ProfileClient.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import type { User } from '@prisma/client';
-import SignOutButton from './SignOutButton';
 import { useRouter } from 'next/navigation';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем наши новые Server Actions ---
+import { updateUserProfile, updateUserPassword } from './actions';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+import ProfileHeader from '@/components/profile/ProfileHeader';
+import EditProfileForm from '@/components/profile/EditProfileForm';
+import EditPasswordForm from '@/components/profile/EditPasswordForm';
+import SignOutButton from './SignOutButton';
+
 interface ProfileClientProps {
-  user: User;
+  user: User & { role?: { name?: string | null } | null };
 }
 
 export default function ProfileClient({
   user: initialUser,
 }: ProfileClientProps) {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const [user, setUser] = useState(initialUser);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [name, setName] = useState(initialUser.name || '');
+
   const [isEditingName, setIsEditingName] = useState(false);
-  const [email, setEmail] = useState(initialUser.email || '');
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [name, setName] = useState(initialUser.name || '');
+  const [surname, setSurname] = useState(initialUser.surname || '');
+
   const [isSendingEmail, setIsSendingEmail] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [isEditingPassword, setIsEditingPassword] = useState(false);
 
-  const handleUpdateName = async () => {
-    if (name === user.name) {
-      setIsEditingName(false);
-      return;
-    }
-    setIsLoading(true);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Реализуем вызов Server Action ---
+  const handleUpdateProfile = () => {
     setError(null);
     setSuccess(null);
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Не удалось обновить имя.');
-      setUser(data);
-      setSuccess('Имя успешно обновлено!');
-      setIsEditingName(false);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
+    startTransition(async () => {
+      const result = await updateUserProfile({ name, surname });
+      if (result.error) {
+        setError(result.error);
+      } else if (result.success && result.data) {
+        setSuccess('Профиль успешно обновлен!');
+        setUser(
+          result.data as User & { role?: { name: string | null } | null },
+        );
+        setIsEditingName(false);
+        router.refresh(); // Обновляем сессию и данные на всей странице
+      }
+    });
   };
 
-  const handleUpdateEmail = async () => {
-    if (email === user.email) {
-      setIsEditingEmail(false);
-      return;
-    }
-    setIsLoading(true);
+  const handleUpdatePassword = async (
+    currentPassword: string,
+    newPassword: string,
+  ) => {
     setError(null);
     setSuccess(null);
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Не удалось обновить email.');
-
-      setSuccess('Email успешно обновлен! Страница сейчас перезагрузится.');
-      setIsEditingEmail(false);
-
-      // Добавляем задержку перед перезагрузкой
-      setTimeout(() => {
-        router.refresh();
-      }, 1500);
-    } catch (err: any) {
-      setError(err.message);
-      setIsLoading(false);
-    }
+    startTransition(async () => {
+      const result = await updateUserPassword({ currentPassword, newPassword });
+      if (result.error) {
+        // Ошибка будет показана внутри компонента EditPasswordForm
+        // Но мы можем захотеть обработать ее и здесь
+        setError(result.error);
+      } else if (result.success) {
+        setSuccess('Пароль успешно изменен!');
+        // Компонент EditPasswordForm сам закроет форму при успехе
+      }
+    });
   };
-
-  const handleUpdatePassword = async () => {
-    if (!currentPassword || !newPassword) {
-      setError('Все поля пароля должны быть заполнены.');
-      return;
-    }
-    if (newPassword !== confirmNewPassword) {
-      setError('Новые пароли не совпадают.');
-      return;
-    }
-    setIsLoading(true);
-    setError(null);
-    setSuccess(null);
-    try {
-      const res = await fetch('/api/user/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Не удалось изменить пароль.');
-      setSuccess('Пароль успешно изменен!');
-      setIsEditingPassword(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmNewPassword('');
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSendVerificationEmail = async () => {
     setIsSendingEmail(true);
     setError(null);
     setSuccess(null);
     try {
+      // Этот API-маршрут мы оставили как есть, он работает
       const res = await fetch('/api/auth/send-verification-link', {
         method: 'POST',
       });
@@ -137,16 +93,7 @@ export default function ProfileClient({
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div className="text-center">
-        <div className="font-body text-3xl font-bold tracking-tight">
-          Личный кабинет
-        </div>
-        <div className="font-body mt-2 text-lg text-gray-600">
-          Добро пожаловать, {user.name || user.email}!
-        </div>
-      </div>
-
+    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
@@ -159,171 +106,29 @@ export default function ProfileClient({
       )}
 
       <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-body font-semibold text-gray-500">Имя</div>
-            {!isEditingName ? (
-              <div className="font-body text-lg">
-                {user.name || 'Не указано'}
-              </div>
-            ) : (
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="font-body mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-              />
-            )}
-          </div>
-          {!isEditingName ? (
-            <button
-              onClick={() => setIsEditingName(true)}
-              disabled={isEditingEmail || isEditingPassword}
-              className="font-body text-sm font-semibold text-indigo-600 hover:text-indigo-500 disabled:text-gray-400"
-            >
-              Изменить
-            </button>
-          ) : (
-            <div className="flex gap-x-2">
-              <button
-                onClick={handleUpdateName}
-                disabled={isLoading}
-                className="font-body text-sm font-semibold text-green-600 hover:text-green-500 disabled:opacity-50"
-              >
-                {isLoading ? '...' : 'Сохранить'}
-              </button>
-              <button
-                onClick={() => setIsEditingName(false)}
-                className="font-body text-sm text-gray-500 hover:text-gray-700"
-              >
-                Отмена
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="rounded-lg border bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="font-body font-semibold text-gray-500">Email</div>
-            {!isEditingEmail ? (
-              <div className="font-body text-lg">{user.email}</div>
-            ) : (
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="font-body mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-              />
-            )}
-          </div>
-          {!isEditingEmail ? (
-            <button
-              onClick={() => setIsEditingEmail(true)}
-              disabled={isEditingName || isEditingPassword}
-              className="font-body text-sm font-semibold text-indigo-600 hover:text-indigo-500 disabled:text-gray-400"
-            >
-              Изменить
-            </button>
-          ) : (
-            <div className="flex gap-x-2">
-              <button
-                onClick={handleUpdateEmail}
-                disabled={isLoading}
-                className="font-body text-sm font-semibold text-green-600 hover:text-green-500 disabled:opacity-50"
-              >
-                {isLoading ? '...' : 'Сохранить'}
-              </button>
-              <button
-                onClick={() => setIsEditingEmail(false)}
-                className="font-body text-sm text-gray-500 hover:text-gray-700"
-              >
-                Отмена
-              </button>
-            </div>
-          )}
-        </div>
-        {!user.emailVerified ? (
-          <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-medium text-amber-800">
-                Ваш email не подтвержден.
-              </div>
-              <button
-                onClick={handleSendVerificationEmail}
-                disabled={isSendingEmail}
-                className="font-body text-sm font-semibold whitespace-nowrap text-indigo-600 hover:text-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSendingEmail ? 'Отправка...' : 'Отправить письмо'}
-              </button>
-            </div>
-          </div>
+        {isEditingName ? (
+          <EditProfileForm
+            user={user}
+            name={name}
+            setName={setName}
+            surname={surname}
+            setSurname={setSurname}
+            onSave={handleUpdateProfile}
+            onCancel={() => setIsEditingName(false)}
+            isPending={isPending}
+          />
         ) : (
-          <div className="mt-2 text-sm text-green-600">Email подтвержден.</div>
+          <ProfileHeader
+            user={user}
+            onEditClick={() => setIsEditingName(true)}
+            onSendVerificationEmail={handleSendVerificationEmail}
+            isSendingEmail={isSendingEmail}
+          />
         )}
       </div>
 
       <div className="rounded-lg border bg-white p-6 shadow-sm">
-        {!isEditingPassword ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-body font-semibold text-gray-500">
-                Пароль
-              </div>
-              <div className="font-body text-lg">************</div>
-            </div>
-            <button
-              onClick={() => setIsEditingPassword(true)}
-              disabled={isEditingName || isEditingEmail}
-              className="font-body text-sm font-semibold text-indigo-600 hover:text-indigo-500 disabled:text-gray-400"
-            >
-              Изменить
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="font-body font-semibold text-gray-500">
-              Смена пароля
-            </div>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Текущий пароль"
-              className="font-body block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-            />
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Новый пароль (мин. 8 символов)"
-              className="font-body block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-            />
-            <input
-              type="password"
-              value={confirmNewPassword}
-              onChange={(e) => setConfirmNewPassword(e.target.value)}
-              placeholder="Подтвердите новый пароль"
-              className="font-body block w-full rounded-md border-gray-300 shadow-sm sm:text-sm"
-            />
-            <div className="flex justify-end gap-x-2">
-              <button
-                onClick={handleUpdatePassword}
-                disabled={isLoading}
-                className="font-body text-sm font-semibold text-green-600 hover:text-green-500 disabled:opacity-50"
-              >
-                {isLoading ? '...' : 'Сохранить пароль'}
-              </button>
-              <button
-                onClick={() => setIsEditingPassword(false)}
-                className="font-body text-sm text-gray-500 hover:text-gray-700"
-              >
-                Отмена
-              </button>
-            </div>
-          </div>
-        )}
+        <EditPasswordForm onSave={handleUpdatePassword} isPending={isPending} />
       </div>
 
       <div className="mt-6">
