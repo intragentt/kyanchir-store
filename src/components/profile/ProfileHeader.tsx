@@ -6,7 +6,7 @@ import Image from 'next/image';
 
 import AvatarPlaceholder from '@/components/AvatarPlaceholder';
 import ShortLogo from '@/components/icons/ShortLogo';
-import SettingsIcon from '../icons/SettingsIcon'; // <-- Импортируем иконку
+import SettingsIcon from '../icons/SettingsIcon';
 
 interface ProfileHeaderProps {
   user: User & { role?: { name?: string | null } | null };
@@ -72,17 +72,17 @@ const ProfileHeader = ({
           </div>
         </div>
       </div>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем кнопку на иконку --- */}
       <div>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний отступ справа --- */}
         <button
           onClick={onEditClick}
-          className="p-2 text-gray-600 transition-colors hover:text-gray-900"
+          className="p-2 pr-0 text-gray-600 transition-colors hover:text-gray-900" // Заменено p-2 на p-2 pr-0
           aria-label="Изменить профиль"
         >
           <SettingsIcon className="h-6 w-6" />
         </button>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 };

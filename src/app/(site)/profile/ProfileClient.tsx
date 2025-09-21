@@ -103,9 +103,7 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем ВСЕ классы контейнера и отступов ---
     <div className="space-y-0 pb-8 pt-6">
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="mb-4 rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
@@ -116,8 +114,10 @@ export default function ProfileClient({
           {success}
         </div>
       )}
-
-      <div className="border-b border-gray-200 py-5">
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем лишнюю обертку вокруг шапки профиля --- */}
+      <div className="pb-5">
+        {' '}
+        {/* Оставляем только отступ снизу */}
         {isEditingName ? (
           <EditProfileForm
             user={user}
@@ -138,7 +138,9 @@ export default function ProfileClient({
           />
         )}
       </div>
-
+      <div className="border-b border-gray-200"></div>{' '}
+      {/* --- Визуальный разделитель --- */}
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <ProfileInfoBlock
         title="Telegram"
         buttonText="Привязать"
@@ -146,11 +148,9 @@ export default function ProfileClient({
       >
         <p>Получайте уведомления о заказах</p>
       </ProfileInfoBlock>
-
       <div className="border-b border-gray-200 py-5">
         <EditPasswordForm onSave={handleUpdatePassword} isPending={isPending} />
       </div>
-
       <ProfileInfoBlock
         title="Активные сессии"
         buttonText="Управлять"
@@ -158,7 +158,6 @@ export default function ProfileClient({
       >
         <p>Просмотр и управление устройствами</p>
       </ProfileInfoBlock>
-
       <ProfileInfoBlock
         title="Номер телефона"
         buttonText="Изменить"
@@ -166,7 +165,6 @@ export default function ProfileClient({
       >
         <p>Не указан</p>
       </ProfileInfoBlock>
-
       <ProfileInfoBlock
         title="Адрес доставки"
         buttonText="Изменить"
@@ -174,7 +172,6 @@ export default function ProfileClient({
       >
         <p>Не указан</p>
       </ProfileInfoBlock>
-
       <ProfileInfoBlock
         title="Поддержка"
         buttonText="Перейти"
@@ -182,11 +179,9 @@ export default function ProfileClient({
       >
         <p>Связаться с нами</p>
       </ProfileInfoBlock>
-
       <div className="pt-8">
         <SignOutButton />
       </div>
-
       <div className="pt-4 text-center">
         <button
           onClick={handleDeleteAccount}
