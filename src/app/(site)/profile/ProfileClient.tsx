@@ -31,17 +31,57 @@ export default function ProfileClient({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const handleUpdateProfile = () => {
-    /* ... */
+    setError(null);
+    setSuccess(null);
+
+    startTransition(async () => {
+      const result = await updateUserProfile({ name, surname });
+      if (result.error) {
+        setError(result.error);
+      } else if (result.success) {
+        setSuccess('Профиль успешно обновлен.');
+        setUser((prevUser) => ({ ...prevUser, name, surname }));
+        setIsEditingName(false);
+        router.refresh();
+      }
+    });
   };
+
   const handleUpdatePassword = async (
     currentPassword: string,
     newPassword: string,
   ) => {
-    /* ... */
+    setError(null);
+    setSuccess(null);
+
+    startTransition(async () => {
+      const result = await updateUserPassword({
+        currentPassword,
+        newPassword,
+      });
+
+      if (result.error) {
+        setError(result.error);
+      } else if (result.success) {
+        setSuccess('Пароль успешно изменен.');
+      }
+    });
   };
+
   const handleSendVerificationEmail = async () => {
-    /* ... */
+    setIsSendingEmail(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      alert('Функционал отправки письма в разработке.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Произошла ошибка';
+      setError(message);
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
+
   const handleEditPhone = () =>
     alert('Функционал редактирования телефона в разработке.');
   const handleEditAddress = () =>
@@ -51,13 +91,21 @@ export default function ProfileClient({
     alert('Функционал привязки Telegram в разработке.');
   const handleManageSessions = () =>
     alert('Функционал управления сессиями в разработке.');
+
   const handleDeleteAccount = () => {
-    /* ... */
+    if (
+      confirm(
+        'Вы уверены, что хотите удалить свой аккаунт? Это действие необратимо.',
+      )
+    ) {
+      alert('Функционал удаления аккаунта в разработке.');
+    }
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем контейнер и отступы, оставляем только вертикальный ритм ---
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: ПОЛНОСТЬЮ УДАЛЯЕМ КЛАССЫ КОНТЕЙНЕРА И ГОРИЗОНТАЛЬНЫХ ОТСТУПОВ ---
     <div className="space-y-0 pb-8 pt-6">
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="mb-4 rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
@@ -69,7 +117,6 @@ export default function ProfileClient({
         </div>
       )}
 
-      {/* Теперь ProfileHeader - просто один из блоков, без лишних оберток */}
       {isEditingName ? (
         <EditProfileForm
           user={user}
@@ -89,7 +136,6 @@ export default function ProfileClient({
           isSendingEmail={isSendingEmail}
         />
       )}
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       <ProfileInfoBlock
         title="Telegram"
