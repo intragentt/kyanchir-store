@@ -20,7 +20,9 @@ const DeliveryStatus = () => {
             Доставка
           </div>
         </div>
-        <div className="-mr-8 flex items-center space-x-2">
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убран класс -mr-8 и добавлен space-x-3 --- */}
+        <div className="flex items-center space-x-3">
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
           <div className="h-2.5 w-2.5 rounded-full bg-green-500"></div>
           <ChevronIcon
             isOpen={isDeliveryOpen}
