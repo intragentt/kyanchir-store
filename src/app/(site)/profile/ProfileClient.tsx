@@ -64,8 +64,8 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем боковые отступы px-4 -> px-2 ---
-    <div className="mx-auto max-w-2xl space-y-0 px-2 pb-8 pt-6">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем стандартный отступ px-4 для выравнивания с шапкой ---
+    <div className="mx-auto max-w-2xl space-y-0 px-4 pb-8 pt-6">
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
