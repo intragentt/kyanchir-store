@@ -98,46 +98,31 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     }
   }, [isSearchActive, isMenuOpen]);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая, "инстаграмная" логика скролла ---
   useEffect(() => {
     const handleScroll = () => {
-      // Блокируем логику, если открыто меню/поиск или мы не на главной
       if (isSearchActive || isMenuOpen || !isHomePage) return;
       const currentScrollY = window.scrollY;
-
-      // Если мы у самого верха страницы, шапка всегда статична
       if (currentScrollY <= 5) {
         setHeaderStatus('static');
         lastScrollY.current = currentScrollY;
         return;
       }
-
-      // Если скроллим вниз
       if (currentScrollY > lastScrollY.current) {
-        // И шапка была "прилипшей", делаем ее "открепленной"
         if (headerStatus === 'pinned') {
           setHeaderStatus('unpinned');
         }
-      }
-      // Если скроллим вверх
-      else {
-        // И шапка НЕ была "прилипшей", делаем ее "прилипшей"
+      } else {
         if (headerStatus !== 'pinned') {
           setHeaderStatus('pinned');
         }
       }
-
-      // Обновляем позицию для следующего события скролла,
-      // но только если разница не слишком маленькая (избегаем "дрожания" на iOS)
       if (Math.abs(currentScrollY - lastScrollY.current) > 5) {
         lastScrollY.current = currentScrollY;
       }
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isHomePage, headerHeight, isSearchActive, isMenuOpen, headerStatus]); // Добавляем headerStatus в зависимости
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  }, [isHomePage, headerHeight, isSearchActive, isMenuOpen, headerStatus]);
 
   const contextValue = {
     headerStatus,
@@ -161,7 +146,13 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
         <ConditionalHeader />
         <SearchOverlay />
         {isHomePage && <DynamicHeroSection />}
-        <main className="flex-grow">{children}</main>
+        {/* --- НАЧАло ИЗМЕНЕНИЙ: Добавляем единый контейнер для всего контента --- */}
+        <main className="flex-grow">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+            {children}
+          </div>
+        </main>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <Footer />
         <ClientInteractivity />
       </FooterProvider>
