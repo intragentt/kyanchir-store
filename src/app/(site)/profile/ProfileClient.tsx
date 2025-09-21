@@ -103,8 +103,8 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем max-w-2xl на container для унификации с шапкой ---
-    <div className="container mx-auto space-y-0 px-4 pb-8 pt-6">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем ПОЛНЫЙ набор отзывчивых отступов из шапки ---
+    <div className="container mx-auto space-y-0 px-4 pb-8 pt-6 sm:px-6 lg:px-8 xl:px-12">
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="mb-4 rounded-md bg-red-100 p-4 text-sm text-red-700">
