@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useAppStore } from '@/store/useAppStore';
-import Logo from '../icons/Logo'; // Импортируем логотип
-import CodeInput from './CodeInput'; // Импортируем наш новый компонент
+import CodeInput from './CodeInput';
+import CloseIcon from '../icons/CloseIcon'; // <-- ШАГ 1: Импортируем иконку закрытия
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -37,7 +37,6 @@ export default function VerificationModal({
   const handleResendCode = async () => {
     if (!email || resendCooldown > 0) return;
 
-    // Можно добавить состояние загрузки и для этой кнопки
     try {
       const response = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
@@ -45,7 +44,7 @@ export default function VerificationModal({
         body: JSON.stringify({ email }),
       });
       if (!response.ok) throw new Error('Не удалось отправить код.');
-      setResendCooldown(RESEND_COOLDOWN); // Запускаем таймер
+      setResendCooldown(RESEND_COOLDOWN);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка');
     }
@@ -86,13 +85,22 @@ export default function VerificationModal({
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-50 px-4 backdrop-blur-sm">
       <div className="animate-in fade-in zoom-in-95 relative w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg sm:p-10">
-        <div className="mx-auto mb-8 flex justify-center">
-          <Logo className="h-6 w-auto text-gray-800" />
-        </div>
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 p-2 text-gray-400 transition-colors hover:text-gray-700"
+          aria-label="Закрыть"
+        >
+          <CloseIcon className="h-6 w-6" />
+        </button>
 
-        <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl">
+        {/* Логотип удален */}
+
+        <div className="mb-2 text-2xl font-bold text-gray-900">
           Введите код подтверждения
-        </h2>
+        </div>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
         <p className="mt-2 text-sm text-gray-600 sm:text-base">
           Мы отправили 6-значный код на{' '}
           <span className="font-semibold text-gray-800">{email}</span>
