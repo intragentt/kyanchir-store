@@ -2,16 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-// Хук, реализующий "гибридное" поведение шапки с "примагничиванием"
+// Хук, реализующий "гибридное" поведение шапки с вычислением прозрачности
 export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
   const [translateY, setTranslateY] = useState(0);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем состояние для прозрачности ---
+  const [opacity, setOpacity] = useState(1);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const lastScrollY = useRef(0);
   const currentTranslate = useRef(0);
   const ticking = useRef(false);
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем ref для таймера ---
   const scrollEndTimeout = useRef<NodeJS.Timeout | null>(null);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     const headerEl = headerRef.current;
@@ -44,34 +45,36 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
 
       if (!ticking.current) {
         window.requestAnimationFrame(() => {
+          // --- НАЧАЛО ИЗМЕНЕНИЙ: Вычисляем и устанавливаем прозрачность ---
+          const hiddenRatio = Math.abs(currentTranslate.current) / headerHeight;
+          const newOpacity = Math.max(0, 1 - hiddenRatio * 1.5); // *1.5 для более быстрого исчезновения
+
           setTranslateY(currentTranslate.current);
+          setOpacity(newOpacity);
+          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
           ticking.current = false;
 
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Логика определения конца скролла ---
-          // Сбрасываем предыдущий таймер
           if (scrollEndTimeout.current) {
             clearTimeout(scrollEndTimeout.current);
           }
 
-          // Устанавливаем новый таймер. Если он сработает, значит скролл закончился.
           scrollEndTimeout.current = setTimeout(() => {
             const currentPos = currentTranslate.current;
             const snapThreshold = headerHeight * 0.53;
 
-            // Если шапка не в крайних положениях
             if (currentPos > -headerHeight && currentPos < 0) {
-              // Если скрыта больше, чем на 53%, скрываем полностью
               if (currentPos < -snapThreshold) {
                 currentTranslate.current = -headerHeight;
               } else {
-                // Иначе, показываем полностью
                 currentTranslate.current = 0;
               }
-              // Обновляем состояние для плавной анимации "примагничивания"
+              // Обновляем состояние для анимации "примагничивания"
               setTranslateY(currentTranslate.current);
+              // Также обновляем прозрачность до финального значения
+              setOpacity(currentTranslate.current === 0 ? 1 : 0);
             }
-          }, 150); // 150ms - хорошая задержка для определения остановки
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+          }, 150);
         });
         ticking.current = true;
       }
@@ -79,7 +82,6 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
 
     window.addEventListener('scroll', onScroll, { passive: true });
 
-    // Очистка таймера при размонтировании компонента
     return () => {
       window.removeEventListener('scroll', onScroll);
       if (scrollEndTimeout.current) {
@@ -88,5 +90,6 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
     };
   }, [headerRef]);
 
-  return { translateY };
+  // --- ИЗМЕНЕНИЕ: Возвращаем оба значения ---
+  return { translateY, opacity };
 };
