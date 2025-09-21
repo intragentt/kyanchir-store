@@ -28,7 +28,6 @@ export default function ProfileClient({
   const [isEditingName, setIsEditingName] = useState(false);
   const [name, setName] = useState(initialUser.name || '');
   const [surname, setSurname] = useState(initialUser.surname || '');
-
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const handleUpdateProfile = () => {
@@ -49,10 +48,12 @@ export default function ProfileClient({
   const handleEditAddress = () =>
     alert('Функционал редактирования адреса в разработке.');
   const handleSupport = () => router.push('/support');
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заглушка для Telegram ---
   const handleLinkTelegram = () =>
     alert('Функционал привязки Telegram в разработке.');
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заглушка для нового блока ---
+  const handleManageSessions = () =>
+    alert('Функционал управления сессиями в разработке.');
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleDeleteAccount = () => {
@@ -66,8 +67,8 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшен отступ py-8 -> pt-4 pb-8 ---
-    <div className="mx-auto max-w-2xl space-y-6 px-4 pb-8 pt-4">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убран верхний отступ pt-4 ---
+    <div className="mx-auto max-w-2xl space-y-6 px-4 pb-8">
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
@@ -102,7 +103,6 @@ export default function ProfileClient({
         )}
       </div>
 
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый блок Telegram --- */}
       <ProfileInfoBlock
         title="Telegram"
         buttonText="Привязать"
@@ -110,11 +110,20 @@ export default function ProfileClient({
       >
         <p>Получайте уведомления о заказах</p>
       </ProfileInfoBlock>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       <div className="rounded-lg border bg-white p-6 shadow-sm">
         <EditPasswordForm onSave={handleUpdatePassword} isPending={isPending} />
       </div>
+
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый блок Сессий --- */}
+      <ProfileInfoBlock
+        title="Активные сессии"
+        buttonText="Управлять"
+        onButtonClick={handleManageSessions}
+      >
+        <p>Просмотр и управление устройствами</p>
+      </ProfileInfoBlock>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
       <ProfileInfoBlock
         title="Номер телефона"
