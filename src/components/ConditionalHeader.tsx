@@ -3,32 +3,44 @@
 import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import ProductPageHeader from '@/components/layout/ProductPageHeader';
-import HybridHeader from './HybridHeader'; // <-- Импортируем наш новый гибридный хедер
+import HybridHeader from './HybridHeader';
+// --- ИЗМЕНЕНИЕ: Импортируем useAppStore ---
+import { useAppStore } from '@/store/useAppStore';
 
 export default function ConditionalHeader() {
   const pathname = usePathname();
   const isProductPage = pathname.startsWith('/product/');
   const isHomePage = pathname === '/';
 
+  // --- ИЗМЕНЕНИЕ: Получаем состояние из Zustand для обычной шапки ---
+  const {
+    isSearchActive,
+    setSearchActive,
+    isFloatingMenuOpen,
+    setFloatingMenuOpen,
+  } = useAppStore((state) => ({
+    isSearchActive: state.isSearchActive,
+    setSearchActive: state.setSearchActive,
+    isFloatingMenuOpen: state.isFloatingMenuOpen,
+    setFloatingMenuOpen: state.setFloatingMenuOpen,
+  }));
+
   if (isProductPage) {
     return <ProductPageHeader />;
   }
 
-  // Если это главная страница, рендерим наш новый гибридный хедер
   if (isHomePage) {
     return <HybridHeader />;
   }
 
-  // На всех остальных страницах (профиль, каталог) рендерим простой статичный хедер
+  // На всех остальных страницах рендерим простую статичную шапку
   return (
     <div className="w-full bg-white">
-      {/* Для статичного хедера нужно передать пропсы, но сейчас он не используется,
-          так как AppCore его не рендерит. Оставляем для ясности. */}
       <Header
-        isSearchActive={false}
-        onSearchToggle={() => {}}
-        isMenuOpen={false}
-        onMenuToggle={() => {}}
+        isSearchActive={isSearchActive}
+        onSearchToggle={setSearchActive}
+        isMenuOpen={isFloatingMenuOpen}
+        onMenuToggle={setFloatingMenuOpen}
       />
     </div>
   );

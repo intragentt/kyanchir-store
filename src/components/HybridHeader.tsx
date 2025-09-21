@@ -3,20 +3,25 @@
 import { useRef } from 'react';
 import Header from '@/components/Header';
 import { useAppStore } from '@/store/useAppStore';
-import { useHybridHeader } from '@/hooks/useHybridHeader'; // <-- Наш новый хук
+// --- ИЗМЕНЕНИЕ: Исправляем путь импорта на относительный ---
+import { useHybridHeader } from './hooks/useHybridHeader';
 
 export default function HybridHeader() {
   const headerRef = useRef<HTMLDivElement>(null);
   const { translateY } = useHybridHeader(headerRef);
 
-  // Пропсы для дочернего <Header />
-  const { isSearchActive, setSearchActive, isMenuOpen, setMenuOpen } =
-    useAppStore((state) => ({
-      isSearchActive: state.isSearchActive,
-      setSearchActive: state.setSearchActive,
-      isMenuOpen: state.isMenuOpen,
-      setMenuOpen: state.setMenuOpen,
-    }));
+  // --- ИЗМЕНЕНИЕ: Получаем все состояние из Zustand, используем правильные имена ---
+  const {
+    isSearchActive,
+    setSearchActive,
+    isFloatingMenuOpen,
+    setFloatingMenuOpen,
+  } = useAppStore((state) => ({
+    isSearchActive: state.isSearchActive,
+    setSearchActive: state.setSearchActive,
+    isFloatingMenuOpen: state.isFloatingMenuOpen,
+    setFloatingMenuOpen: state.setFloatingMenuOpen,
+  }));
 
   return (
     <div
@@ -30,8 +35,8 @@ export default function HybridHeader() {
       <Header
         isSearchActive={isSearchActive}
         onSearchToggle={setSearchActive}
-        isMenuOpen={isMenuOpen}
-        onMenuToggle={setMenuOpen}
+        isMenuOpen={isFloatingMenuOpen} // <-- Используем isFloatingMenuOpen
+        onMenuToggle={setFloatingMenuOpen} // <-- Используем setFloatingMenuOpen
         className="bg-white/80 backdrop-blur-md"
       />
     </div>
