@@ -26,17 +26,18 @@ const StatusStep = ({
     right: 'right-0',
   }[align];
 
-  const labelOffsetClass =
-    align === 'left' ? 'translate-x-[5px] translate-y-3' : '';
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Общее смещение для всех статусов ---
+  // translate-y-6 (~24px) применяется ко всем текстам для выравнивания по одной линии.
+  const verticalOffset = 'translate-y-6';
+  // Горизонтальный отступ применяется только к первому элементу.
+  const horizontalOffset = align === 'left' ? 'translate-x-[5px]' : '';
+  const labelOffsetClass = `${verticalOffset} ${horizontalOffset}`;
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убран класс flex-1 ---
-    // Теперь компонент не растягивается, а позволяет родительскому flex-контейнеру
-    // с justify-between правильно его позиционировать.
     <div
       className={`relative flex ${positionClasses.replace('left-1/2 -translate-x-1/2', 'items-center').replace('left-0', 'items-start').replace('right-0', 'items-end')}`}
     >
-    {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className={`relative mx-auto ${circleClasses}`}></div>
       <span
         className={`absolute mt-2 block whitespace-nowrap text-[10px] font-medium ${textColor} ${positionClasses} ${labelOffsetClass}`}
