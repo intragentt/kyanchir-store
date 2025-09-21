@@ -1,10 +1,9 @@
-// Местоположение: src/app/layout.tsx
-// Метафора: "Мозговой центр и Скелет Приложения"
+// Метафора: "Скелет Приложения" (без UI)
 
 import './globals.css';
 import { fontHeading, fontBody, fontMono } from './fonts';
 import AuthProvider from '@/components/providers/AuthProvider';
-import AppCore from '@/components/AppCore';
+// AppCore был удален отсюда
 import Script from 'next/script';
 
 export const metadata = {
@@ -33,13 +32,9 @@ export default function RootLayout({
       </head>
 
       <body className="h-full">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: "Атомный" скрипт для Safari --- */}
-        {/* Этот скрипт выполняется ДО интерактивности React и принудительно отключает 
-            "умное" восстановление скролла в браузере. Это решает баг с жестом обновления. */}
         <Script id="scroll-restoration-fix" strategy="beforeInteractive">
           {`history.scrollRestoration = "manual"`}
         </Script>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
@@ -50,7 +45,9 @@ export default function RootLayout({
         </noscript>
 
         <AuthProvider>
-          <AppCore>{children}</AppCore>
+          {/* ИЗМЕНЕНИЕ: AppCore здесь больше нет. Мы просто рендерим дочерние элементы.
+              Теперь /admin/layout.tsx и /(site)/layout.tsx могут работать независимо. */}
+          {children}
         </AuthProvider>
       </body>
     </html>
