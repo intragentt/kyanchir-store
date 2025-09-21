@@ -7,15 +7,14 @@ import { useStickyHeader } from '@/context/StickyHeaderContext';
 
 export default function ConditionalHeader() {
   const pathname = usePathname();
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем статус шапки из контекста ---
+  // Получаем статус шапки из нашего "мозга" (контекста)
   const {
     isSearchActive,
     setIsSearchActive,
     isMenuOpen,
     setIsMenuOpen,
-    headerStatus, // <-- Получаем состояние
+    headerStatus, // <-- Эта переменная говорит, когда прятать шапку
   } = useStickyHeader();
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const isProductPage = pathname.startsWith('/product/');
   const isHomePage = pathname === '/';
@@ -24,14 +23,14 @@ export default function ConditionalHeader() {
     return <ProductPageHeader />;
   }
 
+  // Логика ТОЛЬКО для главной страницы
   if (isHomePage) {
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем динамические классы для анимации ---
+    // Формируем классы для анимации
     const headerClasses = `
       fixed left-0 right-0 top-0 z-50 w-full bg-white/80 backdrop-blur-md
       transition-transform duration-300 ease-in-out
       ${headerStatus === 'unpinned' ? '-translate-y-full' : 'translate-y-0'}
-    `;
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    `; // ^^^ Вот эта строка и прячет шапку ПОЛНОСТЬЮ при скролле вниз
 
     return (
       <div className={headerClasses}>
@@ -45,7 +44,7 @@ export default function ConditionalHeader() {
     );
   }
 
-  // На всех остальных страницах (профиль, каталог и т.д.) используем обычную статичную шапку
+  // На ВСЕХ ОСТАЛЬНЫХ страницах (профиль и т.д.) шапка простая и статичная
   return (
     <div className="w-full bg-white">
       <Header
