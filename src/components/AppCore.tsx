@@ -1,4 +1,3 @@
-// Местоположение: src/components/AppCore.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -42,15 +41,16 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const lastScrollY = useRef(0);
   const scrollLockPosition = useRef(0);
   const isLockingScroll = useRef(false);
-  const SCROLL_UP_THRESHOLD = 800;
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем порог для более резкой анимации ---
+  const SCROLL_UP_THRESHOLD = 150; // Было 800
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   const SCROLL_DOWN_THRESHOLD = 50;
   const scrollUpAnchor = useRef<number | null>(null);
   const scrollDownAnchor = useRef<number | null>(null);
 
   useEffect(() => {
-    // "Умный" рестарт с setTimeout.
-    // Этот код выполняется ПОСЛЕ того, как Safari
-    // завершит свою анимацию обновления, решая баг с "залипанием".
     const timer = setTimeout(() => {
       window.scrollTo(0, 0);
       setHeaderStatus('static');
