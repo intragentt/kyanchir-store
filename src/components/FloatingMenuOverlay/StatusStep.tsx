@@ -26,16 +26,17 @@ const StatusStep = ({
     right: 'right-0',
   }[align];
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем класс для смещения ---
-  // Этот класс сдвинет текст на 5px вправо и на 2px вниз, но только для элемента "Обработан" (align="left")
   const labelOffsetClass =
-    align === 'left' ? 'translate-x-[5px] translate-y-0.5' : '';
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    align === 'left' ? 'translate-x-[5px] translate-y-3' : '';
 
   return (
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убран класс flex-1 ---
+    // Теперь компонент не растягивается, а позволяет родительскому flex-контейнеру
+    // с justify-between правильно его позиционировать.
     <div
-      className={`relative flex flex-1 ${positionClasses.replace('left-1/2 -translate-x-1/2', 'items-center').replace('left-0', 'items-start').replace('right-0', 'items-end')}`}
+      className={`relative flex ${positionClasses.replace('left-1/2 -translate-x-1/2', 'items-center').replace('left-0', 'items-start').replace('right-0', 'items-end')}`}
     >
+    {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className={`relative mx-auto ${circleClasses}`}></div>
       <span
         className={`absolute mt-2 block whitespace-nowrap text-[10px] font-medium ${textColor} ${positionClasses} ${labelOffsetClass}`}
