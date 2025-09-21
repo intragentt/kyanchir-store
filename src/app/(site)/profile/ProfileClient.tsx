@@ -31,16 +31,57 @@ export default function ProfileClient({
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   const handleUpdateProfile = () => {
-    /* ... */
+    setError(null);
+    setSuccess(null);
+
+    startTransition(async () => {
+      const result = await updateUserProfile({ name, surname });
+      if (result.error) {
+        setError(result.error);
+      } else if (result.success) {
+        // --- ИЗМЕНЕНИЕ: Установлено конкретное строковое сообщение ---
+        setSuccess('Профиль успешно обновлен.');
+        setUser((prevUser) => ({ ...prevUser, name, surname }));
+        setIsEditingName(false);
+        router.refresh();
+      }
+    });
   };
+
   const handleUpdatePassword = async (
     currentPassword: string,
     newPassword: string,
   ) => {
-    /* ... */
+    setError(null);
+    setSuccess(null);
+
+    startTransition(async () => {
+      const result = await updateUserPassword({
+        currentPassword,
+        newPassword,
+      });
+
+      if (result.error) {
+        setError(result.error);
+      } else if (result.success) {
+        // --- ИЗМЕНЕНИЕ: Установлено конкретное строковое сообщение ---
+        setSuccess('Пароль успешно изменен.');
+      }
+    });
   };
+
   const handleSendVerificationEmail = async () => {
-    /* ... */
+    setIsSendingEmail(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      alert('Функционал отправки письма в разработке.');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Произошла ошибка';
+      setError(message);
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   const handleEditPhone = () =>
@@ -64,16 +105,14 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем стандартный отступ px-4 для выравнивания с шапкой ---
     <div className="mx-auto max-w-2xl space-y-0 px-4 pb-8 pt-6">
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
-        <div className="rounded-md bg-red-100 p-4 text-sm text-red-700">
+        <div className="mb-4 rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
         </div>
       )}
       {success && (
-        <div className="rounded-md bg-green-100 p-4 text-sm text-green-700">
+        <div className="mb-4 rounded-md bg-green-100 p-4 text-sm text-green-700">
           {success}
         </div>
       )}
