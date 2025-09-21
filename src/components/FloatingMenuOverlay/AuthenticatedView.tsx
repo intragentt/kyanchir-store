@@ -14,7 +14,7 @@ interface UserSession {
   email?: string | null;
   image?: string | null;
   bonusPoints?: number | null;
-  emailVerified?: Date | null; // <-- ДОБАВЛЕНО: Поле для статуса верификации
+  emailVerified?: Date | null;
   role?: {
     name?: string | null;
   } | null;
@@ -50,22 +50,24 @@ const AuthenticatedView = ({ user, onClose }: AuthenticatedViewProps) => {
           >
             {user?.name || 'Личный кабинет'}
           </Link>
-          <p className="truncate text-sm text-gray-500">{user?.email}</p>
 
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Блок статуса email --- */}
-          {!user.emailVerified && (
-            <Link
-              href="/profile"
-              onClick={onClose}
-              className="mt-1.5 flex cursor-pointer items-center space-x-1.5"
-              aria-label="Перейти в профиль для подтверждения email"
-            >
-              <div className="h-2 w-2 flex-shrink-0 rounded-full bg-yellow-400"></div>
-              <span className="text-xs font-medium text-yellow-600">
-                Email не подтвержден
-              </span>
-            </Link>
-          )}
+          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Email и кнопка подтверждения в одной строке --- */}
+          <div className="mt-0.5 flex items-center space-x-2">
+            <p className="truncate text-sm text-gray-500">{user?.email}</p>
+            {!user.emailVerified && (
+              <Link
+                href="/profile"
+                onClick={onClose}
+                className="group flex flex-shrink-0 cursor-pointer items-center space-x-1.5 rounded-full bg-yellow-100 px-2 py-0.5 transition-colors hover:bg-yellow-200"
+                aria-label="Перейти в профиль для подтверждения email"
+              >
+                <div className="h-1.5 w-1.5 rounded-full bg-yellow-500"></div>
+                <span className="text-xs font-semibold text-yellow-800">
+                  Подтвердить
+                </span>
+              </Link>
+            )}
+          </div>
           {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-2 inline-flex items-center space-x-2 self-start rounded-md bg-gray-100 px-2.5 py-1">
