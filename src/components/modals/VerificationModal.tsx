@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // <-- ШАГ 1: Импортируем useRouter
 import { signIn } from 'next-auth/react';
+// useAppStore больше не нужен для обновления, но может понадобиться для чего-то еще, пока оставим
 import { useAppStore } from '@/store/useAppStore';
 import CodeInput from './CodeInput';
-import CloseIcon from '../icons/CloseIcon'; // <-- ШАГ 1: Импортируем иконку закрытия
+import CloseIcon from '../icons/CloseIcon';
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -23,7 +25,7 @@ export default function VerificationModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
-  const fetchUser = useAppStore((state) => state.fetchUser);
+  const router = useRouter(); // <-- ШАГ 2: Инициализируем роутер
 
   // Таймер для повторной отправки кода
   useEffect(() => {
@@ -63,10 +65,13 @@ export default function VerificationModal({
     });
 
     if (res?.ok) {
-      await fetchUser();
-      onClose();
+      // --- ШАГ 3: ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ МЕТОД ОБНОВЛЕНИЯ ---
+      // router.refresh() мягко обновит данные с сервера, включая сессию.
+      // Это заставит useAppStore получить актуальные данные о пользователе.
+      router.refresh();
+      onClose(); // Сразу закрываем окно
     } else {
-      setError('Неверный или устаревший код.');
+      setError(res?.error || 'Неверный или устаревший код.');
     }
     setIsLoading(false);
   };
@@ -85,7 +90,6 @@ export default function VerificationModal({
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black bg-opacity-50 px-4 backdrop-blur-sm">
       <div className="animate-in fade-in zoom-in-95 relative w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-lg sm:p-10">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ --- */}
         <button
           onClick={onClose}
           className="absolute right-4 top-4 p-2 text-gray-400 transition-colors hover:text-gray-700"
@@ -94,12 +98,9 @@ export default function VerificationModal({
           <CloseIcon className="h-6 w-6" />
         </button>
 
-        {/* Логотип удален */}
-
         <div className="mb-2 text-2xl font-bold text-gray-900">
           Введите код подтверждения
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
         <p className="mt-2 text-sm text-gray-600 sm:text-base">
           Мы отправили 6-значный код на{' '}
