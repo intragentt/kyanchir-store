@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-// --- ИЗМЕНЕНИЕ: Импортируем новую иконку ---
-import CheckIcon from './icons/CheckIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем синтаксис импорта на именованный ---
+import { CheckIcon } from './icons/CheckIcon';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function CookieConsentBanner() {
   const [isVisible, setIsVisible] = useState(false);
@@ -24,7 +25,6 @@ export default function CookieConsentBanner() {
   }
 
   return (
-    // --- ИЗМЕНЕНИЕ: Меняем фон на белый и добавляем стандартную рамку ---
     <div className="animate-in slide-in-from-bottom-10 fixed bottom-4 left-4 right-4 z-[200] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg">
       <div className="flex flex-col items-center gap-4 sm:flex-row">
         <p className="flex-grow text-center text-sm font-medium text-gray-800 sm:text-left">
@@ -36,11 +36,9 @@ export default function CookieConsentBanner() {
         </p>
         <button
           onClick={handleAccept}
-          // --- ИЗМЕНЕНИЕ: Уменьшаем скругление кнопки ---
           className="flex h-12 w-full flex-shrink-0 items-center justify-between rounded-xl border border-gray-800 px-6 transition-colors hover:bg-gray-800/10 sm:w-auto"
         >
           <span className="font-semibold text-gray-800">Хорошо</span>
-          {/* --- ИЗМЕНЕНИЕ: Используем новую иконку --- */}
           <CheckIcon className="ml-4 h-6 w-6 text-gray-800" />
         </button>
       </div>

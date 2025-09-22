@@ -22,4 +22,4 @@ export const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 // Default export больше не нужен
-export default CheckIcon;
+// export default CheckIcon;
