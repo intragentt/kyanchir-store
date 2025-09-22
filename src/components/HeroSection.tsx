@@ -82,8 +82,8 @@ export default function HeroSection() {
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем отступ сверху (pt-4) и убираем нижний (pb-*) ---
-    <div className="w-full pt-4">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем лишний отступ pt-4 ---
+    <div className="w-full">
       {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className="w-full overflow-x-hidden">
         <MiniBannerSlider
