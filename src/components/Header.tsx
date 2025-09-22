@@ -14,9 +14,7 @@ interface HeaderProps {
   onSearchToggle: (isActive: boolean) => void;
   isMenuOpen: boolean;
   onMenuToggle: (isOpen: boolean) => void;
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем новый опциональный проп ---
   contentOpacity?: number;
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
 
 export default function Header({
@@ -25,19 +23,17 @@ export default function Header({
   onSearchToggle,
   isMenuOpen,
   onMenuToggle,
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Принимаем новый проп ---
   contentOpacity,
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const setFloatingMenuOpen = useAppStore((state) => state.setFloatingMenuOpen);
 
   return (
     <header className={`w-full bg-white ${className}`}>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем прозрачность к контейнеру контента --- */}
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем верхний отступ с pt-3 до pt-2 --- */}
       <div
-        className="container mx-auto flex h-full items-center justify-between px-4 pb-1.5 pt-3 sm:px-6 lg:px-8 xl:px-12"
-        style={{ opacity: contentOpacity ?? 1 }} // <-- Если проп не передан, прозрачность 1
+        className="container mx-auto flex h-full items-center justify-between px-4 pb-1.5 pt-2 sm:px-6 lg:px-8 xl:px-12"
+        style={{ opacity: contentOpacity ?? 1 }}
       >
         {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         {!isSearchActive ? (
