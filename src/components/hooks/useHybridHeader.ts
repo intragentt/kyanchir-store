@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-// Хук, исправленный для работы с "упругим" скроллом на iOS
-export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
+// Хук теперь принимает состояние оверлея, чтобы "излечиваться" от амнезии
+export const useHybridHeader = (
+  headerRef: React.RefObject<HTMLElement>,
+  isOverlayOpen: boolean,
+) => {
   const [translateY, setTranslateY] = useState(0);
   const [opacity, setOpacity] = useState(1);
 
@@ -12,6 +15,19 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
   const ticking = useRef(false);
   const scrollEndTimeout = useRef<NodeJS.Timeout | null>(null);
   const isTouching = useRef(false);
+
+  // Этот useEffect следит за состоянием оверлея (меню/поиск)
+  useEffect(() => {
+    // Если оверлей был только что закрыт
+    if (!isOverlayOpen) {
+      // Принудительно возвращаем шапку в полностью видимое состояние
+      currentTranslate.current = 0;
+      setTranslateY(0);
+      setOpacity(1);
+      // И сбрасываем позицию скролла, чтобы хук не думал, что мы скроллим вниз
+      lastScrollY.current = window.scrollY;
+    }
+  }, [isOverlayOpen]); // Зависит только от состояния оверлея
 
   useEffect(() => {
     const headerEl = headerRef.current;
@@ -41,12 +57,13 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
     };
 
     const onScroll = () => {
+      // Если оверлей открыт, мы полностью игнорируем все события скролла
+      if (isOverlayOpen) return;
+
       const y = window.scrollY;
       const headerHeight = headerEl.offsetHeight;
       if (headerHeight === 0) return;
 
-      // --- НАЧАЛО ИЗМЕНЕНИЙ: "Лекарство" от бага с "упругим" скроллом на iOS ---
-      // Если мы вверху или выше (отрицательный скролл), принудительно показываем шапку.
       if (y <= 0) {
         currentTranslate.current = 0;
         lastScrollY.current = y;
@@ -58,9 +75,8 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
           });
           ticking.current = true;
         }
-        return; // Прерываем дальнейшее выполнение
+        return;
       }
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
       const dy = y - lastScrollY.current;
       if (Math.abs(dy) < smallDelta) return;
@@ -110,7 +126,7 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
       window.removeEventListener('touchend', onTouchEnd);
       if (scrollEndTimeout.current) clearTimeout(scrollEndTimeout.current);
     };
-  }, [headerRef]);
+  }, [headerRef, isOverlayOpen]); // Добавляем isOverlayOpen в зависимости, чтобы переподписываться на события
 
   return { translateY, opacity };
 };

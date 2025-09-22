@@ -7,29 +7,6 @@ import { useHybridHeader } from './hooks/useHybridHeader';
 
 export default function HybridHeader() {
   const headerRef = useRef<HTMLDivElement>(null);
-  const { translateY, opacity } = useHybridHeader(headerRef);
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Измеряем высоту хедера и устанавливаем CSS-переменную ---
-  useEffect(() => {
-    const setHeaderHeightVar = () => {
-      if (headerRef.current) {
-        const height = headerRef.current.offsetHeight;
-        document.documentElement.style.setProperty(
-          '--header-height',
-          `${height}px`,
-        );
-      }
-    };
-
-    // Устанавливаем при монтировании и при изменении размера окна
-    setHeaderHeightVar();
-    window.addEventListener('resize', setHeaderHeightVar);
-
-    return () => {
-      window.removeEventListener('resize', setHeaderHeightVar);
-    };
-  }, []);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const {
     isSearchActive,
@@ -43,6 +20,30 @@ export default function HybridHeader() {
     setFloatingMenuOpen: state.setFloatingMenuOpen,
   }));
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем состояние оверлея в хук ---
+  const isOverlayOpen = isSearchActive || isFloatingMenuOpen;
+  const { translateY, opacity } = useHybridHeader(headerRef, isOverlayOpen);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  useEffect(() => {
+    const setHeaderHeightVar = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        document.documentElement.style.setProperty(
+          '--header-height',
+          `${height}px`,
+        );
+      }
+    };
+
+    setHeaderHeightVar();
+    window.addEventListener('resize', setHeaderHeightVar);
+
+    return () => {
+      window.removeEventListener('resize', setHeaderHeightVar);
+    };
+  }, []);
+
   return (
     <div
       ref={headerRef}
@@ -52,7 +53,6 @@ export default function HybridHeader() {
         transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Убираем тень (shadow-md) --- */}
       <Header
         isSearchActive={isSearchActive}
         onSearchToggle={setSearchActive}
@@ -61,7 +61,6 @@ export default function HybridHeader() {
         className="bg-white"
         contentOpacity={opacity}
       />
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 }
