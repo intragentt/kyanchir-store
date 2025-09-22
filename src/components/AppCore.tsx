@@ -12,7 +12,6 @@ import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
-// Header больше не нужен здесь
 
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -39,6 +38,9 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
 
   const scrollLockPosition = useRef(0);
   const isLockingScroll = useRef(false);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем useRef для сохранения исходного стиля ---
+  const originalBodyOverflow = useRef('');
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -70,11 +72,14 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанная и исправленная логика блокировки скролла ---
   useEffect(() => {
-    const originalStyle = window.getComputedStyle(document.body).overflow;
     if (isSearchActive || isFloatingMenuOpen) {
       if (!isLockingScroll.current) {
+        // Запоминаем исходное значение ТОЛЬКО при первой блокировке
+        originalBodyOverflow.current = document.body.style.overflow;
         scrollLockPosition.current = window.scrollY;
+
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.top = `-${scrollLockPosition.current}px`;
@@ -83,7 +88,8 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       }
     } else {
       if (isLockingScroll.current) {
-        document.body.style.overflow = originalStyle;
+        // Восстанавливаем из сохраненного значения
+        document.body.style.overflow = originalBodyOverflow.current;
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
@@ -92,6 +98,7 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       }
     }
   }, [isSearchActive, isFloatingMenuOpen]);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (isAuthPage) {
     return <main>{children}</main>;
@@ -103,23 +110,15 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       <NotificationManager />
       <ConditionalHeader />
       <SearchOverlay />
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Переносим paddingTop на <main> --- */}
       <main
         className="flex-grow"
-        style={
-          isHomePage
-            ? { paddingTop: 'var(--header-height, 70px)' } // 70px - запасное значение
-            : {}
-        }
+        style={isHomePage ? { paddingTop: 'var(--header-height, 70px)' } : {}}
       >
         {isHomePage && <DynamicHeroSection />}
-
-        {/* Внутренний контейнер больше не отвечает за верхний отступ */}
         <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
           {children}
         </div>
       </main>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <Footer />
       <ClientInteractivity />
     </FooterProvider>
