@@ -4,35 +4,31 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Product } from '@prisma/client';
 
-// Компоненты
 import Header from '@/components/Header';
 import StickyHeader from './StickyHeader';
 import CategoryFilter from '../CategoryFilter';
 import StickyCategoryFilter from './StickyCategoryFilter';
 import CatalogContent from '../CatalogContent';
-import { useStickyHeader } from '@/context/StickyHeaderContext';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем мертвый контекст на Zustand ---
+import { useAppStore } from '@/store/useAppStore';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-// Типы
 export type ProductWithInfo = Product & {
   price: number;
   oldPrice?: number | null;
   imageUrls: string[];
 };
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем тип для категорий ---
 interface Category {
   id: string;
   name: string;
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const HEADER_HEIGHT = 65;
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Компонент теперь должен ПРИНИМАТЬ категории ---
 interface CatalogHeaderControllerProps {
   categories: Category[];
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function CatalogHeaderController({
   categories,
@@ -43,10 +39,7 @@ export default function CatalogHeaderController({
   );
   const [activeCategory, setActiveCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
-
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем состояние для синхронизации скролла ---
   const [scrollLeft, setScrollLeft] = useState(0);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const [isStickyHeaderVisible, setIsStickyHeaderVisible] = useState(false);
   const [isStickyFilterVisible, setIsStickyFilterVisible] = useState(false);
@@ -57,22 +50,30 @@ export default function CatalogHeaderController({
   const workZoneRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
 
-  const { isSearchActive, setIsSearchActive, isMenuOpen, setIsMenuOpen } =
-    useStickyHeader();
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем состояние из нашего центрального хранилища ---
+  const {
+    isSearchActive,
+    setSearchActive,
+    isFloatingMenuOpen,
+    setFloatingMenuOpen,
+  } = useAppStore((state) => ({
+    isSearchActive: state.isSearchActive,
+    setSearchActive: state.setSearchActive,
+    isFloatingMenuOpen: state.isFloatingMenuOpen,
+    setFloatingMenuOpen: state.setFloatingMenuOpen,
+  }));
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     setIsLoading(false);
   }, []);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем обработчик скролла ---
   const handleFilterScroll = useCallback((newScrollLeft: number) => {
     setScrollLeft(newScrollLeft);
   }, []);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const applyFilter = useCallback(
     (products: ProductWithInfo[], categoryId: string) => {
-      // Логика фильтрации остается вашей
       if (categoryId === 'all') {
         setFilteredProducts(products);
       } else {
@@ -146,23 +147,20 @@ export default function CatalogHeaderController({
         topPosition={filterTopPosition}
         onSelectCategory={handleSelectCategory}
         activeCategory={activeCategory}
-        // --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем недостающие пропсы "клону" ---
         categories={categories}
         scrollLeft={scrollLeft}
         onScroll={handleFilterScroll}
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       />
 
       <div ref={originalHeaderRef}>
         <Header
           isSearchActive={isSearchActive}
-          onSearchToggle={setIsSearchActive}
-          isMenuOpen={isMenuOpen}
-          onMenuToggle={setIsMenuOpen}
+          onSearchToggle={setSearchActive}
+          isMenuOpen={isFloatingMenuOpen}
+          onMenuToggle={setFloatingMenuOpen}
         />
       </div>
       <div ref={originalFilterRef}>
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем недостающие пропсы "оригиналу" --- */}
         <CategoryFilter
           onSelectCategory={handleSelectCategory}
           activeCategory={activeCategory}
@@ -170,7 +168,6 @@ export default function CatalogHeaderController({
           scrollLeft={scrollLeft}
           onScroll={handleFilterScroll}
         />
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </div>
 
       <div ref={workZoneRef}>

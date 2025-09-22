@@ -1,6 +1,8 @@
 // Местоположение: src/app/admin/products/new/page.tsx
 import prisma from '@/lib/prisma';
-import PageContainer from '@/components/layout/PageContainer';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем мертвый импорт ---
+// import PageContainer from '@/components/layout/PageContainer';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import CreateProductForm from '@/components/admin/CreateProductForm';
 
 // Эта страница всегда должна запрашивать свежие данные
@@ -20,17 +22,14 @@ async function getFormData() {
 export default async function NewProductPage() {
   const { categories, statuses } = await getFormData();
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем все обертки и возвращаем чистый контент ---
   return (
-    <main>
-      <PageContainer className="py-12">
-        <div className="mx-auto max-w-4xl">
-          <h1 className="mb-6 text-2xl font-bold text-gray-800">
-            Создание нового товара
-          </h1>
-          {/* --- ИСПРАВЛЕНИЕ: Передаем загруженные данные в компонент формы --- */}
-          <CreateProductForm categories={categories} statuses={statuses} />
-        </div>
-      </PageContainer>
-    </main>
+    <div className="mx-auto max-w-4xl">
+      <h1 className="mb-6 text-2xl font-bold text-gray-800">
+        Создание нового товара
+      </h1>
+      <CreateProductForm categories={categories} statuses={statuses} />
+    </div>
   );
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
