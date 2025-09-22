@@ -12,13 +12,14 @@ import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем новый компонент ---
+import CookieConsentBanner from './CookieConsentBanner';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем проверку на страницу профиля ---
   const isProfilePage = pathname === '/profile';
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const isAuthPage =
     pathname.startsWith('/login') ||
@@ -99,21 +100,22 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       <SearchOverlay />
       <main
         className="flex-grow"
-        // --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем paddingTop и для главной, и для профиля ---
         style={
           isHomePage || isProfilePage
             ? { paddingTop: 'var(--header-height, 70px)' }
             : {}
         }
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       >
         {isHomePage && <DynamicHeroSection />}
-        <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
+        <div className="sm-px-6 container mx-auto px-4 py-12 lg:px-8 xl:px-12">
           {children}
         </div>
       </main>
       <Footer />
       <ClientInteractivity />
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем баннер в самый конец --- */}
+      <CookieConsentBanner />
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </FooterProvider>
   );
 }
