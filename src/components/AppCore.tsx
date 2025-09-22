@@ -12,7 +12,7 @@ import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
-// Header больше не импортируется и не используется здесь
+// Header больше не нужен здесь
 
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -103,29 +103,23 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       <NotificationManager />
       <ConditionalHeader />
       <SearchOverlay />
-      <main className="flex-grow">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью удаляем статический Header --- */}
-        {/* Статичная версия шапки больше не нужна */}
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-
+      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Переносим paddingTop на <main> --- */}
+      <main
+        className="flex-grow"
+        style={
+          isHomePage
+            ? { paddingTop: 'var(--header-height, 70px)' } // 70px - запасное значение
+            : {}
+        }
+      >
         {isHomePage && <DynamicHeroSection />}
 
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем paddingTop, равный высоте хедера, ТОЛЬКО на главной --- */}
-        <div
-          className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12"
-          style={
-            isHomePage
-              ? {
-                  paddingTop: 'var(--header-height, 70px)',
-                  paddingBottom: '3rem',
-                } // 70px - запасное значение
-              : { paddingBottom: '3rem' } // Для остальных страниц сохраняем только нижний отступ
-          }
-        >
+        {/* Внутренний контейнер больше не отвечает за верхний отступ */}
+        <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
           {children}
         </div>
-        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </main>
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <Footer />
       <ClientInteractivity />
     </FooterProvider>
