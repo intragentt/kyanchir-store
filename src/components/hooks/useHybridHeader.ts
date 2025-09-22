@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-// Хук, реализующий "гибридное" поведение шапки с вычислением прозрачности
+// Хук, реализующий "гибридное" поведение шапки с "примагничиванием" и touch-логикой
 export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
   const [translateY, setTranslateY] = useState(0);
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем состояние для прозрачности ---
   const [opacity, setOpacity] = useState(1);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const lastScrollY = useRef(0);
   const currentTranslate = useRef(0);
   const ticking = useRef(false);
   const scrollEndTimeout = useRef<NodeJS.Timeout | null>(null);
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем флаг для отслеживания касания ---
+  const isTouching = useRef(false);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     const headerEl = headerRef.current;
@@ -25,17 +26,33 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
       headerEl.style.transition = 'none';
     }
 
-    const onScroll = () => {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Выносим логику "примагничивания" в отдельную функцию ---
+    const snapToEdge = () => {
       const headerHeight = headerEl.offsetHeight;
       if (headerHeight === 0) return;
 
+      const currentPos = currentTranslate.current;
+      const snapThreshold = headerHeight * 0.53;
+
+      if (currentPos > -headerHeight && currentPos < 0) {
+        if (currentPos < -snapThreshold) {
+          currentTranslate.current = -headerHeight;
+        } else {
+          currentTranslate.current = 0;
+        }
+        setTranslateY(currentTranslate.current);
+        setOpacity(currentTranslate.current === 0 ? 1 : 0);
+      }
+    };
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+    const onScroll = () => {
+      // Логика pixel-by-pixel отслеживания остается той же
+      const headerHeight = headerEl.offsetHeight;
+      if (headerHeight === 0) return;
       const y = window.scrollY;
       const dy = y - lastScrollY.current;
-
-      if (Math.abs(dy) < smallDelta) {
-        lastScrollY.current = y;
-        return;
-      }
+      if (Math.abs(dy) < smallDelta) return;
 
       let targetTranslate = currentTranslate.current - dy;
       targetTranslate = Math.max(-headerHeight, Math.min(0, targetTranslate));
@@ -45,34 +62,19 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
 
       if (!ticking.current) {
         window.requestAnimationFrame(() => {
-          // --- НАЧАЛО ИЗМЕНЕНИЙ: Вычисляем и устанавливаем прозрачность ---
           const hiddenRatio = Math.abs(currentTranslate.current) / headerHeight;
-          const newOpacity = Math.max(0, 1 - hiddenRatio * 1.5); // *1.5 для более быстрого исчезновения
+          const newOpacity = Math.max(0, 1 - hiddenRatio * 1.5);
 
           setTranslateY(currentTranslate.current);
           setOpacity(newOpacity);
-          // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
           ticking.current = false;
 
-          if (scrollEndTimeout.current) {
-            clearTimeout(scrollEndTimeout.current);
-          }
-
+          // Логика для десктопа (срабатывает, когда нет касания)
+          if (scrollEndTimeout.current) clearTimeout(scrollEndTimeout.current);
           scrollEndTimeout.current = setTimeout(() => {
-            const currentPos = currentTranslate.current;
-            const snapThreshold = headerHeight * 0.53;
-
-            if (currentPos > -headerHeight && currentPos < 0) {
-              if (currentPos < -snapThreshold) {
-                currentTranslate.current = -headerHeight;
-              } else {
-                currentTranslate.current = 0;
-              }
-              // Обновляем состояние для анимации "примагничивания"
-              setTranslateY(currentTranslate.current);
-              // Также обновляем прозрачность до финального значения
-              setOpacity(currentTranslate.current === 0 ? 1 : 0);
+            // --- ИЗМЕНЕНИЕ: Проверяем, что палец не на экране ---
+            if (!isTouching.current) {
+              snapToEdge();
             }
           }, 150);
         });
@@ -80,16 +82,33 @@ export const useHybridHeader = (headerRef: React.RefObject<HTMLElement>) => {
       }
     };
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем обработчики касаний ---
+    const onTouchStart = () => {
+      isTouching.current = true;
+      // Убиваем таймер, чтобы он не сработал во время касания
+      if (scrollEndTimeout.current) clearTimeout(scrollEndTimeout.current);
+    };
+
+    const onTouchEnd = () => {
+      isTouching.current = false;
+      // "Примагничиваем" сразу после отпускания пальца
+      snapToEdge();
+    };
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
 
     return () => {
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchend', onTouchEnd);
       if (scrollEndTimeout.current) {
         clearTimeout(scrollEndTimeout.current);
       }
     };
   }, [headerRef]);
 
-  // --- ИЗМЕНЕНИЕ: Возвращаем оба значения ---
   return { translateY, opacity };
 };
