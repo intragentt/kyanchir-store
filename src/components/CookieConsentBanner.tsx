@@ -23,14 +23,17 @@ export default function CookieConsentBanner() {
   }
 
   return (
-    <div className="animate-in slide-in-from-bottom-10 fixed bottom-4 left-4 right-4 z-[200] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg">
+    <div className="fixed bottom-4 left-4 right-4 z-[200] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg animate-in slide-in-from-bottom-10">
       <div className="flex flex-col items-center gap-4 sm:flex-row">
-        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем текст и ссылку --- */}
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем перенос строки --- */}
         <p className="flex-grow text-center text-sm font-medium text-gray-800 sm:text-left">
-          <Link href="/privacy-policy" className="underline hover:text-black">
-            Мы используем куки
-          </Link>
-          , чтобы улучшить ваш опыт взаимодействия с сайтом.
+          <span>
+            <Link href="/privacy-policy" className="underline hover:text-black">
+              Мы используем куки
+            </Link>
+            , чтобы улучшить
+          </span>
+          <span className="block">ваш опыт взаимодействия с сайтом.</span>
         </p>
         {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
         <button
