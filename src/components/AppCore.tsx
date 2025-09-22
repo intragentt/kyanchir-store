@@ -12,7 +12,7 @@ import ClientInteractivity from '@/components/ClientInteractivity';
 import SearchOverlay from '@/components/SearchOverlay';
 import NetworkStatusManager from '@/components/NetworkStatusManager';
 import NotificationManager from '@/components/NotificationManager';
-import Header from './Header';
+// Header больше не импортируется и не используется здесь
 
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -25,19 +25,13 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     pathname.startsWith('/reset-password');
 
   const { data: session } = useSession();
-  const {
-    setUser,
-    isSearchActive,
-    setSearchActive,
-    isFloatingMenuOpen,
-    setFloatingMenuOpen,
-  } = useAppStore((state) => ({
-    setUser: state.setUser,
-    isSearchActive: state.isSearchActive,
-    setSearchActive: state.setSearchActive,
-    isFloatingMenuOpen: state.isFloatingMenuOpen,
-    setFloatingMenuOpen: state.setFloatingMenuOpen,
-  }));
+  const { setUser, isSearchActive, isFloatingMenuOpen } = useAppStore(
+    (state) => ({
+      setUser: state.setUser,
+      isSearchActive: state.isSearchActive,
+      isFloatingMenuOpen: state.isFloatingMenuOpen,
+    }),
+  );
 
   useEffect(() => {
     setUser(session?.user ?? null);
@@ -110,20 +104,27 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       <ConditionalHeader />
       <SearchOverlay />
       <main className="flex-grow">
-        {isHomePage && (
-          <div className="w-full bg-white">
-            <Header
-              isSearchActive={isSearchActive}
-              onSearchToggle={setSearchActive}
-              isMenuOpen={isFloatingMenuOpen}
-              onMenuToggle={setFloatingMenuOpen}
-            />
-          </div>
-        )}
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью удаляем статический Header --- */}
+        {/* Статичная версия шапки больше не нужна */}
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
+
         {isHomePage && <DynamicHeroSection />}
-        <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
+
+        {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем paddingTop, равный высоте хедера, ТОЛЬКО на главной --- */}
+        <div
+          className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12"
+          style={
+            isHomePage
+              ? {
+                  paddingTop: 'var(--header-height, 70px)',
+                  paddingBottom: '3rem',
+                } // 70px - запасное значение
+              : { paddingBottom: '3rem' } // Для остальных страниц сохраняем только нижний отступ
+          }
+        >
           {children}
         </div>
+        {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       </main>
       <Footer />
       <ClientInteractivity />
