@@ -23,7 +23,7 @@ export default function CookieConsentBanner() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-[200] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg animate-in slide-in-from-bottom-10">
+    <div className="animate-in slide-in-from-bottom-10 fixed bottom-4 left-4 right-4 z-[200] rounded-2xl border border-gray-200 bg-white p-4 shadow-lg">
       <div className="flex flex-col items-center gap-4 sm:flex-row">
         {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем текст и ссылку --- */}
         <p className="flex-grow text-center text-sm font-medium text-gray-800 sm:text-left">

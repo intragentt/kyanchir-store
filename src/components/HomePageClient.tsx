@@ -1,11 +1,8 @@
-// Местоположение: src/components/HomePageClient.tsx
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
 import { useSearchParams, useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import CatalogContent from '@/components/CatalogContent';
 import SmartStickyCategoryFilter from '@/components/SmartStickyCategoryFilter';
 import { ProductWithInfo } from '@/lib/types';
@@ -34,11 +31,9 @@ export default function HomePageClient({
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Этот useEffect будет "слушать" URL и обменивать токен на сессию
   useEffect(() => {
     const token = searchParams.get('token');
     if (token) {
@@ -49,10 +44,8 @@ export default function HomePageClient({
         });
 
         if (res?.ok) {
-          // Успешный вход, перезагружаем страницу, чтобы обновить состояние на сервере
           router.refresh();
         } else {
-          // Можно добавить уведомление об ошибке
           console.error('Telegram login failed:', res?.error);
         }
       };
@@ -60,7 +53,6 @@ export default function HomePageClient({
       handleTelegramLogin();
     }
   }, [searchParams, router]);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     let productsToFilter = [...allProducts];
@@ -107,8 +99,9 @@ export default function HomePageClient({
     };
   }, []);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем внешний div-контейнер, используем React.Fragment ---
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+    <>
       <div ref={filterContainerRef}>
         <SmartStickyCategoryFilter
           onSelectCategory={handleSelectCategory}
@@ -124,6 +117,7 @@ export default function HomePageClient({
       <div ref={productGridRef} className="relative min-h-[200vh]">
         <CatalogContent products={filteredProducts} isLoading={false} />
       </div>
-    </div>
+    </>
   );
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
