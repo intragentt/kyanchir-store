@@ -36,12 +36,7 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     setUser(session?.user ?? null);
   }, [session, setUser]);
 
-  const scrollLockPosition = useRef(0);
-  const isLockingScroll = useRef(false);
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем useRef для сохранения исходного стиля ---
-  const originalBodyOverflow = useRef('');
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
+  // Этот useEffect сбрасывает скролл только при переходе на новую страницу
   useEffect(() => {
     const timer = setTimeout(() => {
       window.scrollTo(0, 0);
@@ -49,6 +44,7 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [pathname]);
 
+  // Интеграция с Telegram Web App
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -60,6 +56,7 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Предотвращение жестов масштабирования на iOS
   useEffect(() => {
     const preventGesture = (e: Event) => e.preventDefault();
     document.addEventListener('gesturestart', preventGesture);
@@ -72,33 +69,31 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписанная и исправленная логика блокировки скролла ---
+  // Новая, правильная логика блокировки скролла через overflow
   useEffect(() => {
-    if (isSearchActive || isFloatingMenuOpen) {
-      if (!isLockingScroll.current) {
-        // Запоминаем исходное значение ТОЛЬКО при первой блокировке
-        originalBodyOverflow.current = document.body.style.overflow;
-        scrollLockPosition.current = window.scrollY;
+    const html = document.documentElement;
+    const body = document.body;
 
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${scrollLockPosition.current}px`;
-        document.body.style.width = '100%';
-        isLockingScroll.current = true;
-      }
+    // Сохраняем исходные стили, чтобы вернуть их позже
+    const originalHtmlOverflow = html.style.overflow;
+    const originalBodyOverflow = body.style.overflow;
+
+    if (isSearchActive || isFloatingMenuOpen) {
+      // Применяем блокировку скролла
+      html.style.overflow = 'hidden';
+      body.style.overflow = 'hidden';
     } else {
-      if (isLockingScroll.current) {
-        // Восстанавливаем из сохраненного значения
-        document.body.style.overflow = originalBodyOverflow.current;
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.width = '';
-        window.scrollTo(0, scrollLockPosition.current);
-        isLockingScroll.current = false;
-      }
+      // Возвращаем исходные стили
+      html.style.overflow = originalHtmlOverflow;
+      body.style.overflow = originalBodyOverflow;
     }
+
+    // Функция очистки, которая сработает при размонтировании компонента
+    return () => {
+      html.style.overflow = originalHtmlOverflow;
+      body.style.overflow = originalBodyOverflow;
+    };
   }, [isSearchActive, isFloatingMenuOpen]);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (isAuthPage) {
     return <main>{children}</main>;
@@ -112,7 +107,11 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       <SearchOverlay />
       <main
         className="flex-grow"
-        style={isHomePage ? { paddingTop: 'var(--header-height, 70px)' } : {}}
+        style={
+          isHomePage
+            ? { paddingTop: 'var(--header-height, 70px)' } // 70px - запасное значение на случай, если JS не успел
+            : {}
+        }
       >
         {isHomePage && <DynamicHeroSection />}
         <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">
