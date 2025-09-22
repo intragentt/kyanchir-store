@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-// Хук с полностью переработанной, надежной логикой
 export const useHybridHeader = (
   headerRef: React.RefObject<HTMLElement>,
   isOverlayOpen: boolean,
@@ -10,31 +9,26 @@ export const useHybridHeader = (
   const [translateY, setTranslateY] = useState(0);
   const [opacity, setOpacity] = useState(1);
 
-  // Используем useRef для всех "внутренних" состояний, которые не вызывают ре-рендер
   const lastScrollY = useRef(0);
   const currentTranslate = useRef(0);
   const ticking = useRef(false);
   const scrollEndTimeout = useRef<NodeJS.Timeout | null>(null);
   const isTouching = useRef(false);
+  const justClosedOverlay = useRef(false);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Единый, главный useEffect, который управляет всем ---
   useEffect(() => {
-    // Если оверлей (меню/поиск) открыт, мы не делаем НИЧЕГО.
-    // Хук "спит", слушателей скролла нет.
     if (isOverlayOpen) {
       return;
     }
 
-    // Как только оверлей закрывается, этот код "просыпается"
     const headerEl = headerRef.current;
     if (!headerEl) return;
 
-    // ШАГ 1: Принудительно сбрасываем состояние шапки в "видимое"
     currentTranslate.current = 0;
     setTranslateY(0);
     setOpacity(1);
-    // ШАГ 2: Сбрасываем "память" о скролле, чтобы избежать "амнезии"
     lastScrollY.current = window.scrollY;
+    justClosedOverlay.current = true;
 
     const smallDelta = 8;
     const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -59,6 +53,12 @@ export const useHybridHeader = (
     };
 
     const onScroll = () => {
+      if (justClosedOverlay.current) {
+        justClosedOverlay.current = false;
+        lastScrollY.current = window.scrollY;
+        return;
+      }
+
       const y = window.scrollY;
       const headerHeight = headerEl.offsetHeight;
       if (headerHeight === 0) return;
@@ -115,21 +115,17 @@ export const useHybridHeader = (
       snapToEdge();
     };
 
-    // ШАГ 3: Только теперь, с чистым состоянием, подписываемся на события
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('touchstart', onTouchStart, { passive: true });
     window.addEventListener('touchend', onTouchEnd, { passive: true });
 
-    // Функция очистки удалит слушатели, когда оверлей снова откроется
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);
-      if (scrollEndTimeout.current) {
-        clearTimeout(scrollEndTimeout.current);
-      }
+      if (scrollEndTimeout.current) clearTimeout(scrollEndTimeout.current);
     };
-  }, [headerRef, isOverlayOpen]); // Этот хук теперь зависит только от этих двух вещей
+  }, [headerRef, isOverlayOpen]);
 
   return { translateY, opacity };
 };
