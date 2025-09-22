@@ -1,4 +1,3 @@
-// Местоположение: src/components/HeroSection.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -83,7 +82,9 @@ export default function HeroSection() {
   };
 
   return (
-    <div className="w-full pb-4 sm:pb-6 lg:pb-8">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем отступ сверху (pt-4) и убираем нижний (pb-*) ---
+    <div className="w-full pt-4">
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className="w-full overflow-x-hidden">
         <MiniBannerSlider
           key={isDesktop ? 'desktop' : 'mobile'}
