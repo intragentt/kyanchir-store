@@ -1,6 +1,10 @@
+'use client'; // Добавляем 'use client' на всякий случай, для иконок это хорошая практика
+
 import React from 'react';
 
-const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Меняем экспорт на именованный (named export) ---
+export const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width="24"
@@ -17,4 +21,5 @@ const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+// Default export больше не нужен
 export default CheckIcon;
