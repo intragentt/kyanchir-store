@@ -16,6 +16,9 @@ import NotificationManager from '@/components/NotificationManager';
 export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем проверку на страницу профиля ---
+  const isProfilePage = pathname === '/profile';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const isAuthPage =
     pathname.startsWith('/login') ||
@@ -36,7 +39,6 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     setUser(session?.user ?? null);
   }, [session, setUser]);
 
-  // Этот useEffect сбрасывает скролл только при переходе на новую страницу
   useEffect(() => {
     const timer = setTimeout(() => {
       window.scrollTo(0, 0);
@@ -44,7 +46,6 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [pathname]);
 
-  // Интеграция с Telegram Web App
   useEffect(() => {
     if (window.Telegram?.WebApp) {
       const tg = window.Telegram.WebApp;
@@ -56,7 +57,6 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Предотвращение жестов масштабирования на iOS
   useEffect(() => {
     const preventGesture = (e: Event) => e.preventDefault();
     document.addEventListener('gesturestart', preventGesture);
@@ -69,26 +69,18 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Новая, правильная логика блокировки скролла через overflow
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
-
-    // Сохраняем исходные стили, чтобы вернуть их позже
     const originalHtmlOverflow = html.style.overflow;
     const originalBodyOverflow = body.style.overflow;
-
     if (isSearchActive || isFloatingMenuOpen) {
-      // Применяем блокировку скролла
       html.style.overflow = 'hidden';
       body.style.overflow = 'hidden';
     } else {
-      // Возвращаем исходные стили
       html.style.overflow = originalHtmlOverflow;
       body.style.overflow = originalBodyOverflow;
     }
-
-    // Функция очистки, которая сработает при размонтировании компонента
     return () => {
       html.style.overflow = originalHtmlOverflow;
       body.style.overflow = originalBodyOverflow;
@@ -107,11 +99,13 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
       <SearchOverlay />
       <main
         className="flex-grow"
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем paddingTop и для главной, и для профиля ---
         style={
-          isHomePage
-            ? { paddingTop: 'var(--header-height, 70px)' } // 70px - запасное значение на случай, если JS не успел
+          isHomePage || isProfilePage
+            ? { paddingTop: 'var(--header-height, 70px)' }
             : {}
         }
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       >
         {isHomePage && <DynamicHeroSection />}
         <div className="container mx-auto px-4 py-12 sm:px-6 lg:px-8 xl:px-12">

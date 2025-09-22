@@ -4,15 +4,16 @@ import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import ProductPageHeader from '@/components/layout/ProductPageHeader';
 import HybridHeader from './HybridHeader';
-// --- ИЗМЕНЕНИЕ: Импортируем useAppStore ---
 import { useAppStore } from '@/store/useAppStore';
 
 export default function ConditionalHeader() {
   const pathname = usePathname();
   const isProductPage = pathname.startsWith('/product/');
   const isHomePage = pathname === '/';
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем проверку на страницу профиля ---
+  const isProfilePage = pathname === '/profile';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // --- ИЗМЕНЕНИЕ: Получаем состояние из Zustand для обычной шапки ---
   const {
     isSearchActive,
     setSearchActive,
@@ -29,11 +30,13 @@ export default function ConditionalHeader() {
     return <ProductPageHeader />;
   }
 
-  if (isHomePage) {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Рендерим гибридный хедер и для главной, и для профиля ---
+  if (isHomePage || isProfilePage) {
     return <HybridHeader />;
   }
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  // На всех остальных страницах рендерим простую статичную шапку
+  // На всех остальных страницах (например, каталог) рендерим простую статичную шапку
   return (
     <div className="w-full bg-white">
       <Header
