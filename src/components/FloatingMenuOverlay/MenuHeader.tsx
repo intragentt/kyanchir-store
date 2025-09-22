@@ -2,9 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем старый контекст на Zustand ---
 import { useAppStore } from '@/store/useAppStore';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import Logo from '../icons/Logo';
 import SearchIcon from '../icons/SearchIcon';
 import CloseIcon from '../icons/CloseIcon';
@@ -15,9 +13,7 @@ interface MenuHeaderProps {
 
 const MenuHeader = ({ onClose }: MenuHeaderProps) => {
   const [isSearchModeActive, setIsSearchModeActive] = useState(false);
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем функцию из хранилища ---
   const setSearchActive = useAppStore((state) => state.setSearchActive);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleSearchClick = () => {
     onClose();
@@ -25,7 +21,9 @@ const MenuHeader = ({ onClose }: MenuHeaderProps) => {
   };
 
   return (
-    <div className="flex-shrink-0 px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Применяем те же вертикальные отступы, что и в основной шапке ---
+    <div className="flex-shrink-0 px-4 pb-1.5 pt-2 sm:px-6 lg:px-8 xl:px-12">
+      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       <div className="flex w-full items-center justify-between">
         {!isSearchModeActive ? (
           <>
