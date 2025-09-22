@@ -1,5 +1,7 @@
 // Местоположение: src/app/admin/dashboard/page.tsx
-import PageContainer from '@/components/layout/PageContainer';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем мертвый импорт ---
+// import PageContainer from '@/components/layout/PageContainer';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import ProductTable from '@/components/admin/ProductTable';
 import prisma from '@/lib/prisma';
 
@@ -7,18 +9,18 @@ export const dynamic = 'force-dynamic';
 
 async function getProductsForTable() {
   const products = await prisma.product.findMany({
-    orderBy: { name: 'asc' }, // Сортируем по имени для предсказуемости
+    orderBy: { name: 'asc' },
     include: {
       status: true,
       categories: true,
       tags: true,
       attributes: true,
       variants: {
-        orderBy: { color: 'asc' }, // Сортируем варианты по цвету
+        orderBy: { color: 'asc' },
         include: {
           images: { orderBy: { order: 'asc' } },
           sizes: {
-            orderBy: { size: { value: 'asc' } }, // Сортируем размеры по значению
+            orderBy: { size: { value: 'asc' } },
             include: {
               size: true,
             },
@@ -27,10 +29,6 @@ async function getProductsForTable() {
       },
     },
   });
-
-  // --- ИЗМЕНЕНИЕ: Убираем старый, слишком строгий фильтр. ---
-  // Наша новая логика синхронизации сама создает правильные родительские товары.
-  // Этот фильтр больше не нужен.
   return products;
 }
 
@@ -55,16 +53,14 @@ export default async function DashboardPage() {
       }),
     ]);
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем все обертки и возвращаем чистый компонент ---
   return (
-    <main>
-      <PageContainer className="py-12">
-        <ProductTable
-          products={allProducts}
-          allCategories={allCategories}
-          allTags={allTags}
-          filterPresets={filterPresets as any}
-        />
-      </PageContainer>
-    </main>
+    <ProductTable
+      products={allProducts}
+      allCategories={allCategories}
+      allTags={allTags}
+      filterPresets={filterPresets as any}
+    />
   );
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }

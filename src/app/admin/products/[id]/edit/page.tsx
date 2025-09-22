@@ -1,7 +1,9 @@
 // Местоположение: src/app/admin/products/[id]/edit/page.tsx
 export const dynamic = 'force-dynamic';
 
-import PageContainer from '@/components/layout/PageContainer';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем мертвый импорт ---
+// import PageContainer from '@/components/layout/PageContainer';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import prisma from '@/lib/prisma';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -47,8 +49,7 @@ export default async function EditProductPage({
 }: EditProductPageProps) {
   const { id } = params;
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем загрузку всех статусов ---
-  const [product, allSizes, allCategories, allTags, allStatuses] = // <-- Добавили allStatuses
+  const [product, allSizes, allCategories, allTags, allStatuses] =
     await Promise.all([
       getProductWithDetails(id),
       prisma.size.findMany({
@@ -60,48 +61,44 @@ export default async function EditProductPage({
       prisma.tag.findMany({
         orderBy: { name: 'asc' },
       }),
-      // VVV--- ДОБАВЛЕНА ЭТА СТРОКА ---VVV
       prisma.status.findMany({
         orderBy: { name: 'asc' },
       }),
     ]);
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   if (!product) {
     notFound();
   }
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем все обертки и возвращаем чистый контент ---
   return (
-    <main>
-      <PageContainer className="py-10">
-        <div>
-          <Link
-            href="/admin/products" // <-- Более корректный путь назад
-            className="text-sm font-medium text-gray-500 hover:text-gray-800"
-          >
-            ← Назад к товарам
-          </Link>
-          <div className="mt-2 md:flex md:items-center md:justify-between">
-            <div className="min-w-0 flex-1">
-              <div className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
-                Редактирование товара
-              </div>
+    <>
+      <div>
+        <Link
+          href="/admin/products"
+          className="text-sm font-medium text-gray-500 hover:text-gray-800"
+        >
+          ← Назад к товарам
+        </Link>
+        <div className="mt-2 md:flex md:items-center md:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+              Редактирование товара
             </div>
           </div>
         </div>
+      </div>
 
-        <div className="mt-8">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем allStatuses в компонент --- */}
-          <EditProductForm
-            product={product}
-            allSizes={allSizes}
-            allCategories={allCategories}
-            allTags={allTags}
-            allStatuses={allStatuses} // <-- Передаем статусы
-          />
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
-        </div>
-      </PageContainer>
-    </main>
+      <div className="mt-8">
+        <EditProductForm
+          product={product}
+          allSizes={allSizes}
+          allCategories={allCategories}
+          allTags={allTags}
+          allStatuses={allStatuses}
+        />
+      </div>
+    </>
   );
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
