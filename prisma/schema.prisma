@@ -1,3 +1,5 @@
+// Финальная, обновленная монолитная схема.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -6,6 +8,8 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// --- Домен: Продукты ---
 
 model Product {
   id               String            @id @default(cuid())
@@ -54,22 +58,23 @@ model Image {
 }
 
 model ProductSize {
-  id               String      @id @default(cuid())
+  id               String       @id @default(cuid())
   code             String?
   article          String?
   moySkladHref     String?
-  moySkladType     String      @default("variant")
+  moySkladType     String       @default("variant")
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
   sizeId           String
-  size             Size        @relation(fields: [sizeId], references: [id])
+  size             Size         @relation(fields: [sizeId], references: [id])
   stock            Int
   price            Int?
   oldPrice         Int?
   orderItems       OrderItem[]
+  wishlistItems    WishlistItem[] // <-- ДОБАВЛЕНО: Связь с Избранным
+  cartItems        CartItem[]     // <-- ДОБАВЛЕНО: Связь с Корзиной
   moyskladId       String?
-  archived         Boolean           @default(false)
-
+  archived         Boolean      @default(false)
   @@unique([productVariantId, sizeId])
 }
 
@@ -124,6 +129,8 @@ model Status {
   products Product[]
 }
 
+// --- Домен: Заказы ---
+
 model OrderStatus {
   id     String  @id @default(cuid())
   name   String  @unique
@@ -166,35 +173,7 @@ model OrderItem {
   productSizeValue   String
 }
 
-model FilterPreset {
-  id        String       @id @default(cuid())
-  name      String       @unique
-  isDefault Boolean      @default(false)
-  items     PresetItem[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-}
-
-model PresetItem {
-  id         String         @id @default(cuid())
-  presetId   String
-  preset     FilterPreset   @relation(fields: [presetId], references: [id], onDelete: Cascade)
-  typeId     String
-  type       PresetItemType @relation(fields: [typeId], references: [id])
-  categoryId String?
-  category   Category?      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  tagId      String?
-  tag        Tag?           @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  order      Int
-  @@unique([presetId, categoryId])
-  @@unique([presetId, tagId])
-}
-
-model PresetItemType {
-  id    String       @id @default(cuid())
-  name  String       @unique
-  items PresetItem[]
-}
+// --- Домен: Пользователи ---
 
 model UserRole {
   id    String @id @default(cuid())
@@ -203,23 +182,89 @@ model UserRole {
 }
 
 model User {
-  id                   String                 @id @default(cuid())
-  name                 String?
-  surname              String? // <-- ДОБАВЛЕНО: Новое поле для фамилии
-  email                String?                @unique
-  emailVerified        DateTime?
-  image                String?
-  telegramId           String?                @unique
-  phone                String?
-  passwordHash         String?
-  accounts             Account[]
-  sessions             Session[]
-  loginTokens          LoginToken[]
-  roleId               String
-  role                 UserRole               @relation(fields: [roleId], references: [id])
-  bonusPoints          Int                    @default(0)
-  orders               Order[]
-  passwordResetTokens  PasswordResetToken[]
+  id                  String               @id @default(cuid())
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Шифрование и E-commerce ---
+  name_encrypted      String?
+  surname_encrypted   String?
+  email_hash          String?              @unique
+  email_encrypted     String?
+  // Старые поля name, surname, email удалены
+  
+  emailVerified       DateTime?
+  image               String?
+  telegramId          String?              @unique
+  phone               String?
+  passwordHash        String?
+  passwordChangedAt   DateTime? // <-- ДОБАВЛЕНО: недостающее поле
+
+  accounts            Account[]
+  sessions            Session[]
+  loginTokens         LoginToken[]
+  passwordResetTokens PasswordResetToken[]
+  
+  roleId              String
+  role                UserRole             @relation(fields: [roleId], references: [id])
+  bonusPoints         Int                  @default(0)
+  
+  orders              Order[]
+  
+  // Новые модели E-commerce
+  addresses           Address[]
+  wishlistItems       WishlistItem[]
+  cartItems           CartItem[]
+  measurements        UserMeasurements?
+  
+  createdAt           DateTime             @default(now()) // <-- ДОБАВЛЕНО: недостающее поле
+  updatedAt           DateTime             @updatedAt   // <-- ДОБАВЛЕНО: недостающее поле
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+}
+
+model UserMeasurements {
+  id        String   @id @default(cuid())
+  heightCm  Int?
+  chestCm   Int?
+  waistCm   Int?
+  hipsCm    Int?
+  inseamCm  Int?
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id                String   @id @default(cuid())
+  street            String
+  city              String
+  postalCode        String
+  country           String
+  apartment         String?
+  notes             String?
+  isDefaultShipping Boolean  @default(false)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+}
+
+model WishlistItem {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productSizeId String
+  productSize   ProductSize @relation(fields: [productSizeId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+  @@unique([userId, productSizeId])
+}
+
+model CartItem {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productSizeId String
+  productSize   ProductSize @relation(fields: [productSizeId], references: [id], onDelete: Cascade)
+  quantity      Int
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  @@unique([userId, productSizeId])
 }
 
 model Account {
@@ -271,10 +316,11 @@ model PasswordResetToken {
   expires   DateTime
   createdAt DateTime @default(now())
   userId    String?
-  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@unique([email, token])
 }
+
+// --- Домен: Поддержка ---
 
 model AgentRole {
   id     String         @id @default(cuid())
@@ -345,6 +391,38 @@ model SupportMessage {
   createdAt    DateTime      @default(now())
 }
 
+// --- Домен: Система ---
+
+model FilterPreset {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  isDefault Boolean      @default(false)
+  items     PresetItem[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model PresetItem {
+  id         String         @id @default(cuid())
+  presetId   String
+  preset     FilterPreset   @relation(fields: [presetId], references: [id], onDelete: Cascade)
+  typeId     String
+  type       PresetItemType @relation(fields: [typeId], references: [id])
+  categoryId String?
+  category   Category?      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tagId      String?
+  tag        Tag?           @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  order      Int
+  @@unique([presetId, categoryId])
+  @@unique([presetId, tagId])
+}
+
+model PresetItemType {
+  id    String       @id @default(cuid())
+  name  String       @unique
+  items PresetItem[]
+}
+
 model CodeRule {
   id           String            @id @default(cuid())
   assignedCode String            @unique
@@ -372,4 +450,16 @@ model SystemSetting {
 model SkuSequence {
   prefix     String @id @unique
   lastNumber Int    @default(0)
+}
+
+model TemporaryReply {
+  id             String   @id @default(cuid())
+  agentMessageId BigInt   @unique
+  replyText      String   @db.Text
+  ticketId       String
+  agentId        String
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime @default(now()) @db.Timestamptz(0)
+  @@index([createdAt], map: "created_at_idx")
+  @@index([expiresAt], map: "expires_at_idx")
 }
