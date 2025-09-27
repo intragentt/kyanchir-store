@@ -3,10 +3,12 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { addMinutes } from 'date-fns';
 import prisma from '@/lib/prisma';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем нашу крипто-утилиту ---
+import { encrypt } from '@/lib/encryption';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export async function POST(request: Request) {
   try {
-    // 1. Проверяем "пароль" от нашего Эмиссара
     const authHeader = request.headers.get('Authorization');
     const secret = process.env.BOT_API_SECRET;
 
@@ -14,7 +16,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Получаем данные о пользователе от Эмиссара
     const { telegramId, firstName, phone } = await request.json();
     if (!telegramId || !phone) {
       return NextResponse.json(
@@ -23,25 +24,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Находим или создаем пользователя в нашей базе
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Шифруем данные и используем правильные поля ---
+    const encryptedFirstName = firstName ? encrypt(firstName) : null;
+    const encryptedPhone = encrypt(phone);
+
     const user = await prisma.user.upsert({
       where: { telegramId: String(telegramId) },
-      update: { phone, name: firstName },
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      update: {
+        phone: encryptedPhone, // Обновляем зашифрованный телефон
+      },
       create: {
         telegramId: String(telegramId),
-        phone,
-        name: firstName,
+        phone: encryptedPhone, // Сохраняем зашифрованный телефон
+        name_encrypted: encryptedFirstName, // Сохраняем зашифрованное имя
         role: {
           connect: {
-            name: 'USER', // <-- Применяем то же самое исправление
+            name: 'USER',
           },
         },
       },
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    // 4. Создаем для него одноразовый "пропуск"
     const token = crypto.randomBytes(32).toString('hex');
     const expires = addMinutes(new Date(), 5);
 
@@ -49,11 +53,10 @@ export async function POST(request: Request) {
       data: {
         token,
         expires,
-        userId: user.id, // Сразу привязываем к пользователю!
+        userId: user.id,
       },
     });
 
-    // 5. Отправляем "пропуск" обратно Эмиссару
     return NextResponse.json({ token });
   } catch (error) {
     console.error('[Bot API] Error creating login link:', error);
