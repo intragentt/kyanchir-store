@@ -1,14 +1,15 @@
 // Местоположение: /src/app/api/auth/password-reset/confirm/route.ts
+// МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ
+
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcrypt';
+import { createHash } from '@/lib/encryption'; // <-- ДОБАВЛЕНО: Импортируем нашу утилиту хэширования
 
 export async function POST(req: Request) {
   try {
-    const {
-      token,
-      newPassword,
-    }: { token?: string; newPassword?: string } = await req.json();
+    const { token, newPassword }: { token?: string; newPassword?: string } =
+      await req.json();
 
     if (!token || !newPassword) {
       return NextResponse.json(
@@ -23,12 +24,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Находим токен в "сейфе"
     const passwordResetToken = await prisma.passwordResetToken.findUnique({
       where: { token },
     });
 
-    // 2. Проверяем, что он валиден и не просрочен
     if (!passwordResetToken || passwordResetToken.expires < new Date()) {
       return NextResponse.json(
         { error: 'Ссылка недействительна или её срок истёк' },
@@ -36,24 +35,26 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Хешируем новый пароль
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    // 4. Используем транзакцию для "железобетонной" надежности
-    // Она либо выполнит ОБЕ операции, либо не выполнит ни одной.
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем хэш для поиска пользователя ---
+    const emailHash = createHash(passwordResetToken.email);
+
     await prisma.$transaction([
-      // Операция 1: Обновляем пароль пользователя
       prisma.user.update({
-        where: { email: passwordResetToken.email },
+        // Ищем пользователя по email_hash
+        where: { email_hash: emailHash },
         data: { passwordHash },
       }),
-      // Операция 2: Уничтожаем использованный токен
       prisma.passwordResetToken.delete({
         where: { id: passwordResetToken.id },
       }),
     ]);
-    
-    console.log(`[Reset Confirm] Пароль для ${passwordResetToken.email} успешно изменен.`);
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+    console.log(
+      `[Reset Confirm] Пароль для ${passwordResetToken.email} успешно изменен.`,
+    );
 
     return NextResponse.json({
       success: true,

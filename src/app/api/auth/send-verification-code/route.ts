@@ -1,21 +1,23 @@
 // Местоположение: src/app/api/auth/send-verification-code/route.ts
+// МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ
+
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import sgMail from '@sendgrid/mail';
+import { createHash, encrypt } from '@/lib/encryption'; // <-- ДОБАВЛЕНО: Импортируем обе утилиты
 
 export async function POST(req: Request) {
   try {
     const { email } = await req.json();
 
-    if (!email) {
+    if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'Email обязателен' }, { status: 400 });
     }
 
-    // 1. Генерируем код и срок его жизни
+    const lowercasedEmail = email.toLowerCase();
     const token = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 минут
 
-    // 2. Находим базовую роль 'USER'. Это "вакцина" от нашей предыдущей ошибки.
     const userRole = await prisma.userRole.findUnique({
       where: { name: 'USER' },
     });
@@ -25,37 +27,38 @@ export async function POST(req: Request) {
       throw new Error('Default user role is not configured on the server.');
     }
 
-    // 3. Находим или создаем пользователя.
-    // upsert - идеальный инструмент: он найдет существующего пользователя
-    // или создаст нового, если это его первый вход, СРАЗУ присвоив ему роль.
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписываем логику upsert ---
+    const emailHash = createHash(lowercasedEmail);
+
     await prisma.user.upsert({
-      where: { email },
-      update: {}, // Если пользователь найден, ничего не меняем
+      where: { email_hash: emailHash }, // Ищем по хэшу
+      update: {}, // Если найден, ничего не делаем
       create: {
-        email,
-        roleId: userRole.id, // Если создаем нового - сразу даем ему роль
+        email_hash: emailHash, // Сохраняем хэш
+        email_encrypted: encrypt(lowercasedEmail), // Шифруем email
+        // В качестве имени по умолчанию используем часть email до "@"
+        name_encrypted: encrypt(lowercasedEmail.split('@')[0]),
+        roleId: userRole.id,
       },
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    // 4. Удаляем старые токены для этого email
     await prisma.verificationToken.deleteMany({
-      where: { identifier: email },
+      where: { identifier: lowercasedEmail },
     });
 
-    // 5. Создаем новый токен
     await prisma.verificationToken.create({
       data: {
-        identifier: email,
+        identifier: lowercasedEmail,
         token,
         expires,
       },
     });
 
-    // 6. Отправляем email через SendGrid
     sgMail.setApiKey(process.env.EMAIL_SERVER_PASSWORD!);
 
     const msg = {
-      to: email,
+      to: lowercasedEmail,
       from: process.env.EMAIL_FROM!,
       subject: `Ваш код для входа в Kyanchir: ${token}`,
       html: `<div style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">

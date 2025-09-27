@@ -1,8 +1,11 @@
 // Местоположение: /src/app/api/auth/password-reset/request/route.ts
+// МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ
+
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import crypto from 'crypto';
 import { sendPasswordResetEmail } from '@/lib/mail';
+import { createHash } from '@/lib/encryption'; // <-- ДОБАВЛЕНО: Импортируем нашу утилиту хэширования
 
 export async function POST(req: Request) {
   try {
@@ -14,12 +17,14 @@ export async function POST(req: Request) {
 
     const lowercasedEmail = email.toLowerCase();
 
-    const user = await prisma.user.findUnique({
-      where: { email: lowercasedEmail },
-    });
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем хэш для поиска ---
+    const emailHash = createHash(lowercasedEmail);
 
-    // ВАЖНО: В целях безопасности, мы всегда возвращаем успешный ответ,
-    // даже если пользователь не найден. Это предотвращает "перечисление email".
+    const user = await prisma.user.findUnique({
+      where: { email_hash: emailHash },
+    });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     if (!user) {
       console.log(
         `[Reset Request] Запрос на сброс для несуществующего email: ${email}`,
@@ -30,11 +35,11 @@ export async function POST(req: Request) {
       });
     }
 
-    // 1. Создаем безопасный, уникальный токен
     const token = crypto.randomBytes(32).toString('hex');
     const expires = new Date(new Date().getTime() + 3600 * 1000); // 1 час
 
-    // 2. Сохраняем токен в "сейф" (базу данных)
+    // Важно: в токен мы по-прежнему сохраняем НАСТОЯЩИЙ email,
+    // чтобы его можно было использовать для отправки письма.
     await prisma.passwordResetToken.create({
       data: {
         userId: user.id,
@@ -44,7 +49,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // 3. Отправляем письмо с помощью нашего "почтальона"
     await sendPasswordResetEmail(lowercasedEmail, token);
 
     return NextResponse.json({

@@ -1,14 +1,14 @@
 // Местоположение: src/app/api/auth/register/route.ts
+// МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ
+
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcrypt';
+import { createHash, encrypt } from '@/lib/encryption'; // <-- ДОБАВЛЕНО: Импортируем обе утилиты
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// Список email-адресов, которые должны автоматически становиться администраторами.
 const ADMIN_EMAILS = ['intragentt@gmail.com', 'podovinikovone@mail.ru'].map(
   (email) => email.toLowerCase(),
-); // Приводим к нижнему регистру для надежности
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+);
 
 export async function POST(req: Request) {
   try {
@@ -25,11 +25,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const lowercasedEmail = email.toLowerCase(); // Всегда работаем с нижним регистром
+    const lowercasedEmail = email.toLowerCase();
+
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем хэш для поиска ---
+    const emailHash = createHash(lowercasedEmail);
 
     const existingUser = await prisma.user.findUnique({
-      where: { email: lowercasedEmail },
+      where: { email_hash: emailHash },
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
     if (existingUser) {
       return NextResponse.json(
         { error: 'Пользователь с таким email уже существует' },
@@ -39,36 +44,34 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: "Умное" назначение роли ---
-
-    // 1. Определяем, какую роль должен получить пользователь.
     const isUserAdmin = ADMIN_EMAILS.includes(lowercasedEmail);
     const targetRoleName = isUserAdmin ? 'ADMIN' : 'USER';
     console.log(
       `[Register] Регистрация для ${email}. Назначаемая роль: ${targetRoleName}`,
     );
 
-    // 2. Находим ID нужной роли в базе данных.
     const role = await prisma.userRole.findUnique({
       where: { name: targetRoleName },
     });
 
-    // 3. Если нужная роль не найдена — это критическая ошибка.
     if (!role) {
       const errorMessage = `CRITICAL: Role '${targetRoleName}' not found in database.`;
       console.error(errorMessage);
       throw new Error('Server configuration error.');
     }
 
-    // 4. Создаем пользователя, связывая его с правильной ролью.
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Создаем пользователя с зашифрованными данными ---
     const user = await prisma.user.create({
       data: {
-        name,
-        email: lowercasedEmail, // Сохраняем email в нижнем регистре
+        // Хэшируем email для поиска
+        email_hash: emailHash,
+        // Шифруем имя и email для хранения
+        name_encrypted: encrypt(name),
+        email_encrypted: encrypt(lowercasedEmail),
+        // Остальные поля
         passwordHash,
         roleId: role.id,
       },
-      // Включаем информацию о роли в ответ для отладки
       include: {
         role: {
           select: { name: true },
@@ -78,7 +81,7 @@ export async function POST(req: Request) {
     // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     console.log(
-      `[Register] Пользователь ${user.email} успешно создан с ролью ${user.role.name}`,
+      `[Register] Пользователь ${lowercasedEmail} успешно создан с ролью ${user.role.name}`,
     );
 
     return NextResponse.json(
