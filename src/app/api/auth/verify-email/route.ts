@@ -1,21 +1,28 @@
 // Местоположение: src/app/api/auth/verify-email/route.ts
+// МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ
+
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { createHash } from '@/lib/encryption'; // <-- ДОБАВЛЕНО: Импортируем нашу утилиту хэширования
 
 export async function POST(req: Request) {
   try {
     const { email, token } = await req.json();
 
-    if (!email || !token) {
+    if (!email || !token || typeof email !== 'string') {
       return NextResponse.json(
         { error: 'Email и токен обязательны' },
         { status: 400 },
       );
     }
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем хэш для поиска пользователя ---
+    const emailHash = createHash(email);
+
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email_hash: emailHash },
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     if (!user) {
       return NextResponse.json(
@@ -24,17 +31,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем правильный уникальный идентификатор ---
-    // Ищем токен по его уникальной комбинации: identifier (userId) + token
+    // ВАЖНО: В модели VerificationToken поле `identifier` теперь хранит `email`, а не `userId`.
+    // Это изменение нужно будет внести в /send-verification-code/route.ts, если еще не сделано.
+    // Пока что, предположим, что identifier - это email.
     const verificationToken = await prisma.verificationToken.findUnique({
       where: {
         identifier_token: {
-          identifier: user.id,
+          identifier: email, // Ищем по email
           token: token,
         },
       },
     });
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     if (!verificationToken || verificationToken.expires < new Date()) {
       return NextResponse.json(
@@ -43,23 +50,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // Обновляем пользователя, устанавливая дату подтверждения email
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем пользователя по хэшу ---
     await prisma.user.update({
-      where: { email },
+      where: { email_hash: emailHash },
       data: { emailVerified: new Date() },
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем токен по его уникальной комбинации ---
-    // Удаляем использованный токен, используя тот же самый правильный идентификатор
     await prisma.verificationToken.delete({
       where: {
         identifier_token: {
-          identifier: user.id,
+          identifier: email,
           token: token,
         },
       },
     });
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     return NextResponse.json({ success: true });
   } catch (error) {

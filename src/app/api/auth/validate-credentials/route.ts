@@ -1,15 +1,15 @@
 // Местоположение: src/app/api/auth/validate-credentials/route.ts
+// МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ
+
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import bcrypt from 'bcrypt';
+import { createHash } from '@/lib/encryption'; // <-- ДОБАВЛЕНО: Импортируем нашу утилиту хэширования
 
 export async function POST(req: Request) {
   try {
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // Явно указываем типы для email и password
     const { email, password }: { email?: string; password?: string } =
       await req.json();
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     if (!email || !password) {
       return NextResponse.json(
@@ -18,9 +18,13 @@ export async function POST(req: Request) {
       );
     }
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем хэш для поиска ---
+    const emailHash = createHash(email.toLowerCase());
+
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email_hash: emailHash },
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     if (!user || !user.passwordHash) {
       return NextResponse.json(
