@@ -1,12 +1,17 @@
 'use client';
 
 import React from 'react';
-import type { User } from '@prisma/client';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем User из нашего центрального файла типов ---
+import type { User } from '@/lib/types';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import Image from 'next/image';
 
 import AvatarPlaceholder from '@/components/AvatarPlaceholder';
 import ShortLogo from '@/components/icons/ShortLogo';
 import SettingsIcon from '../icons/SettingsIcon';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем нашу крипто-утилиту ---
+import { decrypt } from '@/lib/encryption';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 interface ProfileHeaderProps {
   user: User & { role?: { name?: string | null } | null };
@@ -21,6 +26,16 @@ const ProfileHeader = ({
   onSendVerificationEmail,
   isSendingEmail,
 }: ProfileHeaderProps) => {
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Расшифровываем данные перед отображением ---
+  const decryptedName = user.name_encrypted ? decrypt(user.name_encrypted) : '';
+  const decryptedSurname = user.surname_encrypted
+    ? decrypt(user.surname_encrypted)
+    : '';
+  const decryptedEmail = user.email_encrypted
+    ? decrypt(user.email_encrypted)
+    : '';
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
   return (
     <div className="flex w-full items-start justify-between border-b border-gray-200 py-5">
       <div className="flex items-center space-x-4">
@@ -38,14 +53,14 @@ const ProfileHeader = ({
           )}
         </div>
         <div className="flex flex-col">
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Стили имени как в меню --- */}
           <div className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg">
-            {user.name || ''} {user.surname || ''}
+            {/* Отображаем расшифрованные данные */}
+            {decryptedName} {decryptedSurname}
           </div>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
 
           <div className="mt-0.5 flex flex-col items-start sm:flex-row sm:items-center sm:space-x-2">
-            <p className="truncate text-sm text-gray-500">{user.email}</p>
+            {/* Отображаем расшифрованные данные */}
+            <p className="truncate text-sm text-gray-500">{decryptedEmail}</p>
             {!user.emailVerified && (
               <button
                 onClick={onSendVerificationEmail}
@@ -74,17 +89,15 @@ const ProfileHeader = ({
           </div>
         </div>
       </div>
-      {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью копируем структуру блока иконок из меню --- */}
       <div className="flex flex-col items-center">
         <button
           onClick={onEditClick}
-          className="p-2" // Устанавливаем идентичный отступ
+          className="p-2"
           aria-label="Изменить профиль"
         >
           <SettingsIcon className="h-6 w-6 text-gray-800" />
         </button>
       </div>
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
     </div>
   );
 };
