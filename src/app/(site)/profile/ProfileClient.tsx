@@ -11,9 +11,20 @@ import EditPasswordForm from '@/components/profile/EditPasswordForm';
 import SignOutButton from './SignOutButton';
 import ProfileInfoBlock from '@/components/profile/ProfileInfoBlock';
 
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем тип для соответствия дешифрованным данным ---
+// Мы "говорим" TypeScript, что объект user будет содержать стандартные поля User,
+// а также новые, дешифрованные поля name, surname и email.
+type DecryptedUser = User & {
+  name: string;
+  surname: string;
+  email: string;
+  role?: { name?: string | null } | null;
+};
+
 interface ProfileClientProps {
-  user: User & { role?: { name?: string | null } | null };
+  user: DecryptedUser;
 }
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function ProfileClient({
   user: initialUser,
@@ -26,6 +37,7 @@ export default function ProfileClient({
   const [success, setSuccess] = useState<string | null>(null);
 
   const [isEditingName, setIsEditingName] = useState(false);
+  // Теперь эти строки не вызовут ошибки, так как initialUser.name и initialUser.surname существуют
   const [name, setName] = useState(initialUser.name || '');
   const [surname, setSurname] = useState(initialUser.surname || '');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
@@ -103,9 +115,7 @@ export default function ProfileClient({
   };
 
   return (
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: ПОЛНОСТЬЮ УДАЛЯЕМ КЛАССЫ КОНТЕЙНЕРА И ГОРИЗОНТАЛЬНЫХ ОТСТУПОВ ---
     <div className="space-y-0 pb-8 pt-6">
-      {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
       {error && (
         <div className="mb-4 rounded-md bg-red-100 p-4 text-sm text-red-700">
           {error}
