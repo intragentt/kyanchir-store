@@ -11,9 +11,9 @@ if (!keyHex || keyHex.length !== 64) {
 }
 const key = Buffer.from(keyHex, 'hex');
 
-// Эта проверка гарантирует TypeScript, что 'salt' никогда не будет undefined
-const salt = process.env.ENCRYPTION_SALT;
-if (!salt) {
+// Эта проверка гарантирует, что соль существует при запуске приложения
+const saltFromEnv = process.env.ENCRYPTION_SALT;
+if (!saltFromEnv) {
   throw new Error(
     'Критическая ошибка: ENCRYPTION_SALT не определен в .env файле.',
   );
@@ -45,6 +45,13 @@ export function decrypt(text: string): string {
 }
 
 export function createHash(text: string): string {
-  // Теперь ошибка здесь невозможна
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем проверку внутри функции для TypeScript ---
+  const salt = process.env.ENCRYPTION_SALT;
+  if (!salt) {
+    // Эта ошибка никогда не должна сработать, если проверка выше на месте,
+    // но она заставляет TypeScript быть уверенным, что salt - это string.
+    throw new Error('Критическая ошибка: ENCRYPTION_SALT не доступен в createHash.');
+  }
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   return crypto.createHmac('sha256', salt).update(text).digest('hex');
 }

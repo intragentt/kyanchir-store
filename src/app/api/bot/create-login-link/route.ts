@@ -3,54 +3,12 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { addMinutes } from 'date-fns';
 import prisma from '@/lib/prisma';
+import { encrypt } from '@/lib/encryption';
 
 export async function POST(request: Request) {
   try {
     const authHeader = request.headers.get('Authorization');
     const secret = process.env.BOT_API_SECRET;
-
-    // --- НАЧАЛО ДИАГНОСТИКИ ---
-    console.log('--- НАЧАЛО АУДИТА БЕЗОПАСНОСТИ ---');
-
-    if (authHeader) {
-      console.log(
-        `Получен заголовок 'Authorization'. Длина: ${authHeader.length}`,
-      );
-      console.log(`Первые 15 символов: '${authHeader.substring(0, 15)}'`);
-      console.log(
-        `Последние 15 символов: '${authHeader.substring(
-          authHeader.length - 15,
-        )}'`,
-      );
-    } else {
-      console.log("!!! ОШИБКА: Заголовок 'Authorization' НЕ ПОЛУЧЕН.");
-    }
-
-    if (secret) {
-      console.log(
-        `Секрет 'BOT_API_SECRET' на сервере. Длина: ${secret.length}`,
-      );
-      console.log(`Первые 15 символов: '${secret.substring(0, 15)}'`);
-      console.log(
-        `Последние 15 символов: '${secret.substring(secret.length - 15)}'`,
-      );
-    } else {
-      console.log(
-        "!!! КРИТИЧЕСКАЯ ОШИБКА: Секрет 'BOT_API_SECRET' НЕ НАЙДЕН на сервере.",
-      );
-    }
-
-    const expectedAuthHeader = `Bearer ${secret}`;
-    console.log(`Ожидался заголовок. Длина: ${expectedAuthHeader.length}`);
-
-    if (authHeader === expectedAuthHeader) {
-      console.log('--- ВЕРДИКТ: УСПЕХ! Ключи полностью совпадают. ---');
-    } else {
-      console.log('--- ВЕРДИКТ: ПРОВАЛ! Ключи НЕ СОВПАДАЮТ. ---');
-    }
-
-    console.log('--- КОНЕЦ АУДИТА БЕЗОПАСНОСТИ ---');
-    // --- КОНЕЦ ДИАГНОСТИКИ ---
 
     if (!secret || authHeader !== `Bearer ${secret}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -65,22 +23,30 @@ export async function POST(request: Request) {
       );
     }
 
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Используем правильные имена полей из вашей схемы ---
+    // Шифруем данные перед записью в базу данных
+    const encryptedFirstName = firstName ? encrypt(firstName) : null;
+    const encryptedPhone = encrypt(phone);
+
     const user = await prisma.user.upsert({
       where: { telegramId: String(telegramId) },
-      update: { phone, name: firstName },
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
+      update: {
+        // При обновлении, обновляем зашифрованный телефон в поле 'phone'
+        phone: encryptedPhone,
+      },
       create: {
         telegramId: String(telegramId),
-        phone,
-        name: firstName,
+        // При создании, записываем зашифрованные данные в правильные поля:
+        phone: encryptedPhone, // <-- ИСПРАВЛЕНО
+        name_encrypted: encryptedFirstName, // <-- Это поле у вас есть
         role: {
           connect: {
-            name: 'USER', // <-- ВОТ ИСПРАВЛЕНИЕ. Подключаемся к существующей роли 'USER'
+            name: 'USER',
           },
         },
       },
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
     const token = crypto.randomBytes(32).toString('hex');
     const expires = addMinutes(new Date(), 5);
