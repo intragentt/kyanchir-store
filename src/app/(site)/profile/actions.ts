@@ -1,13 +1,14 @@
-'use server'; // <-- Это специальная директива, которая говорит Next.js, что это серверный файл
+'use server';
 
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod'; // Zod для надежной валидации данных
+import { z } from 'zod';
 import bcrypt from 'bcrypt';
 
 import prisma from '@/lib/prisma';
 import { auth } from '@/lib/auth';
+import { encrypt } from '@/lib/encryption'; // <-- ДОБАВЛЕНО: Импортируем шифрование
 
-// Схема валидации для данных профиля
+// Схема валидации осталась прежней, так как на вход мы получаем обычные строки
 const profileSchema = z.object({
   name: z.string().min(1, 'Имя не может быть пустым.'),
   surname: z.string().optional(),
@@ -28,23 +29,28 @@ export async function updateUserProfile(formData: {
     return { error: 'Неверные данные.' };
   }
 
+  const { name, surname } = validatedFields.data;
+
   try {
+    // --- НАЧАЛО ИЗМЕНЕНИЙ: Шифруем данные перед записью в БД ---
     const updatedUser = await prisma.user.update({
       where: { id: session.user.id },
       data: {
-        name: validatedFields.data.name,
-        surname: validatedFields.data.surname,
+        // Шифруем имя и фамилию и кладем их в правильные поля
+        name_encrypted: encrypt(name),
+        surname_encrypted: surname ? encrypt(surname) : null,
       },
     });
+    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-    revalidatePath('/profile'); // Говорим Next.js обновить данные на странице профиля
+    revalidatePath('/profile');
     return { success: true, data: updatedUser };
   } catch (error) {
     return { error: 'Не удалось обновить профиль.' };
   }
 }
 
-// Схема валидации для пароля
+// Схема валидации для пароля (без изменений)
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, 'Текущий пароль обязателен.'),
   newPassword: z
@@ -52,7 +58,7 @@ const passwordSchema = z.object({
     .min(8, 'Новый пароль должен быть не менее 8 символов.'),
 });
 
-// Экшен для обновления пароля
+// Экшен для обновления пароля (без изменений)
 export async function updateUserPassword(formData: {
   currentPassword: string;
   newPassword: string;
