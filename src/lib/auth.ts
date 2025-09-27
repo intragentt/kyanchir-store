@@ -3,6 +3,9 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
+// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем нашу крипто-утилиту ---
+import { createHash } from '@/lib/encryption';
+// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const cookieDomain =
   process.env.NODE_ENV === 'production' ? '.kyanchir.ru' : undefined;
@@ -20,10 +23,14 @@ export const authOptions: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
+        
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Ищем пользователя по хэшу email ---
+        const emailHash = createHash(credentials.email);
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() },
+          where: { email_hash: emailHash },
           include: { role: true },
         });
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
         if (!user || !user.passwordHash) {
           return null;
@@ -72,10 +79,15 @@ export const authOptions: NextAuthOptions = {
         });
         if (!verificationToken || verificationToken.expires < new Date())
           return null;
+        
+        // --- НАЧАЛО ИЗМЕНЕНИЙ: Ищем пользователя по хэшу email ---
+        const emailHash = createHash(credentials.email);
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email.toLowerCase() },
+          where: { email_hash: emailHash },
           include: { role: true },
         });
+        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+        
         if (user) {
           await prisma.verificationToken.delete({
             where: {
@@ -99,28 +111,24 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.AUTH_SECRET,
   callbacks: {
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
     async jwt({ token, user }) {
-      // При первом входе (когда `user` объект доступен), добавляем все нужные поля в токен
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.bonusPoints = user.bonusPoints;
-        token.emailVerified = user.emailVerified; // <-- ДОБАВЛЕНО
+        token.emailVerified = user.emailVerified;
       }
       return token;
     },
     async session({ session, token }) {
-      // На каждой сессии, передаем данные из токена в объект `session.user`
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role;
         session.user.bonusPoints = token.bonusPoints;
-        session.user.emailVerified = token.emailVerified; // <-- ДОБАВЛЕНО
+        session.user.emailVerified = token.emailVerified;
       }
       return session;
     },
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   },
   cookies: {
     sessionToken: {
