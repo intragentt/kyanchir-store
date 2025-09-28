@@ -14,11 +14,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Единое состояние для логики входа по коду ---
-  const [isCodeFlowActive, setIsCodeFlowActive] = useState(false);
-  const [code, setCode] = useState('');
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
+  // --- ВОССТАНОВЛЕНО: Возвращаем все состояния, как было ---
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -39,22 +36,19 @@ export default function LoginPage() {
     }
   }, [searchParams]);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Новая логика отправки и проверки кода ---
-
-  // Шаг 1: Отправка кода на email
-  const handleSendLoginCode = async (e: React.FormEvent<HTMLFormElement>) => {
+  // --- ВОССТАНОВЛЕНО: Возвращаем оригинальную логику с одним исправлением ---
+  const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
     setSuccessMessage(null);
 
-    if (!email) {
-      setError('Email обязателен для заполнения.');
+    if (!email || !password) {
+      setError('Все поля обязательны для заполнения.');
       setIsLoading(false);
       return;
     }
 
-    // Сохраняем или удаляем email в localStorage
     if (rememberMe) {
       localStorage.setItem('rememberedEmail', email);
     } else {
@@ -62,39 +56,43 @@ export default function LoginPage() {
     }
 
     try {
-      // Вызываем ПРАВИЛЬНЫЙ API-маршрут
-      const res = await fetch('/api/auth/send-login-code', {
+      // Шаг 1: Проверяем пару email + пароль. Этот шаг остается без изменений.
+      const validateRes = await fetch('/api/auth/validate-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!validateRes.ok) {
+        const data = await validateRes.json();
+        throw new Error(data.error || 'Неверные учетные данные.');
+      }
+
+      // Шаг 2: Отправляем код.
+      // ИЗМЕНЕНО: Вызываем ПРАВИЛЬНЫЙ API-маршрут, который не требует сессии.
+      const sendCodeRes = await fetch('/api/auth/send-login-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-      const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Не удалось отправить код.');
+      if (!sendCodeRes.ok) {
+        const data = await sendCodeRes.json();
+        throw new Error(
+          data.error || 'Не удалось отправить код подтверждения.',
+        );
       }
 
-      // Если код успешно отправлен, переключаемся на форму ввода кода
-      setSuccessMessage(`Код отправлен на ${email}`);
-      setIsCodeFlowActive(true);
+      // Если все успешно, перенаправляем на страницу ввода кода.
+      router.push(`/login/verify-code?email=${encodeURIComponent(email)}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Произошла ошибка.');
+      setError(
+        err instanceof Error ? err.message : 'Произошла непредвиденная ошибка.',
+      );
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Шаг 2: Вход с помощью полученного кода (логика из VerificationModal)
-  const handleVerifyCodeSubmit = async (
-    e: React.FormEvent<HTMLFormElement>,
-  ) => {
-    e.preventDefault();
-    // ... здесь будет логика проверки кода и входа ...
-    alert('Логика проверки кода в разработке. Перенаправляем на главную.');
-    router.push('/');
-  };
-
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const redirectToTelegramBot = () => {
     window.location.href = 'https://t.me/kyanchir_store_bot';
@@ -117,28 +115,75 @@ export default function LoginPage() {
               {successMessage}
             </p>
           )}
+          <form
+            className="space-y-4 text-left font-body"
+            onSubmit={handleLoginSubmit}
+            noValidate
+          >
+            <div className="relative">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                placeholder="Email"
+              />
+              {email && (
+                <button
+                  type="button"
+                  onClick={() => setEmail('')}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  aria-label="Очистить поле Email"
+                >
+                  <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                </button>
+              )}
+            </div>
 
-          {/* --- ИЗМЕНЕНИЕ: Динамически показываем одну из двух форм --- */}
-          {!isCodeFlowActive ? (
-            // Форма запроса кода
-            <form
-              className="space-y-4 text-left font-body"
-              onSubmit={handleSendLoginCode}
-              noValidate
-            >
-              <div className="relative">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-10 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-                  placeholder="Email для входа"
-                />
+            <div className="relative">
+              <input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 pr-16 text-base placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
+                placeholder="Пароль"
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                {password && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="mr-2"
+                      aria-label={
+                        showPassword ? 'Скрыть пароль' : 'Показать пароль'
+                      }
+                    >
+                      {showPassword ? (
+                        <EyeOffIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                      ) : (
+                        <EyeIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPassword('')}
+                      aria-label="Очистить поле Пароль"
+                    >
+                      <ClearIcon className="h-5 w-5 text-zinc-400 hover:text-zinc-600" />
+                    </button>
+                  </>
+                )}
               </div>
+            </div>
+
+            <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <input
                   id="remember-me"
@@ -155,43 +200,30 @@ export default function LoginPage() {
                   Запомнить меня
                 </label>
               </div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 disabled:opacity-50"
-              >
-                {isLoading ? 'Отправка...' : 'Получить код для входа'}
-              </button>
-            </form>
-          ) : (
-            // Форма ввода кода
-            <form
-              className="space-y-4 text-left font-body"
-              onSubmit={handleVerifyCodeSubmit}
-              noValidate
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
             >
-              {/* Здесь будет компонент CodeInput, пока простое поле */}
-              <input
-                type="text"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="6-значный код"
-                className="block w-full rounded-md border-zinc-300 bg-zinc-50 px-3 py-2 text-center text-base tracking-[8px] placeholder-zinc-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500"
-              />
-              <button
-                type="submit"
-                disabled={isLoading || code.length < 6}
-                className="w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 disabled:opacity-50"
-              >
-                {isLoading ? 'Проверка...' : 'Войти'}
-              </button>
-            </form>
-          )}
-
-          {error && (
-            <p className="pt-2 text-center text-xs text-red-600">{error}</p>
-          )}
-
+              {isLoading ? 'Проверка...' : 'Войти'}
+            </button>
+            {error && (
+              <p className="pt-2 text-center text-xs text-red-600">{error}</p>
+            )}
+          </form>
+          <div className="text-center font-body">
+            <Link
+              href={
+                email
+                  ? `/forgot-password?email=${encodeURIComponent(email)}`
+                  : '/forgot-password'
+              }
+              className="text-sm font-semibold text-[#6B80C5] hover:text-opacity-80"
+            >
+              Забыли пароль?
+            </Link>
+          </div>
           <div className="flex items-center gap-x-3">
             <div className="h-px w-full bg-zinc-200" />
             <div className="font-body text-sm font-medium text-zinc-400">
