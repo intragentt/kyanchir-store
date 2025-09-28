@@ -10,6 +10,7 @@ import EditProfileForm from '@/components/profile/EditProfileForm';
 import EditPasswordForm from '@/components/profile/EditPasswordForm';
 import SignOutButton from './SignOutButton';
 import ProfileInfoBlock from '@/components/profile/ProfileInfoBlock';
+import VerificationModal from '@/components/auth/VerificationModal'; // <-- ШАГ 1: Импортируем модальное окно
 
 type DecryptedUser = User & {
   name: string;
@@ -36,6 +37,10 @@ export default function ProfileClient({
   const [name, setName] = useState(initialUser.name || '');
   const [surname, setSurname] = useState(initialUser.surname || '');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Управляем видимостью модального окна ---
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleUpdateProfile = () => {
     setError(null);
@@ -75,27 +80,23 @@ export default function ProfileClient({
     });
   };
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью восстанавливаем логику ---
   const handleSendVerificationEmail = async () => {
     setIsSendingEmail(true);
     setError(null);
     setSuccess(null);
     try {
-      // Отправляем POST-запрос на наш новый API-маршрут
       const response = await fetch('/api/auth/send-verification-code', {
         method: 'POST',
       });
       const data = await response.json();
 
       if (!response.ok) {
-        // Если сервер вернул ошибку, показываем ее пользователю
         throw new Error(data.error || 'Произошла неизвестная ошибка');
       }
 
-      // В случае успеха, показываем сообщение об успехе
+      // --- ИЗМЕНЕНО: Вместо alert() открываем модальное окно ---
       setSuccess(data.success);
-      // В будущем здесь будет открываться модальное окно для ввода кода
-      alert('Код подтверждения отправлен на вашу почту!');
+      setIsVerificationModalOpen(true);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Произошла ошибка';
       setError(message);
@@ -103,7 +104,6 @@ export default function ProfileClient({
       setIsSendingEmail(false);
     }
   };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleEditPhone = () =>
     alert('Функционал редактирования телефона в разработке.');
@@ -126,94 +126,106 @@ export default function ProfileClient({
   };
 
   return (
-    <div className="space-y-0 pb-8 pt-6">
-      {error && (
-        <div className="mb-4 rounded-md bg-red-100 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="mb-4 rounded-md bg-green-100 p-4 text-sm text-green-700">
-          {success}
-        </div>
-      )}
+    <>
+      {/* --- ДОБАВЛЕНО: Рендерим модальное окно --- */}
+      <VerificationModal
+        isOpen={isVerificationModalOpen}
+        onClose={() => setIsVerificationModalOpen(false)}
+      />
 
-      {isEditingName ? (
-        <EditProfileForm
-          user={user}
-          name={name}
-          setName={setName}
-          surname={surname}
-          setSurname={setSurname}
-          onSave={handleUpdateProfile}
-          onCancel={() => setIsEditingName(false)}
-          isPending={isPending}
-        />
-      ) : (
-        <ProfileHeader
-          user={user}
-          onEditClick={() => setIsEditingName(true)}
-          onSendVerificationEmail={handleSendVerificationEmail}
-          isSendingEmail={isSendingEmail}
-        />
-      )}
+      <div className="space-y-0 pb-8 pt-6">
+        {error && (
+          <div className="mb-4 rounded-md bg-red-100 p-4 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        {success && (
+          <div className="mb-4 rounded-md bg-green-100 p-4 text-sm text-green-700">
+            {success}
+          </div>
+        )}
 
-      <ProfileInfoBlock
-        title="Telegram"
-        buttonText="Привязать"
-        onButtonClick={handleLinkTelegram}
-      >
-        <p>Получайте уведомления о заказах</p>
-      </ProfileInfoBlock>
+        {isEditingName ? (
+          <EditProfileForm
+            user={user}
+            name={name}
+            setName={setName}
+            surname={surname}
+            setSurname={setSurname}
+            onSave={handleUpdateProfile}
+            onCancel={() => setIsEditingName(false)}
+            isPending={isPending}
+          />
+        ) : (
+          <ProfileHeader
+            user={user}
+            onEditClick={() => setIsEditingName(true)}
+            onSendVerificationEmail={handleSendVerificationEmail}
+            isSendingEmail={isSendingEmail}
+          />
+        )}
 
-      <div className="border-b border-gray-200 py-5">
-        <EditPasswordForm onSave={handleUpdatePassword} isPending={isPending} />
-      </div>
-
-      <ProfileInfoBlock
-        title="Активные сессии"
-        buttonText="Управлять"
-        onButtonClick={handleManageSessions}
-      >
-        <p>Просмотр и управление устройствами</p>
-      </ProfileInfoBlock>
-
-      <ProfileInfoBlock
-        title="Номер телефона"
-        buttonText="Изменить"
-        onButtonClick={handleEditPhone}
-      >
-        <p>Не указан</p>
-      </ProfileInfoBlock>
-
-      <ProfileInfoBlock
-        title="Адрес доставки"
-        buttonText="Изменить"
-        onButtonClick={handleEditAddress}
-      >
-        <p>Не указан</p>
-      </ProfileInfoBlock>
-
-      <ProfileInfoBlock
-        title="Поддержка"
-        buttonText="Перейти"
-        onButtonClick={handleSupport}
-      >
-        <p>Связаться с нами</p>
-      </ProfileInfoBlock>
-
-      <div className="pt-8">
-        <SignOutButton />
-      </div>
-
-      <div className="pt-4 text-center">
-        <button
-          onClick={handleDeleteAccount}
-          className="text-sm font-medium text-red-600 transition-colors hover:text-red-500"
+        {/* ... остальной JSX без изменений ... */}
+        <ProfileInfoBlock
+          title="Telegram"
+          buttonText="Привязать"
+          onButtonClick={handleLinkTelegram}
         >
-          Удалить аккаунт
-        </button>
+          <p>Получайте уведомления о заказах</p>
+        </ProfileInfoBlock>
+
+        <div className="border-b border-gray-200 py-5">
+          <EditPasswordForm
+            onSave={handleUpdatePassword}
+            isPending={isPending}
+          />
+        </div>
+
+        <ProfileInfoBlock
+          title="Активные сессии"
+          buttonText="Управлять"
+          onButtonClick={handleManageSessions}
+        >
+          <p>Просмотр и управление устройствами</p>
+        </ProfileInfoBlock>
+
+        <ProfileInfoBlock
+          title="Номер телефона"
+          buttonText="Изменить"
+          onButtonClick={handleEditPhone}
+        >
+          <p>Не указан</p>
+        </ProfileInfoBlock>
+
+        <ProfileInfoBlock
+          title="Адрес доставки"
+          buttonText="Изменить"
+          onButtonClick={handleEditAddress}
+        >
+          <p>Не указан</p>
+        </ProfileInfoBlock>
+
+        <ProfileInfoBlock
+          title="Поддержка"
+          buttonText="Перейти"
+          onButtonClick={handleSupport}
+        >
+          <p>Связаться с нами</p>
+        </ProfileInfoBlock>
+
+        <div className="pt-8">
+          <SignOutButton />
+        </div>
+
+        <div className="pt-4 text-center">
+          <button
+            onClick={handleDeleteAccount}
+            className="text-sm font-medium text-red-600 transition-colors hover:text-red-500"
+          >
+            Удалить аккаунт
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
