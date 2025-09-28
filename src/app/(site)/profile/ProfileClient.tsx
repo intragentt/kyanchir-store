@@ -11,9 +11,6 @@ import EditPasswordForm from '@/components/profile/EditPasswordForm';
 import SignOutButton from './SignOutButton';
 import ProfileInfoBlock from '@/components/profile/ProfileInfoBlock';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем тип для соответствия дешифрованным данным ---
-// Мы "говорим" TypeScript, что объект user будет содержать стандартные поля User,
-// а также новые, дешифрованные поля name, surname и email.
 type DecryptedUser = User & {
   name: string;
   surname: string;
@@ -24,7 +21,6 @@ type DecryptedUser = User & {
 interface ProfileClientProps {
   user: DecryptedUser;
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function ProfileClient({
   user: initialUser,
@@ -37,7 +33,6 @@ export default function ProfileClient({
   const [success, setSuccess] = useState<string | null>(null);
 
   const [isEditingName, setIsEditingName] = useState(false);
-  // Теперь эти строки не вызовут ошибки, так как initialUser.name и initialUser.surname существуют
   const [name, setName] = useState(initialUser.name || '');
   const [surname, setSurname] = useState(initialUser.surname || '');
   const [isSendingEmail, setIsSendingEmail] = useState(false);
@@ -80,12 +75,27 @@ export default function ProfileClient({
     });
   };
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью восстанавливаем логику ---
   const handleSendVerificationEmail = async () => {
     setIsSendingEmail(true);
     setError(null);
     setSuccess(null);
     try {
-      alert('Функционал отправки письма в разработке.');
+      // Отправляем POST-запрос на наш новый API-маршрут
+      const response = await fetch('/api/auth/send-verification-code', {
+        method: 'POST',
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Если сервер вернул ошибку, показываем ее пользователю
+        throw new Error(data.error || 'Произошла неизвестная ошибка');
+      }
+
+      // В случае успеха, показываем сообщение об успехе
+      setSuccess(data.success);
+      // В будущем здесь будет открываться модальное окно для ввода кода
+      alert('Код подтверждения отправлен на вашу почту!');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Произошла ошибка';
       setError(message);
@@ -93,6 +103,7 @@ export default function ProfileClient({
       setIsSendingEmail(false);
     }
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const handleEditPhone = () =>
     alert('Функционал редактирования телефона в разработке.');

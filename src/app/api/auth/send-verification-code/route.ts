@@ -1,83 +1,66 @@
-// Местоположение: src/app/api/auth/send-verification-code/route.ts
-// МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ
+// Местоположение: /src/app/api/auth/send-verification-code/route.ts
+// МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ ДЛЯ ВЕРИФИКАЦИИ В ПРОФИЛЕ
 
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import prisma from '@/lib/prisma';
-import sgMail from '@sendgrid/mail';
-import { createHash, encrypt } from '@/lib/encryption'; // <-- ДОБАВЛЕНО: Импортируем обе утилиты
+import { auth } from '@/lib/auth'; // Используем сессию для идентификации
+import { sendVerificationCodeEmail } from '@/lib/mail'; // Используем наш Nodemailer
+import { decrypt } from '@/lib/encryption'; // Используем дешифровку
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
-
-    if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'Email обязателен' }, { status: 400 });
+    // 1. Проверяем сессию: код может запросить только авторизованный пользователь
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Неавторизован' }, { status: 401 });
     }
 
-    const lowercasedEmail = email.toLowerCase();
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 минут
-
-    const userRole = await prisma.userRole.findUnique({
-      where: { name: 'USER' },
+    // 2. Находим пользователя в БД по ID из сессии
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
     });
 
-    if (!userRole) {
-      console.error("CRITICAL: 'USER' role not found in database.");
-      throw new Error('Default user role is not configured on the server.');
+    // 3. Убеждаемся, что у пользователя есть зашифрованный email
+    if (!user || !user.email_encrypted) {
+      return NextResponse.json(
+        { error: 'Пользователь или Email не найден' },
+        { status: 404 },
+      );
     }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью переписываем логику upsert ---
-    const emailHash = createHash(lowercasedEmail);
+    // 4. Генерируем новый, надежный 6-значный код
+    const code = crypto.randomInt(100000, 999999).toString();
+    const expires = new Date(new Date().getTime() + 10 * 60 * 1000); // 10 минут
 
-    await prisma.user.upsert({
-      where: { email_hash: emailHash }, // Ищем по хэшу
-      update: {}, // Если найден, ничего не делаем
-      create: {
-        email_hash: emailHash, // Сохраняем хэш
-        email_encrypted: encrypt(lowercasedEmail), // Шифруем email
-        // В качестве имени по умолчанию используем часть email до "@"
-        name_encrypted: encrypt(lowercasedEmail.split('@')[0]),
-        roleId: userRole.id,
-      },
-    });
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+    // 5. Дешифруем email, чтобы знать, куда отправлять письмо
+    const email = decrypt(user.email_encrypted);
 
+    // 6. Удаляем старые токены для этого email, чтобы избежать путаницы
     await prisma.verificationToken.deleteMany({
-      where: { identifier: lowercasedEmail },
+      where: { identifier: email },
     });
 
+    // 7. Создаем новый токен верификации в базе данных
     await prisma.verificationToken.create({
       data: {
-        identifier: lowercasedEmail,
-        token,
+        identifier: email,
+        token: code,
         expires,
       },
     });
 
-    sgMail.setApiKey(process.env.EMAIL_SERVER_PASSWORD!);
+    // 8. Отправляем email с кодом, используя нашу централизованную функцию
+    await sendVerificationCodeEmail(email, code);
 
-    const msg = {
-      to: lowercasedEmail,
-      from: process.env.EMAIL_FROM!,
-      subject: `Ваш код для входа в Kyanchir: ${token}`,
-      html: `<div style="font-family: Arial, sans-serif; text-align: center; padding: 40px;">
-               <h2 style="color: #333;">Ваш код для входа</h2>
-               <div style="font-size: 36px; font-weight: bold; letter-spacing: 8px; margin: 20px 0; padding: 15px; background-color: #f2f2f2; border-radius: 8px;">
-                 ${token}
-               </div>
-             </div>`,
-    };
-
-    await sgMail.send(msg);
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: 'Код подтверждения успешно отправлен.',
+    });
   } catch (error) {
-    console.error('!!! КРИТИЧЕСКАЯ ОШИБКА В /send-verification-code:', error);
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : 'Произошла внутренняя ошибка сервера';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    console.error('[SEND_VERIFICATION_CODE_ERROR]', error);
+    return NextResponse.json(
+      { error: 'Не удалось отправить код.' },
+      { status: 500 },
+    );
   }
 }
