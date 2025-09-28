@@ -1,10 +1,6 @@
-// Местоположение: src/app/login/verify-code/page.tsx
 'use client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ ---
-// 1. Импортируем "официанта" - функцию signIn из next-auth.
 import { signIn } from 'next-auth/react';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from '@/components/icons/Logo';
@@ -28,7 +24,6 @@ function VerifyCodePage() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Убираем state для attemptsLeft, так как эта логика теперь полностью на сервере
   const [resendCooldown, setResendCooldown] = useState(0);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,19 +46,19 @@ function VerifyCodePage() {
   };
 
   const handleResendCode = async () => {
-    if (!email || isLoading) return;
+    if (!email || isLoading || resendCooldown > 0) return;
     setIsLoading(true);
     setError(null);
     try {
-      // Логика переотправки кода остается прежней, так как она связана с другим API
-      await fetch('/api/auth/send-verification-code', {
+      // ИЗМЕНЕНО: Вызываем ПРАВИЛЬНЫЙ API для отправки кода при логине
+      await fetch('/api/auth/send-login-code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
       setCode('');
-      setResendCooldown(60); // Блокируем кнопку на 60 секунд
-      setError('Мы отправили новый код на вашу почту.');
+      setResendCooldown(60);
+      setError('Мы отправили новый код на вашу почту.'); // Используем поле error для информационных сообщений
     } catch (err) {
       setError('Не удалось отправить новый код.');
     } finally {
@@ -71,49 +66,56 @@ function VerifyCodePage() {
     }
   };
 
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Полностью новая, правильная логика входа ---
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    if (code.length !== 6) {
+    if (!email || code.length !== 6) {
       setError('Код должен состоять из 6 цифр.');
-      setIsLoading(false);
       return;
     }
 
-    // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-    // 2. Заменяем старый fetch на вызов signIn.
+    setIsLoading(true);
+    setError(null);
+
     try {
-      // Мы вызываем нашего "специалиста" с id 'email-code'.
-      const result = await signIn('email-code', {
-        // Передаем ему "ингредиенты", которые он ожидает.
-        email,
-        token: code,
-        // Говорим ему не перезагружать страницу после ответа. Мы сами решим, что делать.
+      // Шаг 1: Отправляем email и код на наш новый API-маршрут для проверки.
+      const verifyRes = await fetch('/api/auth/verify-login-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, token: code }),
+      });
+      const userData = await verifyRes.json();
+
+      if (!verifyRes.ok) {
+        throw new Error(userData.error || 'Неверный или устаревший код.');
+      }
+
+      // Шаг 2: Если код верный, наш API вернул полные данные пользователя.
+      // Теперь мы используем специальный провайдер 'credentials',
+      // чтобы просто "сказать" next-auth: "Вот данные, создай сессию".
+      const signInRes = await signIn('credentials', {
         redirect: false,
+        ...userData, // Передаем все данные пользователя, полученные с бэкенда
       });
 
-      // 3. Анализируем ответ от "официанта".
-      if (result?.error) {
-        // Если next-auth вернул ошибку (например, authorize вернул null), показываем ее.
-        setError('Неверный или просроченный код. Попробуйте еще раз.');
-        setCode(''); // Очищаем поле для новой попытки
-        inputRef.current?.focus();
-      } else if (result?.ok) {
-        // Если все прошло успешно (authorize вернул пользователя), перенаправляем в профиль.
-        router.push('/profile');
+      if (signInRes?.error) {
+        throw new Error(signInRes.error || 'Не удалось создать сессию.');
+      }
+
+      if (signInRes?.ok) {
+        router.push('/profile'); // Успех! Перенаправляем в профиль.
       } else {
-        // На случай непредвиденных ответов.
-        setError('Произошла неизвестная ошибка.');
+        throw new Error('Произошла неизвестная ошибка при входе.');
       }
     } catch (err) {
-      setError('Произошла ошибка при подключении к серверу.');
+      setError(err instanceof Error ? err.message : 'Произошла ошибка.');
+      setCode('');
+      inputRef.current?.focus();
     } finally {
       setIsLoading(false);
     }
-    // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   };
+  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const focusInput = () => inputRef.current?.focus();
 
@@ -183,9 +185,9 @@ function VerifyCodePage() {
             <button
               type="submit"
               disabled={isLoading || code.length !== 6}
-              className="hover:bg-opacity-90 w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+              className="w-full rounded-md bg-[#6B80C5] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
             >
-              {isLoading ? 'Проверка...' : 'Подтвердить'}
+              {isLoading ? 'Проверка...' : 'Подтвердить и войти'}
             </button>
             {error && (
               <p className="pt-2 text-center text-xs text-red-600">{error}</p>
@@ -196,7 +198,7 @@ function VerifyCodePage() {
                 type="button"
                 onClick={handleResendCode}
                 disabled={isLoading || resendCooldown > 0}
-                className="hover:text-opacity-80 text-xs font-semibold text-[#6B80C5] disabled:cursor-not-allowed disabled:text-zinc-400"
+                className="text-xs font-semibold text-[#6B80C5] hover:text-opacity-80 disabled:cursor-not-allowed disabled:text-zinc-400"
               >
                 {resendCooldown > 0
                   ? `Отправить снова через ${resendCooldown}с`

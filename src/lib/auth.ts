@@ -3,9 +3,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import prisma from '@/lib/prisma';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcrypt';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем нашу крипто-утилиту ---
 import { createHash } from '@/lib/encryption';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const cookieDomain =
   process.env.NODE_ENV === 'production' ? '.kyanchir.ru' : undefined;
@@ -15,36 +13,58 @@ export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
+      // --- НАЧАЛО ИЗМЕНЕНИЙ: "Декларируем" все возможные поля ---
+      // Мы говорим TypeScript, что credentials МОЖЕТ содержать эти поля.
       credentials: {
         email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
+        id: { label: 'User ID', type: 'text' },
+        // Добавляем остальные поля, которые могут прийти от нашего API
+        name_encrypted: { label: 'Name', type: 'text' },
+        surname_encrypted: { label: 'Surname', type: 'text' },
       },
+      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials) return null;
+
+        // --- РЕЖИМ 2: Вход по коду (проброс данных) ---
+        // Теперь эта проверка корректна с точки зрения TypeScript
+        if (!credentials.password && credentials.id) {
+          const user = await prisma.user.findUnique({
+            where: { id: credentials.id }, // credentials.id теперь существует
+            include: { role: true },
+          });
+          return user;
+        }
+
+        // --- РЕЖИМ 1: Стандартный вход по email и паролю ---
+        if (!credentials.email || !credentials.password) {
           return null;
         }
-        
-        // --- НАЧАЛО ИЗМЕНЕНИЙ: Ищем пользователя по хэшу email ---
-        const emailHash = createHash(credentials.email);
+
+        const emailHash = createHash(credentials.email.toLowerCase());
         const user = await prisma.user.findUnique({
           where: { email_hash: emailHash },
           include: { role: true },
         });
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
         if (!user || !user.passwordHash) {
           return null;
         }
+
         const isValid = await bcrypt.compare(
           credentials.password,
           user.passwordHash,
         );
+
         if (isValid) {
           return user;
         }
+
         return null;
       },
     }),
+
     CredentialsProvider({
       id: 'telegram-credentials',
       name: 'Telegram Login',
@@ -60,47 +80,6 @@ export const authOptions: NextAuthOptions = {
         return loginToken.user;
       },
     }),
-    CredentialsProvider({
-      id: 'email-code',
-      name: 'Email Code Verification',
-      credentials: {
-        email: { label: 'Email', type: 'text' },
-        token: { label: 'Verification Code', type: 'text' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.token) return null;
-        const verificationToken = await prisma.verificationToken.findUnique({
-          where: {
-            identifier_token: {
-              identifier: credentials.email.toLowerCase(),
-              token: credentials.token,
-            },
-          },
-        });
-        if (!verificationToken || verificationToken.expires < new Date())
-          return null;
-        
-        // --- НАЧАЛО ИЗМЕНЕНИЙ: Ищем пользователя по хэшу email ---
-        const emailHash = createHash(credentials.email);
-        const user = await prisma.user.findUnique({
-          where: { email_hash: emailHash },
-          include: { role: true },
-        });
-        // --- КОНЕЦ ИЗМЕНЕНИЙ ---
-        
-        if (user) {
-          await prisma.verificationToken.delete({
-            where: {
-              identifier_token: {
-                identifier: credentials.email.toLowerCase(),
-                token: credentials.token,
-              },
-            },
-          });
-        }
-        return user;
-      },
-    }),
   ],
   pages: {
     signIn: '/login',
@@ -114,9 +93,9 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = user.role;
-        token.bonusPoints = user.bonusPoints;
-        token.emailVerified = user.emailVerified;
+        token.role = (user as any).role;
+        token.bonusPoints = (user as any).bonusPoints;
+        token.emailVerified = (user as any).emailVerified;
       }
       return token;
     },
