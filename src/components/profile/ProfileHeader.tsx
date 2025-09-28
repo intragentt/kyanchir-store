@@ -1,20 +1,25 @@
 'use client';
 
 import React from 'react';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем User из нашего центрального файла типов ---
-import type { User } from '@/lib/types';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+import type { User } from '@prisma/client'; // <-- ИЗМЕНЕНО: Возвращаемся к стандартному типу
 import Image from 'next/image';
 
 import AvatarPlaceholder from '@/components/AvatarPlaceholder';
 import ShortLogo from '@/components/icons/ShortLogo';
 import SettingsIcon from '../icons/SettingsIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем нашу крипто-утилиту ---
-import { decrypt } from '@/lib/encryption';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+// --- УДАЛЕНО: Убираем импорт серверной утилиты ---
+// import { decrypt } from '@/lib/encryption';
+
+// --- ИЗМЕНЕНО: Обновляем тип, чтобы он принимал готовые, расшифрованные данные ---
+type DecryptedUser = User & {
+  name: string;
+  surname: string;
+  email: string;
+  role?: { name?: string | null } | null;
+};
 
 interface ProfileHeaderProps {
-  user: User & { role?: { name?: string | null } | null };
+  user: DecryptedUser;
   onEditClick: () => void;
   onSendVerificationEmail: () => void;
   isSendingEmail: boolean;
@@ -26,15 +31,10 @@ const ProfileHeader = ({
   onSendVerificationEmail,
   isSendingEmail,
 }: ProfileHeaderProps) => {
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Расшифровываем данные перед отображением ---
-  const decryptedName = user.name_encrypted ? decrypt(user.name_encrypted) : '';
-  const decryptedSurname = user.surname_encrypted
-    ? decrypt(user.surname_encrypted)
-    : '';
-  const decryptedEmail = user.email_encrypted
-    ? decrypt(user.email_encrypted)
-    : '';
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+  // --- УДАЛЕНО: Убираем всю логику дешифровки с клиента ---
+  // const decryptedName = ...
+  // const decryptedSurname = ...
+  // const decryptedEmail = ...
 
   return (
     <div className="flex w-full items-start justify-between border-b border-gray-200 py-5">
@@ -54,13 +54,13 @@ const ProfileHeader = ({
         </div>
         <div className="flex flex-col">
           <div className="whitespace-nowrap font-body text-base font-semibold text-gray-800 md:text-lg">
-            {/* Отображаем расшифрованные данные */}
-            {decryptedName} {decryptedSurname}
+            {/* ИЗМЕНЕНО: Просто отображаем готовые данные */}
+            {user.name} {user.surname}
           </div>
 
           <div className="mt-0.5 flex flex-col items-start sm:flex-row sm:items-center sm:space-x-2">
-            {/* Отображаем расшифрованные данные */}
-            <p className="truncate text-sm text-gray-500">{decryptedEmail}</p>
+            {/* ИЗМЕНЕНО: Просто отображаем готовые данные */}
+            <p className="truncate text-sm text-gray-500">{user.email}</p>
             {!user.emailVerified && (
               <button
                 onClick={onSendVerificationEmail}
