@@ -15,17 +15,56 @@ if (!supportBotToken) {
   );
 }
 
+const baseUrl = process.env.NEXTAUTH_URL;
+if (!baseUrl) {
+  throw new Error('Критическая ошибка: NEXTAUTH_URL не определен.');
+}
+
 // --- Инициализация Инстансов Ботов ---
 export const clientBot = new Telegraf(clientBotToken);
 export const supportBot = new Telegraf(supportBotToken);
 
-// --- Клавиатура Агента ---
+// ==================================================================
+// --- ЛОГИКА КЛИЕНТСКОГО БОТА (ClientBot) ---
+// ==================================================================
+
+clientBot.command('start', async (ctx) => {
+  // Telegraf элегантно предоставляет текст после команды в ctx.payload
+  const loginToken = ctx.payload;
+
+  if (loginToken) {
+    console.log(`[Client Bot] Найден login token: ${loginToken}`);
+    // Здесь будет логика для автоматического входа пользователя по токену.
+    // Пока что просто отвечаем.
+    await ctx.reply(`Обрабатываем ваш токен для входа...`);
+  } else {
+    console.log(
+      '[Client Bot] Команда /start без токена, отправляем приветствие.',
+    );
+    const welcomeText =
+      'Добро пожаловать в Kyanchir Store!\n\nЧтобы войти на сайт, нажмите кнопку ниже.';
+
+    // Создаем клавиатуру с помощью хелперов Telegraf
+    const keyboard = Markup.keyboard([
+      [Markup.button.webApp('Войти на сайт', `${baseUrl}/login`)],
+      [Markup.button.contactRequest('📱 Поделиться номером')],
+    ])
+      .resize()
+      .oneTime();
+
+    await ctx.reply(welcomeText, keyboard);
+  }
+});
+
+// ==================================================================
+// --- ЛОГИКА БОТА ПОДДЕРЖКИ (SupportBot) ---
+// ==================================================================
+
 const AGENT_KEYBOARD = Markup.keyboard([
   ['📝 Открытые тикеты'],
   ['🆘 Помощь'],
 ]).resize();
 
-// --- Middleware: Проверка, что пользователь - авторизованный агент ---
 const verifyAgent = async (ctx: Context, next: () => Promise<void>) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return;
@@ -44,9 +83,6 @@ const verifyAgent = async (ctx: Context, next: () => Promise<void>) => {
   await next();
 };
 
-// --- Логика Бота Поддержки ---
-
-// /start
 supportBot.command('start', verifyAgent, async (ctx) => {
   await ctx.reply(
     `👋 Добро пожаловать, ${(ctx as any).agent.name}! Готовы к работе.`,
@@ -54,14 +90,12 @@ supportBot.command('start', verifyAgent, async (ctx) => {
   );
 });
 
-// /tickets или "📝 Открытые тикеты"
 const handleTicketsRequest = async (ctx: Context) => {
   await ctx.reply('⏳ Загружаю список открытых тикетов...');
 };
 supportBot.command('tickets', verifyAgent, handleTicketsRequest);
 supportBot.hears('📝 Открытые тикеты', verifyAgent, handleTicketsRequest);
 
-// Обработка ответа агента на сообщение с тикетом
 supportBot.on('message', verifyAgent, async (ctx) => {
   if (!('text' in ctx.message) || !ctx.message.reply_to_message) {
     return ctx.reply(
@@ -114,17 +148,12 @@ supportBot.on('message', verifyAgent, async (ctx) => {
   );
 });
 
-// --- Обработка Нажатий на Кнопки (Callback Query) ---
-
-// Обработка кнопок "Взять в работу" и "Закрыть"
 supportBot.action(/ticket_(ack|close)_(.+)/, verifyAgent, async (ctx) => {
   const agent = (ctx as any).agent;
   const action = ctx.match[1];
   const ticketId = ctx.match[2];
-
-  // --- НАЧАЛО ИСПРАВЛЕНИЯ ---
-  // Явно проверяем, что исходное сообщение было текстовым
   const originalMessage = ctx.callbackQuery.message;
+
   if (!originalMessage || !('text' in originalMessage)) {
     await ctx.answerCbQuery(
       'Не удалось обработать: исходное сообщение не является текстом.',
@@ -132,7 +161,6 @@ supportBot.action(/ticket_(ack|close)_(.+)/, verifyAgent, async (ctx) => {
     );
     return;
   }
-  // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
   let newStatusName: string | undefined;
   let responseText = '';
@@ -156,7 +184,6 @@ supportBot.action(/ticket_(ack|close)_(.+)/, verifyAgent, async (ctx) => {
       data: { statusId: statusToSet.id },
     });
 
-    // Теперь TypeScript знает, что originalMessage.text существует
     await ctx.editMessageText(
       `${originalMessage.text}\n\n---\n<b>${responseText}</b>`,
       { parse_mode: 'HTML' },
@@ -165,7 +192,6 @@ supportBot.action(/ticket_(ack|close)_(.+)/, verifyAgent, async (ctx) => {
   }
 });
 
-// Обработка кнопки "Отправить с почты..."
 supportBot.action(/reply_(.+)_(.+)_(.+)/, verifyAgent, async (ctx) => {
   const agent = (ctx as any).agent;
   const fromEmail = ctx.match[1];
