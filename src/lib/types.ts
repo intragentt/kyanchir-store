@@ -10,23 +10,21 @@ import {
   Category,
   Tag,
   Status,
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем недостающие импорты ---
   User as PrismaUser, // Импортируем User под псевдонимом, чтобы избежать конфликтов
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 } from '@prisma/client';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Явно реэкспортируем все типы, которые нам нужны в приложении ---
+// Явно реэкспортируем нужные типы
 export type User = PrismaUser;
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-// Этот тип используется для карточек товаров в каталоге (без изменений)
+// Тип для карточек товаров в каталоге
 export type ProductWithInfo = Product & {
   price: number;
   oldPrice?: number | null;
   imageUrls: string[];
+  categoryIds: string[];
 };
 
-// Этот тип используется в API для обновления данных о товаре (без изменений)
+// Тип для обновления данных о товаре через API
 export type UpdateProductPayload = {
   name: string;
   statusId: string;

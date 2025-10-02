@@ -10,11 +10,6 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   const [productsData, mainFilterPreset] = await Promise.all([
     prisma.product.findMany({
-      // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-      // Временно убираем фильтр по статусу, чтобы увидеть все синхронизированные товары,
-      // даже если они сейчас в статусе "DRAFT" (Черновик).
-      // where: { status: 'PUBLISHED' },
-      // --- КОНЕЦ ИЗМЕНЕНИЙ ---
       orderBy: { createdAt: 'desc' },
       include: {
         variants: {
@@ -24,6 +19,9 @@ export default async function HomePage() {
             },
           },
           orderBy: { createdAt: 'asc' },
+        },
+        categories: {
+          select: { id: true },
         },
       },
     }),
@@ -50,6 +48,7 @@ export default async function HomePage() {
           price: firstVariant.price,
           oldPrice: firstVariant.oldPrice,
           imageUrls: imageUrls,
+          categoryIds: product.categories.map((category) => category.id),
         });
       }
       return acc;

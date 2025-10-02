@@ -1,4 +1,4 @@
-// Местоположение: /src/app/admin/page.tsx
+// Местоположение: src/app/admin/page.tsx
 
 import { redirect } from 'next/navigation';
 
@@ -13,6 +13,5 @@ import { redirect } from 'next/navigation';
  */
 export default function AdminRootPage() {
   redirect('/dashboard');
-
   return null;
 }
