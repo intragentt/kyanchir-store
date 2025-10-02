@@ -42,18 +42,17 @@ export default function HomePageClient({
           token,
           redirect: false,
         });
-
         if (res?.ok) {
           router.refresh();
         } else {
           console.error('Telegram login failed:', res?.error);
         }
       };
-
       handleTelegramLogin();
     }
   }, [searchParams, router]);
 
+  // --- ИСПРАВЛЕНО: убрана случайная выборка 5 товаров, фильтрация по categoryIds ---
   useEffect(() => {
     let productsToFilter = [...allProducts];
     if (searchTerm.trim() !== '') {
@@ -62,16 +61,17 @@ export default function HomePageClient({
       );
     }
     if (activeCategory !== 'all') {
-      const shuffled = [...productsToFilter].sort(() => 0.5 - Math.random());
-      productsToFilter = shuffled.slice(0, 5);
+      productsToFilter = productsToFilter.filter((product) =>
+        product.categoryIds.includes(activeCategory),
+      );
     }
     setFilteredProducts(productsToFilter);
   }, [searchTerm, activeCategory, allProducts]);
+  // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
 
   const handleSelectCategory = useCallback(
     (categoryId: string) => {
       if (activeCategory === categoryId || scrollingToFilter.current) return;
-
       if (filterContainerRef.current) {
         const destination = filterContainerRef.current.offsetTop;
         scrollingToFilter.current = true;
@@ -99,7 +99,6 @@ export default function HomePageClient({
     };
   }, []);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем внешний div-контейнер, используем React.Fragment ---
   return (
     <>
       <div ref={filterContainerRef}>
@@ -119,5 +118,4 @@ export default function HomePageClient({
       </div>
     </>
   );
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
