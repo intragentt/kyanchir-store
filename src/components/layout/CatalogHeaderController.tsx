@@ -2,22 +2,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Product } from '@prisma/client';
-
 import Header from '@/components/Header';
 import StickyHeader from './StickyHeader';
 import CategoryFilter from '../CategoryFilter';
 import StickyCategoryFilter from './StickyCategoryFilter';
 import CatalogContent from '../CatalogContent';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем мертвый контекст на Zustand ---
 import { useAppStore } from '@/store/useAppStore';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
-
-export type ProductWithInfo = Product & {
-  price: number;
-  oldPrice?: number | null;
-  imageUrls: string[];
-};
+import { ProductWithInfo } from '@/lib/types';
 
 interface Category {
   id: string;
@@ -50,7 +41,6 @@ export default function CatalogHeaderController({
   const workZoneRef = useRef<HTMLDivElement>(null);
   const lastScrollY = useRef(0);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Получаем состояние из нашего центрального хранилища ---
   const {
     isSearchActive,
     setSearchActive,
@@ -62,7 +52,6 @@ export default function CatalogHeaderController({
     isFloatingMenuOpen: state.isFloatingMenuOpen,
     setFloatingMenuOpen: state.setFloatingMenuOpen,
   }));
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
     setIsLoading(false);
@@ -77,8 +66,11 @@ export default function CatalogHeaderController({
       if (categoryId === 'all') {
         setFilteredProducts(products);
       } else {
-        const shuffled = [...products].sort(() => 0.5 - Math.random());
-        setFilteredProducts(shuffled.slice(0, 5));
+        // ИСПРАВЛЕНО: фильтрация по categoryIds вместо случайной выборки
+        const filtered = products.filter((product) =>
+          product.categoryIds.includes(categoryId),
+        );
+        setFilteredProducts(filtered);
       }
     },
     [],
