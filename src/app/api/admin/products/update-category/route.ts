@@ -1,30 +1,28 @@
-// Местоположение: /src/app/api/admin/products/update-category/route.ts
+// Местоположение: src/app/api/admin/products/update-category/route.ts
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { updateMoySkladProductFolder } from '@/lib/moysklad-api';
+import { UpdateCategorySchema } from '@/lib/schemas/api';
+import { ZodError } from 'zod';
 
 export async function POST(req: Request) {
-  // 1. Проверка сессии и роли администратора
   const session = await getServerSession(authOptions);
+
   if (!session || session.user.role.name !== 'ADMIN') {
     return NextResponse.json({ error: 'Доступ запрещен' }, { status: 403 });
   }
 
   try {
     const body = await req.json();
-    const { productId, newCategoryId } = body;
 
-    // 2. Валидация входных данных
-    if (!productId || !newCategoryId) {
-      return NextResponse.json(
-        { error: 'Необходимы ID товара и ID новой категории' },
-        { status: 400 },
-      );
-    }
+    // Zod валидация входных данных
+    const validatedData = UpdateCategorySchema.parse(body);
+    const { productId, newCategoryId } = validatedData;
 
-    // 3. Получаем данные из нашей БД для работы
+    // Получаем данные из БД
     const product = await prisma.product.findUnique({
       where: { id: productId },
       select: { moyskladId: true },
@@ -37,7 +35,7 @@ export async function POST(req: Request) {
 
     if (!product || !product.moyskladId) {
       return NextResponse.json(
-        { error: `Товар с ID ${productId} не найден в нашей БД` },
+        { error: `Товар с ID ${productId} не найден или не синхронизирован` },
         { status: 404 },
       );
     }
@@ -45,19 +43,19 @@ export async function POST(req: Request) {
     if (!newCategory || !newCategory.moyskladId) {
       return NextResponse.json(
         {
-          error: `Категория с ID ${newCategoryId} не найдена в нашей БД или не синхронизирована`,
+          error: `Категория с ID ${newCategoryId} не найдена или не синхронизирована`,
         },
         { status: 404 },
       );
     }
 
-    // 4. Вызов API-моста для перемещения товара в "МойСклад"
+    // Обновляем в МойСклад
     await updateMoySkladProductFolder(
       product.moyskladId,
       newCategory.moyskladId,
     );
 
-    // 5. Обновление категории в нашей базе данных
+    // Обновляем в нашей БД
     await prisma.product.update({
       where: { id: productId },
       data: {
@@ -69,10 +67,24 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Товар успешно перемещен',
+      message: 'Товар успешно перемещен в новую категорию',
     });
   } catch (error) {
     console.error('Ошибка при перемещении товара:', error);
+
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Ошибка валидации данных',
+          details: error.errors.map((err) => ({
+            field: err.path.join('.'),
+            message: err.message,
+          })),
+        },
+        { status: 400 },
+      );
+    }
+
     const errorMessage =
       error instanceof Error ? error.message : 'Неизвестная ошибка сервера';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
