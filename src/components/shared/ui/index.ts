@@ -1,10 +1,9 @@
 // Местоположение: src/components/shared/ui/index.ts
 
-// UI Components - универсальный подход
-import Button from '../../ui/Button';
-import BottomSheet from '../../ui/BottomSheet';
+// UI Components - исправленные пути
+import Button from './Button';
+import BottomSheet from './BottomSheet';
 
-// Re-export
 export { Button, BottomSheet };
 
 // Наши новые shared компоненты

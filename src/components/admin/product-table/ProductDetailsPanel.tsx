@@ -3,7 +3,7 @@
 'use client';
 
 import type { OptimizedProductForTable } from '@/app/admin/dashboard/page';
-import { TrashIcon } from '@/components/icons/TrashIcon';
+import { TrashIcon } from '@/components/shared/icons'; // ОБНОВЛЕННЫЙ ИМПОРТ
 import { Attribute } from '@prisma/client';
 
 interface ProductDetailsPanelProps {

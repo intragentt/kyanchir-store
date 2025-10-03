@@ -1,4 +1,5 @@
 // Местоположение: src/components/ProductCard.tsx
+
 'use client';
 
 import Image from 'next/image';
@@ -6,8 +7,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { formatPrice, PriceParts } from '@/utils/formatPrice';
 import ImagePlaceholder from './ImagePlaceholder';
-import HeartIcon from './icons/HeartIcon';
-// --- ИЗМЕНЕНИЕ: Указываем правильный путь к нашему центральному файлу типов ---
+import { HeartIcon } from '@/components/shared/icons'; // ОБНОВЛЕННЫЙ ИМПОРТ
 import { ProductWithInfo } from '@/lib/types';
 
 interface ProductCardProps {
@@ -51,7 +51,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       href={`/product/${product.id}`}
-      className="group text-text-primary mx-auto flex w-full flex-col md:max-w-[330px]"
+      className="group mx-auto flex w-full flex-col text-text-primary md:max-w-[330px]"
     >
       {/* ИЗМЕНЕНИЕ 3: Сетка теперь состоит только из 2-х колонок, без рядов */}
       <div className="relative z-10 grid grid-cols-2 gap-x-2.5">
@@ -76,15 +76,15 @@ export default function ProductCard({ product }: ProductCardProps) {
         ))}
       </div>
 
-      <div className="relative z-0 mx-auto mt-[-12px] flex w-[calc(100%-10px)] flex-grow flex-col justify-between rounded-b-md border-x border-b border-gray-200 bg-white px-3 pt-5 pb-2">
+      <div className="relative z-0 mx-auto mt-[-12px] flex w-[calc(100%-10px)] flex-grow flex-col justify-between rounded-b-md border-x border-b border-gray-200 bg-white px-3 pb-2 pt-5">
         <div>
-          <div className="font-body text-text-primary mt-0.5 text-base font-semibold">
+          <div className="mt-0.5 font-body text-base font-semibold text-text-primary">
             {product.name}
           </div>
           <div className="mt-1 flex items-baseline justify-between">
             <div className="flex items-baseline gap-x-2">
               {currentPrice && (
-                <p className="font-body text-text-primary text-base font-semibold">
+                <p className="font-body text-base font-semibold text-text-primary">
                   {`${currentPrice.value} ${currentPrice.currency}`}
                 </p>
               )}
@@ -98,7 +98,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
 
-        <div className="absolute right-1 bottom-1 overflow-visible sm:right-2 sm:bottom-2">
+        <div className="absolute bottom-1 right-1 overflow-visible sm:bottom-2 sm:right-2">
           <button
             aria-label="Добавить в избранное"
             className="flex h-10 w-10 items-center justify-center transition-all duration-300 ease-in-out"

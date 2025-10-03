@@ -1,11 +1,11 @@
-// Местоположение: src/components/admin/ProductTable.tsx
+// Местоположение: src/components/admin/dashboard/ProductTable.tsx
 
 'use client';
 
 import { useState, useMemo } from 'react';
 import type { OptimizedProductForTable } from '@/app/admin/dashboard/page';
-import { ProductTableRow } from './product-table/ProductTableRow';
-import DashboardControls from './DashboardControls';
+import { ProductTableRow } from '../product-table/ProductTableRow'; // ИСПРАВЛЕННЫЙ ПУТЬ
+import DashboardControls from './DashboardControls'; // ИСПРАВЛЕННЫЙ ПУТЬ
 import { Toaster } from 'react-hot-toast';
 
 interface ReferenceData {

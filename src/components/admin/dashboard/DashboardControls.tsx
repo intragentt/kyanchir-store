@@ -1,4 +1,5 @@
-// Местоположение: /src/components/admin/DashboardControls.tsx
+// Местоположение: src/components/admin/dashboard/DashboardControls.tsx
+
 'use client';
 
 import { useState } from 'react';
@@ -8,8 +9,8 @@ import toast from 'react-hot-toast';
 import { SlidersHorizontal } from 'lucide-react';
 import ConflictResolutionModal, {
   UserResolutions,
-} from './ConflictResolutionModal';
-import ApiKeyModal from './ApiKeyModal';
+} from '../ConflictResolutionModal'; // ОБНОВЛЕННЫЙ ПУТЬ
+import ApiKeyModal from '../ApiKeyModal'; // ОБНОВЛЕННЫЙ ПУТЬ
 import type { SkuResolutionPlan } from '@/app/api/admin/utils/backfill-skus/route';
 import { cn } from '@/lib/utils';
 
@@ -22,6 +23,7 @@ const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
+
 const ResetIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -31,6 +33,7 @@ const ResetIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
+
 const CheckBadgeIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path
@@ -40,6 +43,7 @@ const CheckBadgeIcon = (props: React.SVGProps<SVGSVGElement>) => (
     />
   </svg>
 );
+
 const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
     <path d="M5.5 16a3.5 3.5 0 01-3.5-3.5V5.5A3.5 3.5 0 015.5 2h5.086a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V12.5A3.5 3.5 0 0112.5 16h-7zM5 5.5A1.5 1.5 0 003.5 7v5.5A1.5 1.5 0 005 14h7.5a1.5 1.5 0 001.5-1.5V8.586L8.586 4H5.5A1.5 1.5 0 005 5.5z" />
