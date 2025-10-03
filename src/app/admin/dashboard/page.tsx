@@ -1,66 +1,138 @@
 // Местоположение: src/app/admin/dashboard/page.tsx
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем мертвый импорт ---
-// import PageContainer from '@/components/layout/PageContainer';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
 import ProductTable from '@/components/admin/ProductTable';
 import prisma from '@/lib/prisma';
+import { unstable_cache } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
-async function getProductsForTable() {
-  const products = await prisma.product.findMany({
-    orderBy: { name: 'asc' },
-    include: {
-      status: true,
-      categories: true,
-      tags: true,
-      attributes: true,
-      variants: {
-        orderBy: { color: 'asc' },
-        include: {
-          images: { orderBy: { order: 'asc' } },
-          sizes: {
-            orderBy: { size: { value: 'asc' } },
-            include: {
-              size: true,
-            },
-          },
-        },
-      },
-    },
-  });
-  return products;
-}
-
-export type ProductForTable = Awaited<
-  ReturnType<typeof getProductsForTable>
->[0];
-
-export default async function DashboardPage() {
-  const [allProducts, allCategories, allTags, filterPresets] =
-    await Promise.all([
-      getProductsForTable(),
-      prisma.category.findMany({ orderBy: { name: 'asc' } }),
-      prisma.tag.findMany({ orderBy: { name: 'asc' } }),
+// Кэшированные справочники (обновляются редко)
+const getCachedReferenceData = unstable_cache(
+  async () => {
+    return await Promise.all([
+      prisma.category.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.tag.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
+      prisma.status.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: 'asc' },
+      }),
       prisma.filterPreset.findMany({
-        include: {
+        select: {
+          id: true,
+          name: true,
           items: {
+            select: {
+              id: true,
+              order: true,
+              category: { select: { id: true, name: true } },
+              tag: { select: { id: true, name: true } },
+            },
             orderBy: { order: 'asc' },
-            include: { category: true, tag: true },
           },
         },
         orderBy: { createdAt: 'asc' },
       }),
     ]);
+  },
+  ['reference-data'],
+  { revalidate: 3600 }, // Кэш на 1 час
+);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем все обертки и возвращаем чистый компонент ---
+// Оптимизированный запрос продуктов для таблицы (только нужные поля)
+async function getOptimizedProductsForTable() {
+  const products = await prisma.product.findMany({
+    select: {
+      id: true,
+      name: true,
+      article: true,
+      createdAt: true,
+      updatedAt: true,
+      statusId: true,
+      status: {
+        select: { id: true, name: true },
+      },
+      categories: {
+        select: { id: true, name: true },
+      },
+      tags: {
+        select: { id: true, name: true },
+      },
+      variants: {
+        select: {
+          id: true,
+          color: true,
+          price: true,
+          oldPrice: true,
+          isFeatured: true,
+          images: {
+            select: { id: true, url: true },
+            take: 1, // Только первое изображение для таблицы
+            orderBy: { order: 'asc' },
+          },
+          sizes: {
+            select: {
+              id: true,
+              stock: true,
+              size: {
+                select: { id: true, value: true },
+              },
+            },
+            orderBy: { size: { value: 'asc' } },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
+      },
+      // Подсчет атрибутов без загрузки всех данных
+      _count: {
+        select: {
+          attributes: true,
+          alternativeNames: true,
+        },
+      },
+    },
+    orderBy: { updatedAt: 'desc' }, // Последние измененные сверху
+    take: 50, // Пагинация - показываем первые 50
+  });
+
+  return products;
+}
+
+export type OptimizedProductForTable = Awaited<
+  ReturnType<typeof getOptimizedProductsForTable>
+>[0];
+
+export default async function DashboardPage() {
+  const [products, referenceData] = await Promise.all([
+    getOptimizedProductsForTable(),
+    getCachedReferenceData(),
+  ]);
+
+  const [categories, tags, statuses, filterPresets] = referenceData;
+
   return (
-    <ProductTable
-      products={allProducts}
-      allCategories={allCategories}
-      allTags={allTags}
-      filterPresets={filterPresets as any}
-    />
+    <div className="space-y-6">
+      {/* Статистика производительности */}
+      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+        <div className="flex items-center space-x-4 text-sm text-blue-800">
+          <span>📊 Загружено: {products.length} товаров</span>
+          <span>⚡ Справочники из кэша</span>
+          <span>🎯 Оптимизированные запросы</span>
+        </div>
+      </div>
+
+      <ProductTable
+        products={products}
+        allCategories={categories}
+        allTags={tags}
+        allStatuses={statuses}
+        filterPresets={filterPresets}
+      />
+    </div>
   );
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
