@@ -1,13 +1,12 @@
 // Местоположение: src/app/admin/products/[id]/edit/page.tsx
+
 export const dynamic = 'force-dynamic';
 
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем мертвый импорт ---
-// import PageContainer from '@/components/layout/PageContainer';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 import prisma from '@/lib/prisma';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import EditProductForm from '@/components/admin/EditProductForm';
+import { ProductWithDetails } from '@/lib/types';
 
 interface EditProductPageProps {
   params: {
@@ -15,7 +14,9 @@ interface EditProductPageProps {
   };
 }
 
-async function getProductWithDetails(id: string) {
+async function getProductWithDetails(
+  id: string,
+): Promise<ProductWithDetails | null> {
   const product = await prisma.product.findUnique({
     where: { id },
     include: {
@@ -39,10 +40,6 @@ async function getProductWithDetails(id: string) {
   });
   return product;
 }
-
-export type ProductWithDetails = NonNullable<
-  Awaited<ReturnType<typeof getProductWithDetails>>
->;
 
 export default async function EditProductPage({
   params,
@@ -70,7 +67,6 @@ export default async function EditProductPage({
     notFound();
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем все обертки и возвращаем чистый контент ---
   return (
     <>
       <div>
@@ -100,5 +96,4 @@ export default async function EditProductPage({
       </div>
     </>
   );
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }

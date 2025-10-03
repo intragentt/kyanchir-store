@@ -1,13 +1,14 @@
 // Местоположение: src/components/admin/EditProductForm.tsx
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ProductWithDetails } from '@/app/admin/products/[id]/edit/page';
+import { ProductWithDetails } from '@/lib/types';
 import { Size, Category, Tag, Status } from '@prisma/client';
 import toast, { Toaster } from 'react-hot-toast';
 import AddVariantForm from './AddVariantForm';
-import AddSizeForm from './AddSizeForm'; // <-- Импортируем новый компонент
+import AddSizeForm from './AddSizeForm';
 
 interface EditProductFormProps {
   product: ProductWithDetails;
@@ -20,7 +21,7 @@ interface EditProductFormProps {
 export default function EditProductForm({
   product,
   allStatuses,
-  allSizes, // <-- Нам понадобятся все размеры
+  allSizes,
 }: EditProductFormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -80,13 +81,14 @@ export default function EditProductForm({
   return (
     <div className="space-y-10">
       <Toaster position="top-center" />
-      {/* --- Блок 1: Редактирование основных деталей --- */}
+
+      {/* Блок 1: Редактирование основных деталей */}
       <form
         onSubmit={handleSubmit}
         className="space-y-6 rounded-lg bg-white p-8 shadow-sm"
       >
         <h2 className="text-lg font-semibold text-gray-900">Основные детали</h2>
-        {/* ... (содержимое формы без изменений) ... */}
+
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <div>
             <label
@@ -126,6 +128,7 @@ export default function EditProductForm({
             </select>
           </div>
         </div>
+
         <div>
           <label
             htmlFor="description"
@@ -142,6 +145,7 @@ export default function EditProductForm({
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
+
         <div className="flex justify-end border-t pt-6">
           <button
             type="submit"
@@ -153,11 +157,12 @@ export default function EditProductForm({
         </div>
       </form>
 
-      {/* --- Блок 2: Управление вариантами --- */}
+      {/* Блок 2: Управление вариантами */}
       <div className="space-y-6 rounded-lg bg-white p-8 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">
           Варианты (цвета)
         </h2>
+
         <div className="space-y-6">
           {product.variants.length > 0 ? (
             product.variants.map((variant) => (
@@ -166,10 +171,9 @@ export default function EditProductForm({
                   <h3 className="text-md font-semibold text-gray-800">
                     {variant.color}
                   </h3>
-                  {/* Здесь будут кнопки удаления/редактирования варианта */}
                 </div>
 
-                {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Блок управления размерами --- */}
+                {/* Блок управления размерами */}
                 <div className="mt-4 border-t pt-4">
                   <h4 className="text-sm font-medium text-gray-600">
                     Размеры и остатки
@@ -213,7 +217,6 @@ export default function EditProductForm({
                     />
                   </div>
                 </div>
-                {/* --- КОНЕЦ ИЗМЕНЕНИЙ --- */}
               </div>
             ))
           ) : (

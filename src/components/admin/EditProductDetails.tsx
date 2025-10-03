@@ -1,33 +1,24 @@
+// Местоположение: src/components/admin/EditProductDetails.tsx
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-// --- НАЧАЛО ИЗМЕНЕНИЙ (1/4): Импортируем Prisma для создания типа ---
-import { Prisma } from '@prisma/client';
-
-// --- НАЧАЛО ИЗМЕНЕНИЙ (2/4): Создаем правильный тип, который включает статус ---
-type ProductWithStatus = Prisma.ProductGetPayload<{
-  include: {
-    status: true;
-  };
-}>;
+import { ProductWithStatus } from '@/lib/types';
 
 interface EditProductDetailsProps {
   product: ProductWithStatus;
 }
-// --- КОНЕЦ ИЗМЕНЕНИЙ (2/4) ---
 
 export default function EditProductDetails({
   product,
 }: EditProductDetailsProps) {
   const router = useRouter();
-  // --- НАЧАЛО ИЗМЕНЕНИЙ (3/4): Работаем с statusId, а не с объектом ---
   const [formData, setFormData] = useState({
     name: product.name,
     description: product.description || '',
-    statusId: product.statusId, // <-- Используем ID
+    statusId: product.statusId,
   });
-  // --- КОНЕЦ ИЗМЕНЕНИЙ (3/4) ---
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (
@@ -47,7 +38,7 @@ export default function EditProductDetails({
       const response = await fetch(`/api/products/${product.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData), // Отправляем данные, включая statusId
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -83,6 +74,7 @@ export default function EditProductDetails({
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           />
         </div>
+
         {/* Поле Статус */}
         <div>
           <label
@@ -91,23 +83,21 @@ export default function EditProductDetails({
           >
             Статус
           </label>
-          {/* --- НАЧАЛО ИЗМЕНЕНИЙ (4/4): Исправляем select --- */}
           <select
             id="statusId"
-            name="statusId" // <-- меняем name на statusId
-            value={formData.statusId} // <-- value теперь statusId
+            name="statusId"
+            value={formData.statusId}
             onChange={handleInputChange}
             className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
           >
-            {/* Вам нужно будет передать список статусов из БД, но для примера пока так */}
             <option value="ID_статуса_DRAFT">Черновик</option>
             <option value="ID_статуса_PUBLISHED">Опубликован</option>
             <option value="ID_статуса_ARCHIVED">В архиве</option>
           </select>
-          {/* --- КОНЕЦ ИЗМЕНЕНИЙ (4/4) --- */}
-          {/* ПРИМЕЧАНИЕ: В идеале, нужно загрузить статусы из `prisma.status.findMany()` и отрендерить их здесь, используя их ID в качестве value. */}
+          {/* ПРИМЕЧАНИЕ: В идеале нужно загрузить статусы из prisma.status.findMany() */}
         </div>
       </div>
+
       {/* Поле Описание */}
       <div>
         <label
@@ -125,6 +115,7 @@ export default function EditProductDetails({
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         />
       </div>
+
       <div className="flex justify-end">
         <button
           type="submit"

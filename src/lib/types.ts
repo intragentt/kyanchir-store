@@ -10,10 +10,12 @@ import {
   Category,
   Tag,
   Status,
-  User as PrismaUser, // Импортируем User под псевдонимом, чтобы избежать конфликтов
+  User as PrismaUser,
+  ProductVariant,
+  Prisma,
 } from '@prisma/client';
 
-// Явно реэкспортируем нужные типы
+// Реэкспорт базовых Prisma типов
 export type User = PrismaUser;
 
 // Тип для карточек товаров в каталоге
@@ -23,6 +25,29 @@ export type ProductWithInfo = Product & {
   imageUrls: string[];
   categoryIds: string[];
 };
+
+// Тип для админской страницы редактирования товара
+export type ProductWithDetails = Product & {
+  status: Status;
+  alternativeNames: AlternativeName[];
+  variants: (ProductVariant & {
+    images: PrismaImage[];
+    sizes: (ProductSize & {
+      size: Size;
+    })[];
+  })[];
+  attributes: Attribute[];
+  categories: Category[];
+  tags: Tag[];
+};
+
+// Тип для продукта со статусом (для админских компонентов)
+export type ProductWithStatus = Product & {
+  status: Status;
+};
+
+// Тип для статуса продукта (для API)
+export type ProductStatus = Status;
 
 // Тип для обновления данных о товаре через API
 export type UpdateProductPayload = {

@@ -1,9 +1,10 @@
 // Местоположение: src/components/admin/edit-product-form/VariantManager.tsx
+
 'use client';
 
 import { useState } from 'react';
-import { ProductWithDetails } from '@/app/admin/products/[id]/edit/page';
-import { Size } from '@prisma/client';
+import { ProductWithDetails } from '@/lib/types';
+import { Size, ProductSize, Image as PrismaImage } from '@prisma/client';
 import ImageManager from './ImageManager';
 import PriceManager from './PriceManager';
 import SizeManager from './SizeManager';
@@ -91,36 +92,46 @@ export function VariantManager({
             sizes={activeVariant.sizes}
             onSizeUpdate={(sizeId, stock) => {
               const sizeExists = activeVariant.sizes.some(
-                (s) => s.sizeId === sizeId,
+                (s: ProductSize & { size: Size }) => s.sizeId === sizeId,
               );
 
-              let newSizes;
+              let newSizes: (ProductSize & { size: Size })[];
               if (sizeExists) {
-                newSizes = activeVariant.sizes.map((s) =>
-                  s.sizeId === sizeId ? { ...s, stock } : s,
+                newSizes = activeVariant.sizes.map(
+                  (s: ProductSize & { size: Size }) =>
+                    s.sizeId === sizeId ? { ...s, stock } : s,
                 );
               } else {
                 const sizeData = allSizes.find((s) => s.id === sizeId);
                 if (!sizeData) return;
 
-                // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем moyskladId на moySkladHref ---
                 newSizes = [
                   ...activeVariant.sizes,
                   {
                     id: `new_${sizeId}_${Date.now()}`,
+                    code: null,
+                    article: null,
+                    moySkladHref: null,
+                    moySkladType: 'variant',
                     stock: stock,
+                    price: null,
+                    oldPrice: null,
+                    moyskladId: null,
+                    archived: false,
                     sizeId: sizeId,
                     size: sizeData,
                     productVariantId: activeVariant.id,
-                    moySkladHref: null, // Используем новое поле
-                  },
+                    orderItems: [],
+                    wishlistItems: [],
+                    cartItems: [],
+                  } as ProductSize & { size: Size },
                 ];
-                // --- КОНЕЦ ИЗМЕНЕНИЙ ---
               }
-              handleVariantUpdate(activeVariant.id, { sizes: newSizes as any }); // 'as any' для упрощения, т.к. TS ругается на тип
+              handleVariantUpdate(activeVariant.id, { sizes: newSizes });
             }}
           />
         </div>
+
         <div className="lg:col-span-1">
           <ImageManager
             images={activeVariant.images}
@@ -130,7 +141,7 @@ export function VariantManager({
             onImageAdd={() => {}}
             onImageRemove={(imageId) => {
               const newImages = activeVariant.images.filter(
-                (img) => img.id !== imageId,
+                (img: PrismaImage) => img.id !== imageId,
               );
               handleVariantUpdate(activeVariant.id, { images: newImages });
             }}
