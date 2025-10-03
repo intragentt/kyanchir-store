@@ -52,7 +52,6 @@ export default function HomePageClient({
     }
   }, [searchParams, router]);
 
-  // --- ИСПРАВЛЕНО: убрана случайная выборка 5 товаров, фильтрация по categoryIds ---
   useEffect(() => {
     let productsToFilter = [...allProducts];
     if (searchTerm.trim() !== '') {
@@ -67,7 +66,6 @@ export default function HomePageClient({
     }
     setFilteredProducts(productsToFilter);
   }, [searchTerm, activeCategory, allProducts]);
-  // --- КОНЕЦ ИСПРАВЛЕНИЙ ---
 
   const handleSelectCategory = useCallback(
     (categoryId: string) => {
@@ -109,9 +107,6 @@ export default function HomePageClient({
           workZoneRef={productGridRef}
           categories={categories}
         />
-      </div>
-      <div className="mb-6 pl-2 text-base font-medium text-gray-900">
-        двойки
       </div>
       <div ref={productGridRef} className="relative min-h-[200vh]">
         <CatalogContent products={filteredProducts} isLoading={false} />
