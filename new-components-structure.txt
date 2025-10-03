@@ -1,0 +1,176 @@
+src/components
+├── AppCore.tsx
+├── AvatarPlaceholder.tsx
+├── CatalogContent.tsx
+├── CategoryFilter.tsx
+├── ClientInteractivity.tsx
+├── ConditionalHeader.tsx
+├── CookieConsentBanner.tsx
+├── DynamicHeroSection.tsx
+├── FloatingLogoButton.tsx
+├── FloatingMenuOverlay
+│   ├── AuthenticatedView.tsx
+│   ├── CartSummary.tsx
+│   ├── DeliveryStatus.tsx
+│   ├── GuestView.tsx
+│   ├── InfoLinks.tsx
+│   ├── MenuButton.tsx
+│   ├── MenuFooter.tsx
+│   ├── MenuHeader.tsx
+│   ├── ShopNavigation.tsx
+│   ├── StatusStep.tsx
+│   └── index.tsx
+├── Footer.tsx
+├── Header.tsx
+├── HeroSection.tsx
+├── HomePageClient.tsx
+├── HybridHeader.tsx
+├── ImagePlaceholder.tsx
+├── MiniBannerSlider.tsx
+├── NetworkStatusManager.tsx
+├── NotificationManager.tsx
+├── Preloader.tsx
+├── ProductCard.tsx
+├── ProductDetails.tsx
+├── SaleBadge.tsx
+├── SearchOverlay.tsx
+├── SmartStickyCategoryFilter.tsx
+├── admin
+│   ├── AddSizeForm.tsx
+│   ├── AddVariantForm.tsx
+│   ├── AdminHeader.tsx
+│   ├── ApiKeyModal.tsx
+│   ├── ConflictResolutionModal.tsx
+│   ├── CreateProductForm.tsx
+│   ├── DryRunModal.tsx
+│   ├── EditProductDetails.tsx
+│   ├── EditProductForm.tsx
+│   ├── MappingsTable.tsx
+│   ├── VariantManager.tsx
+│   ├── dashboard
+│   │   ├── DashboardControls.tsx
+│   │   ├── ProductTable.tsx
+│   │   └── page.tsx
+│   ├── edit-product-form
+│   │   ├── AboutProductManager.tsx
+│   │   ├── AttributeManager.tsx
+│   │   ├── CategoryManager.tsx
+│   │   ├── DescriptionManager.tsx
+│   │   ├── DetailManager.tsx
+│   │   ├── ImageManager.tsx
+│   │   ├── PriceManager.tsx
+│   │   ├── ProductBasicDetailsForm.tsx
+│   │   ├── ProductVariantsManager.tsx
+│   │   ├── SizeManager.tsx
+│   │   ├── SkuManager.tsx
+│   │   ├── VariantCard.tsx
+│   │   └── VariantManager.tsx
+│   ├── index.ts
+│   ├── layout.tsx
+│   ├── product-table
+│   │   ├── EditableCountdownTimer.tsx
+│   │   ├── ExpanderCell.tsx
+│   │   ├── ProductDetailsPanel.tsx
+│   │   ├── ProductSizeRow.tsx
+│   │   ├── ProductTableRow.tsx
+│   │   └── VariantRow.tsx
+│   ├── products
+│   └── shared
+├── hooks
+│   ├── useElementRect.ts
+│   ├── useFilterRect.ts
+│   ├── useHybridHeader.ts
+│   ├── useScrollInfo.ts
+│   ├── useSmartSticky.ts
+│   └── useStickyCategoryFilter.ts
+├── illustrations
+│   └── ArrowStep1.tsx
+├── layout
+│   ├── CatalogHeaderController.tsx
+│   ├── ProductPageHeader.tsx
+│   ├── StickyCategoryFilter.tsx
+│   ├── StickyHeader.tsx
+│   └── StickyProductPageHeader.tsx
+├── modals
+│   ├── CodeInput.tsx
+│   └── VerificationModal.tsx
+├── profile
+│   ├── EditPasswordForm.tsx
+│   ├── EditProfileForm.tsx
+│   ├── ProfileHeader.tsx
+│   └── ProfileInfoBlock.tsx
+├── providers
+│   └── AuthProvider.tsx
+├── shared
+│   ├── icons
+│   │   ├── AdminIcon.tsx
+│   │   ├── ArrowRightIcon.tsx
+│   │   ├── BurgerIcon.tsx
+│   │   ├── CartIcon.tsx
+│   │   ├── CheckIcon.tsx
+│   │   ├── ChevronDownIcon.tsx
+│   │   ├── ChevronIcon.tsx
+│   │   ├── ChevronRightIcon.tsx
+│   │   ├── ClearIcon.tsx
+│   │   ├── ClockIcon.tsx
+│   │   ├── CloseIcon.tsx
+│   │   ├── CopyIcon.tsx
+│   │   ├── DiscountBadgeIcon.tsx
+│   │   ├── EmailIcon.tsx
+│   │   ├── EyeIcon.tsx
+│   │   ├── EyeOffIcon.tsx
+│   │   ├── HeartIcon.tsx
+│   │   ├── Logo.tsx
+│   │   ├── LogoutIcon.tsx
+│   │   ├── PencilIcon.tsx
+│   │   ├── QuestionMarkIcon.tsx
+│   │   ├── ReceiptIcon.tsx
+│   │   ├── SearchIcon.tsx
+│   │   ├── SettingsIcon.tsx
+│   │   ├── ShareIcon.tsx
+│   │   ├── ShortLogo.tsx
+│   │   ├── SortIcon.tsx
+│   │   ├── SpinnerIcon.tsx
+│   │   ├── SunIcon.tsx
+│   │   ├── TelegramOfficialIcon.tsx
+│   │   ├── ThumbsUpIcon.tsx
+│   │   ├── TrashIcon.tsx
+│   │   ├── TruckIcon.tsx
+│   │   ├── UserIcon.tsx
+│   │   ├── XMarkIcon.tsx
+│   │   └── index.ts
+│   ├── layout
+│   └── ui
+│       ├── BottomSheet.tsx
+│       ├── Button.tsx
+│       ├── ErrorMessage
+│       │   └── ErrorMessage.tsx
+│       ├── LoadingSpinner
+│       │   └── LoadingSpinner.tsx
+│       └── index.ts
+└── site
+    ├── auth
+    │   ├── CodeInput.tsx
+    │   ├── ForgotPasswordForm.tsx
+    │   ├── ResetPasswordForm.tsx
+    │   └── VerificationModal.tsx
+    ├── catalog
+    ├── layout
+    │   ├── DesktopNav.tsx
+    │   └── MobileNav.tsx
+    └── product
+        ├── AddToCartButton.tsx
+        ├── DesktopActionButtons.tsx
+        ├── DesktopProductGallery.tsx
+        ├── DesktopSizeAndCartButton.tsx
+        ├── LowStockBadge.tsx
+        ├── MobileProductGallery.tsx
+        ├── ProductActions.tsx
+        ├── ProductAttributes.tsx
+        ├── ProductGallery.tsx
+        ├── ProductHeader.tsx
+        ├── SizeChart.tsx
+        ├── SizeGuideContent.tsx
+        └── SizeSelector.tsx
+
+25 directories, 149 files

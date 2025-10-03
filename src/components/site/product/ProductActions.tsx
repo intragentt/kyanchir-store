@@ -1,9 +1,9 @@
 // Местоположение: src/components/product-details/ProductActions.tsx
+
 'use client';
 
 import { useState } from 'react';
-import HeartIcon from '../icons/HeartIcon';
-import ShareIcon from '../icons/ShareIcon';
+import { HeartIcon, ShareIcon } from '@/components/shared/icons'; // ОБНОВЛЕННЫЕ ИМПОРТЫ
 
 export default function ProductActions() {
   const [isLiked, setIsLiked] = useState(false);
@@ -27,7 +27,7 @@ export default function ProductActions() {
     <div className="flex items-center gap-x-6">
       <button
         onClick={() => setIsLiked(!isLiked)}
-        className="font-body text-text-primary flex items-center gap-x-2 text-base font-medium"
+        className="flex items-center gap-x-2 font-body text-base font-medium text-text-primary"
       >
         <HeartIcon
           filled={isLiked}
@@ -40,7 +40,7 @@ export default function ProductActions() {
       </button>
       <button
         onClick={handleShareClick}
-        className="font-body text-text-primary flex items-center gap-x-2 text-base font-medium"
+        className="flex items-center gap-x-2 font-body text-base font-medium text-text-primary"
       >
         <ShareIcon className="h-6 w-6" />
         {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавлены классы для смещения текста --- */}
