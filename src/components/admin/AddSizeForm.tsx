@@ -2,10 +2,10 @@
 
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useTransition, useOptimistic } from 'react';
 import { Size } from '@prisma/client';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
+import { addProductSize } from '@/actions/product-actions';
 
 interface AddSizeFormProps {
   productVariantId: string;
@@ -13,59 +13,69 @@ interface AddSizeFormProps {
   existingSizeIds: string[];
 }
 
+// Тип для оптимистичного обновления
+type OptimisticSize = {
+  id: string;
+  sizeId: string;
+  stock: number;
+  size: { value: string };
+  pending?: boolean;
+};
+
 export default function AddSizeForm({
   productVariantId,
   allSizes,
   existingSizeIds,
 }: AddSizeFormProps) {
-  const router = useRouter();
   const [selectedSize, setSelectedSize] = useState('');
   const [initialStock, setInitialStock] = useState('0');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  // Фильтруем размеры, чтобы не показывать уже добавленные
-  const availableSizes = allSizes.filter(
-    (size) => !existingSizeIds.includes(size.id),
+  // Оптимистичные обновления для лучшего UX
+  const [optimisticSizes, addOptimisticSize] = useOptimistic(
+    existingSizeIds,
+    (state: string[], newSizeId: string) => [...state, newSizeId],
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedSize) {
-      toast.error('Пожалуйста, выберите размер.');
+  // Фильтруем размеры с учетом оптимистичных обновлений
+  const availableSizes = allSizes.filter(
+    (size) => !optimisticSizes.includes(size.id),
+  );
+
+  const handleSubmit = async (formData: FormData) => {
+    const sizeId = selectedSize;
+    const stockValue = parseInt(initialStock, 10);
+
+    if (!sizeId) {
+      toast.error('Пожалуйста, выберите размер');
       return;
     }
-    setIsLoading(true);
-    const toastId = toast.loading('Добавляем размер...');
 
-    try {
-      const response = await fetch('/api/admin/product-sizes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productVariantId: productVariantId,
-          sizeId: selectedSize,
-          // --- ИЗМЕНЕНИЕ: Отправляем правильное поле initialStock ---
-          initialStock: parseInt(initialStock, 10),
-        }),
-      });
+    // Оптимистично добавляем размер в UI
+    addOptimisticSize(sizeId);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Не удалось добавить размер');
+    // Сбрасываем форму сразу для лучшего UX
+    setSelectedSize('');
+    setInitialStock('0');
+
+    startTransition(async () => {
+      try {
+        const result = await addProductSize(formData);
+
+        if (result.success) {
+          toast.success(result.message || 'Размер добавлен');
+        } else {
+          toast.error(result.error || 'Не удалось добавить размер');
+          // В случае ошибки, возвращаем форму в исходное состояние
+          setSelectedSize(sizeId);
+          setInitialStock(stockValue.toString());
+        }
+      } catch (error) {
+        toast.error('Произошла непредвиденная ошибка');
+        setSelectedSize(sizeId);
+        setInitialStock(stockValue.toString());
       }
-
-      toast.success('Размер добавлен!', { id: toastId });
-      // --- ИЗМЕНЕНИЕ: Сбрасываем форму в исходное состояние ---
-      setSelectedSize('');
-      setInitialStock('0');
-      router.refresh(); // Обновляем страницу, чтобы увидеть новый размер
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Произошла ошибка', {
-        id: toastId,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   if (availableSizes.length === 0) {
@@ -75,19 +85,23 @@ export default function AddSizeForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-end space-x-4">
+    <form action={handleSubmit} className="flex items-end space-x-4">
+      <input type="hidden" name="productVariantId" value={productVariantId} />
+
       <div className="flex-grow">
         <label
-          htmlFor="size"
+          htmlFor="sizeId"
           className="block text-xs font-medium text-gray-700"
         >
           Размер
         </label>
         <select
-          id="size"
+          id="sizeId"
+          name="sizeId"
           value={selectedSize}
           onChange={(e) => setSelectedSize(e.target.value)}
           className="mt-1 block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
+          required
         >
           <option value="">Выберите размер</option>
           {availableSizes.map((size) => (
@@ -97,28 +111,32 @@ export default function AddSizeForm({
           ))}
         </select>
       </div>
+
       <div>
         <label
-          htmlFor="stock"
+          htmlFor="initialStock"
           className="block text-xs font-medium text-gray-700"
         >
           Начальный склад
         </label>
         <input
           type="number"
-          id="stock"
+          id="initialStock"
+          name="initialStock"
           value={initialStock}
           onChange={(e) => setInitialStock(e.target.value)}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           min="0"
+          required
         />
       </div>
+
       <button
         type="submit"
-        disabled={isLoading}
+        disabled={isPending}
         className="h-fit rounded-md bg-indigo-100 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-200 disabled:opacity-50"
       >
-        {isLoading ? '...' : 'Добавить'}
+        {isPending ? 'Добавление...' : 'Добавить'}
       </button>
     </form>
   );

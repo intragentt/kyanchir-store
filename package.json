@@ -51,7 +51,7 @@
     "swiper": "^11.1.4",
     "tailwind-merge": "^3.3.1",
     "telegraf": "^4.16.3",
-    "zod": "^3.23.8",
+    "zod": "^3.25.76",
     "zustand": "^4.5.2"
   },
   "devDependencies": {

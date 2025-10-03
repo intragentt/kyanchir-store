@@ -1,55 +1,52 @@
 // Местоположение: src/components/admin/AddVariantForm.tsx
+
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import toast from 'react-hot-toast';
+import { useState, useTransition } from 'react';
+import { toast } from 'react-hot-toast';
+import { addProductVariant } from '@/actions/product-actions';
 
 interface AddVariantFormProps {
   productId: string;
 }
 
 export default function AddVariantForm({ productId }: AddVariantFormProps) {
-  const router = useRouter();
   const [color, setColor] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!color.trim()) {
-      toast.error('Название цвета не может быть пустым.');
+  const handleSubmit = async (formData: FormData) => {
+    const colorValue = color.trim();
+
+    if (!colorValue) {
+      toast.error('Название цвета не может быть пустым');
       return;
     }
-    setIsLoading(true);
-    const toastId = toast.loading('Добавляем вариант...');
 
-    try {
-      const response = await fetch('/api/admin/variants', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, color }),
-      });
+    // Сбрасываем форму сразу для оптимистичного UX
+    setColor('');
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
+    startTransition(async () => {
+      try {
+        const result = await addProductVariant(formData);
+
+        if (result.success) {
+          toast.success(result.message || 'Вариант добавлен');
+        } else {
+          toast.error(result.error || 'Не удалось добавить вариант');
+          // Возвращаем значение в случае ошибки
+          setColor(colorValue);
+        }
+      } catch (error) {
+        toast.error('Произошла непредвиденная ошибка');
+        setColor(colorValue);
       }
-
-      toast.success('Вариант успешно добавлен!', { id: toastId });
-      setColor('');
-      router.refresh(); // Обновляем страницу, чтобы показать новый вариант
-    } catch (error) {
-      console.error(error);
-      toast.error(error instanceof Error ? error.message : 'Произошла ошибка', {
-        id: toastId,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex items-center gap-4">
+    <form action={handleSubmit} className="flex items-center gap-4">
+      <input type="hidden" name="productId" value={productId} />
+
       <div>
         <label htmlFor="color" className="sr-only">
           Название цвета
@@ -57,18 +54,22 @@ export default function AddVariantForm({ productId }: AddVariantFormProps) {
         <input
           type="text"
           id="color"
+          name="color"
           value={color}
           onChange={(e) => setColor(e.target.value)}
           placeholder="Например, Черный"
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          required
+          maxLength={50}
         />
       </div>
+
       <button
         type="submit"
-        disabled={isLoading}
+        disabled={isPending}
         className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-50"
       >
-        {isLoading ? 'Добавление...' : '+ Добавить вариант'}
+        {isPending ? 'Добавление...' : '+ Добавить вариант'}
       </button>
     </form>
   );

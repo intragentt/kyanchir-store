@@ -1,12 +1,13 @@
 // Местоположение: src/app/admin/dashboard/page.tsx
 
 import ProductTable from '@/components/admin/ProductTable';
+import { PRODUCT_TABLE_CONFIG } from '@/lib/constants/admin';
 import prisma from '@/lib/prisma';
 import { unstable_cache } from 'next/cache';
 
 export const dynamic = 'force-dynamic';
 
-// Кэшированные справочники (обновляются редко)
+// Кэшированные справочники
 const getCachedReferenceData = unstable_cache(
   async () => {
     return await Promise.all([
@@ -41,10 +42,10 @@ const getCachedReferenceData = unstable_cache(
     ]);
   },
   ['reference-data'],
-  { revalidate: 3600 }, // Кэш на 1 час
+  { revalidate: 3600 },
 );
 
-// Оптимизированный запрос продуктов для таблицы (только нужные поля)
+// Оптимизированный запрос продуктов
 async function getOptimizedProductsForTable() {
   const products = await prisma.product.findMany({
     select: {
@@ -72,7 +73,7 @@ async function getOptimizedProductsForTable() {
           isFeatured: true,
           images: {
             select: { id: true, url: true },
-            take: 1, // Только первое изображение для таблицы
+            take: 1,
             orderBy: { order: 'asc' },
           },
           sizes: {
@@ -88,7 +89,6 @@ async function getOptimizedProductsForTable() {
         },
         orderBy: { createdAt: 'asc' },
       },
-      // Подсчет атрибутов без загрузки всех данных
       _count: {
         select: {
           attributes: true,
@@ -96,8 +96,8 @@ async function getOptimizedProductsForTable() {
         },
       },
     },
-    orderBy: { updatedAt: 'desc' }, // Последние измененные сверху
-    take: 50, // Пагинация - показываем первые 50
+    orderBy: { updatedAt: 'desc' },
+    take: PRODUCT_TABLE_CONFIG.PAGE_SIZE,
   });
 
   return products;
@@ -117,11 +117,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Статистика производительности */}
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
         <div className="flex items-center space-x-4 text-sm text-blue-800">
           <span>📊 Загружено: {products.length} товаров</span>
-          <span>⚡ Справочники из кэша</span>
+          <span>⚡ Справочники кэшированы</span>
           <span>🎯 Оптимизированные запросы</span>
         </div>
       </div>
