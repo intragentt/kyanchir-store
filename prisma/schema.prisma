@@ -15,6 +15,7 @@ model Product {
   id               String            @id @default(cuid())
   article          String?           @unique
   name             String            @unique
+  slug             String?           @unique
   alternativeNames AlternativeName[]
   description      String?           @db.Text
   variants         ProductVariant[]
