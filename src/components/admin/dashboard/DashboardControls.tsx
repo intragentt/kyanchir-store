@@ -13,6 +13,8 @@ import ConflictResolutionModal, {
 import ApiKeyModal from '../ApiKeyModal'; // ОБНОВЛЕННЫЙ ПУТЬ
 import type { SkuResolutionPlan } from '@/app/api/admin/utils/backfill-skus/route';
 import { cn } from '@/lib/utils';
+import { LoadingButton } from '@/components/shared/ui';
+import { useRetry } from '@/hooks/useRetry';
 
 const SyncIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg {...props} viewBox="0 0 20 20" fill="currentColor">
@@ -54,11 +56,19 @@ const TagIcon = (props: React.SVGProps<SVGSVGElement>) => (
 interface DashboardControlsProps {
   isEditMode: boolean;
   setIsEditMode: (value: boolean) => void;
+  onSyncStart?: () => void;
+  onSyncProgress?: (value: number) => void;
+  onSyncComplete?: () => void;
+  onSyncError?: () => void;
 }
 
 export default function DashboardControls({
   isEditMode,
   setIsEditMode,
+  onSyncStart,
+  onSyncProgress,
+  onSyncComplete,
+  onSyncError,
 }: DashboardControlsProps) {
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
@@ -69,6 +79,14 @@ export default function DashboardControls({
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
   const [skuResolutionPlan, setSkuResolutionPlan] =
     useState<SkuResolutionPlan | null>(null);
+  const retry = useRetry({
+    retries: 2,
+    delay: 800,
+    onRetry: (attempt) =>
+      console.log('⚠️ DashboardControls: повторная попытка запроса', {
+        attempt,
+      }),
+  });
 
   const handleSaveApiKey = async (apiKey: string): Promise<boolean> => {
     const toastId = toast.loading('Тестирование и сохранение ключа...');
@@ -108,35 +126,57 @@ export default function DashboardControls({
     setIsSyncing(true);
     const toastId = toast.loading('Синхронизация со складом...');
     try {
-      const catResponse = await fetch('/api/admin/sync/categories', {
-        method: 'POST',
-      });
-      if (catResponse.status === 401) throw new Error('AUTH_ERROR');
-      if (!catResponse.ok) {
-        const data = await catResponse.json();
-        throw new Error(data.error || 'Ошибка синхронизации категорий');
-      }
+      onSyncStart?.();
 
-      const prodResponse = await fetch('/api/admin/sync/products', {
-        method: 'POST',
+      await retry.execute(async () => {
+        const response = await fetch('/api/admin/sync/categories', {
+          method: 'POST',
+        });
+        if (response.status === 401) {
+          const authError = new Error('AUTH_ERROR');
+          (authError as { skipRetry?: boolean }).skipRetry = true;
+          throw authError;
+        }
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Ошибка синхронизации категорий');
+        }
+        onSyncProgress?.(45);
+        return response;
       });
-      if (prodResponse.status === 401) throw new Error('AUTH_ERROR');
-      if (!prodResponse.ok) {
-        const data = await prodResponse.json();
-        throw new Error(data.error || 'Ошибка синхронизации товаров');
-      }
+
+      await retry.execute(async () => {
+        const response = await fetch('/api/admin/sync/products', {
+          method: 'POST',
+        });
+        if (response.status === 401) {
+          const authError = new Error('AUTH_ERROR');
+          (authError as { skipRetry?: boolean }).skipRetry = true;
+          throw authError;
+        }
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Ошибка синхронизации товаров');
+        }
+        onSyncProgress?.(95);
+        return response;
+      });
 
       toast.success('Синхронизация завершена!', { id: toastId });
+      onSyncProgress?.(100);
+      onSyncComplete?.();
       router.refresh();
     } catch (error) {
       if (error instanceof Error && error.message === 'AUTH_ERROR') {
         toast.error('Ошибка авторизации. Требуется API-ключ.', { id: toastId });
         setIsApiKeyModalOpen(true);
+        onSyncError?.();
       } else {
         toast.error(
           error instanceof Error ? error.message : 'Неизвестная ошибка',
           { id: toastId },
         );
+        onSyncError?.();
       }
     } finally {
       setIsSyncing(false);
@@ -235,43 +275,44 @@ export default function DashboardControls({
       <div className="mb-4 space-y-2">
         <div className="flex items-center justify-between">
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <LoadingButton
+              type="button"
               onClick={handleSync}
+              isLoading={isSyncing}
               disabled={anyActionInProgress}
               className="flex items-center gap-x-2 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <SyncIcon
-                className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`}
-              />
+              <SyncIcon className="h-4 w-4" />
               {isSyncing ? 'Синхронизация...' : 'Синхронизировать склад'}
-            </button>
-            <button
+            </LoadingButton>
+            <LoadingButton
+              type="button"
               onClick={handleReset}
+              isLoading={isResetting}
               disabled={anyActionInProgress}
               className="flex items-center gap-x-2 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <ResetIcon
-                className={`h-4 w-4 ${isResetting ? 'animate-spin' : ''}`}
-              />
+              <ResetIcon className="h-4 w-4" />
               {isResetting ? 'Очистка...' : 'Сбросить склад Kyanchir'}
-            </button>
-            <button
+            </LoadingButton>
+            <LoadingButton
+              type="button"
               onClick={handleCheckSkus}
+              isLoading={isCheckingSkus}
               disabled={anyActionInProgress}
               className="flex items-center gap-x-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <CheckBadgeIcon
-                className={`h-4 w-4 ${isCheckingSkus ? 'animate-spin' : ''}`}
-              />
+              <CheckBadgeIcon className="h-4 w-4" />
               {isCheckingSkus ? 'Ревизия...' : 'Проверить артикулы'}
-            </button>
+            </LoadingButton>
             <Link
               href="/admin/categories"
               className="flex items-center gap-x-1 rounded-md border bg-white px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-50"
             >
               <TagIcon className="h-4 w-4" /> Управление категориями
             </Link>
-            <button
+            <LoadingButton
+              type="button"
               onClick={() => setIsEditMode(!isEditMode)}
               disabled={anyActionInProgress}
               className={cn(
@@ -283,7 +324,7 @@ export default function DashboardControls({
             >
               <SlidersHorizontal className="h-4 w-4" />
               {isEditMode ? 'Завершить' : 'Редактировать'}
-            </button>
+            </LoadingButton>
           </div>
           <Link
             href="/admin/products/new"
