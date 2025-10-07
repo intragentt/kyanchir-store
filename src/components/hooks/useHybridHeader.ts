@@ -8,16 +8,28 @@ export const useHybridHeader = (
 ) => {
   const [translateY, setTranslateY] = useState(0);
   const [opacity, setOpacity] = useState(1);
+  const [isSnapping, setIsSnapping] = useState(false);
 
   const lastScrollY = useRef(0);
   const currentTranslate = useRef(0);
   const ticking = useRef(false);
   const scrollEndTimeout = useRef<NodeJS.Timeout | null>(null);
+  const snapAnimationTimeout = useRef<NodeJS.Timeout | null>(null);
   const isTouching = useRef(false);
   const justClosedOverlay = useRef(false);
 
   useEffect(() => {
+    setIsSnapping(false);
+    if (snapAnimationTimeout.current) {
+      clearTimeout(snapAnimationTimeout.current);
+      snapAnimationTimeout.current = null;
+    }
+
     if (isOverlayOpen) {
+      currentTranslate.current = 0;
+      setTranslateY(0);
+      setOpacity(1);
+      lastScrollY.current = window.scrollY;
       return;
     }
 
@@ -27,10 +39,11 @@ export const useHybridHeader = (
     currentTranslate.current = 0;
     setTranslateY(0);
     setOpacity(1);
+    setIsSnapping(false);
     lastScrollY.current = window.scrollY;
     justClosedOverlay.current = true;
 
-    const smallDelta = 8;
+    const smallDelta = 2;
     const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) {
       headerEl.style.transition = 'none';
@@ -42,13 +55,18 @@ export const useHybridHeader = (
       const currentPos = currentTranslate.current;
       const snapThreshold = headerHeight * 0.53;
       if (currentPos > -headerHeight && currentPos < 0) {
-        if (currentPos < -snapThreshold) {
-          currentTranslate.current = -headerHeight;
-        } else {
-          currentTranslate.current = 0;
+        const target = currentPos < -snapThreshold ? -headerHeight : 0;
+        if (target !== currentTranslate.current) {
+          currentTranslate.current = target;
+          setTranslateY(target);
+          setOpacity(target === 0 ? 1 : 0);
+          setIsSnapping(true);
+          if (snapAnimationTimeout.current) clearTimeout(snapAnimationTimeout.current);
+          snapAnimationTimeout.current = setTimeout(() => {
+            setIsSnapping(false);
+            snapAnimationTimeout.current = null;
+          }, 240);
         }
-        setTranslateY(currentTranslate.current);
-        setOpacity(currentTranslate.current === 0 ? 1 : 0);
       }
     };
 
@@ -70,6 +88,7 @@ export const useHybridHeader = (
           window.requestAnimationFrame(() => {
             setTranslateY(0);
             setOpacity(1);
+            setIsSnapping(false);
             ticking.current = false;
           });
           ticking.current = true;
@@ -92,6 +111,7 @@ export const useHybridHeader = (
           const newOpacity = Math.max(0, 1 - hiddenRatio * 1.5);
           setTranslateY(currentTranslate.current);
           setOpacity(newOpacity);
+          setIsSnapping(false);
           ticking.current = false;
 
           if (scrollEndTimeout.current) clearTimeout(scrollEndTimeout.current);
@@ -108,6 +128,8 @@ export const useHybridHeader = (
     const onTouchStart = () => {
       isTouching.current = true;
       if (scrollEndTimeout.current) clearTimeout(scrollEndTimeout.current);
+      if (snapAnimationTimeout.current) clearTimeout(snapAnimationTimeout.current);
+      setIsSnapping(false);
     };
 
     const onTouchEnd = () => {
@@ -124,8 +146,9 @@ export const useHybridHeader = (
       window.removeEventListener('touchstart', onTouchStart);
       window.removeEventListener('touchend', onTouchEnd);
       if (scrollEndTimeout.current) clearTimeout(scrollEndTimeout.current);
+      if (snapAnimationTimeout.current) clearTimeout(snapAnimationTimeout.current);
     };
   }, [headerRef, isOverlayOpen]);
 
-  return { translateY, opacity };
+  return { translateY, opacity, isSnapping };
 };
