@@ -2,11 +2,71 @@
 import prisma from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import ProductDetails from '@/components/ProductDetails';
-import { createSlug } from '@/utils/createSlug';
+import { createSlug, ensureUniqueSlug } from '@/utils/createSlug';
 
 export const dynamic = 'force-dynamic';
 
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'ONESIZE'];
+
+const PRODUCT_INCLUDE = {
+  variants: {
+    include: {
+      images: {
+        orderBy: {
+          order: 'asc' as const,
+        },
+      },
+      // --- НАЧАЛО ИЗМЕНЕНИЙ (1/2): Используем правильное имя связи 'sizes' ---
+      sizes: {
+        include: {
+          size: true,
+        },
+      },
+      // --- КОНЕЦ ИЗМЕНЕНИЙ (1/2) ---
+    },
+  },
+  attributes: true,
+  status: true,
+} as const;
+
+async function findProduct(slug: string) {
+  const product = await prisma.product.findFirst({
+    where: {
+      OR: [
+        {
+          slug: {
+            equals: slug,
+            mode: 'insensitive',
+          },
+        },
+        { id: slug },
+      ],
+    },
+    include: PRODUCT_INCLUDE,
+  });
+
+  if (product) {
+    return product;
+  }
+
+  const sluglessProducts = await prisma.product.findMany({
+    where: { slug: null },
+    select: { id: true, name: true },
+  });
+
+  const fallbackMatch = sluglessProducts.find(
+    (candidate) => createSlug(candidate.name) === slug.toLowerCase(),
+  );
+
+  if (!fallbackMatch) {
+    return null;
+  }
+
+  return prisma.product.findUnique({
+    where: { id: fallbackMatch.id },
+    include: PRODUCT_INCLUDE,
+  });
+}
 
 export default async function ProductPage({
   params,
@@ -15,42 +75,45 @@ export default async function ProductPage({
 }) {
   const { slug } = params;
 
-  const product = await prisma.product.findFirst({
-    where: {
-      OR: [
-        { slug },
-        { id: slug },
-      ],
-    },
-    include: {
-      variants: {
-        include: {
-          images: {
-            orderBy: {
-              order: 'asc',
-            },
-          },
-          // --- НАЧАЛО ИЗМЕНЕНИЙ (1/2): Используем правильное имя связи 'sizes' ---
-          sizes: {
-            include: {
-              size: true,
-            },
-          },
-          // --- КОНЕЦ ИЗМЕНЕНИЙ (1/2) ---
-        },
-      },
-      attributes: true,
-      status: true, // Включаем статус, чтобы можно было его отобразить
-    },
-  });
+  let product = await findProduct(slug);
 
   if (!product) {
     notFound();
   }
 
-  const canonicalSlug = product.slug ?? createSlug(product.name);
+  const resolvedSlug = slug.toLowerCase();
+  let canonicalSlug = product.slug ?? createSlug(product.name);
 
-  if (canonicalSlug !== slug) {
+  if (!product.slug) {
+    const uniqueSlug = await ensureUniqueSlug(canonicalSlug, async (candidate) => {
+      const existing = await prisma.product.findFirst({
+        where: {
+          slug: candidate,
+          NOT: {
+            id: product.id,
+          },
+        },
+        select: { id: true },
+      });
+
+      return Boolean(existing);
+    });
+
+    if (uniqueSlug !== product.slug) {
+      await prisma.product.update({
+        where: { id: product.id },
+        data: { slug: uniqueSlug },
+      });
+
+      product = {
+        ...product,
+        slug: uniqueSlug,
+      };
+      canonicalSlug = uniqueSlug;
+    }
+  }
+
+  if (canonicalSlug !== resolvedSlug) {
     redirect(`/p/${canonicalSlug}`);
   }
 
