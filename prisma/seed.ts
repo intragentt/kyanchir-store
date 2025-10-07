@@ -1,5 +1,9 @@
 // prisma/seed.ts
 import { PrismaClient } from '@prisma/client';
+import {
+  DEFAULT_DESIGN_SYSTEM_SETTINGS,
+  DESIGN_SYSTEM_KEY,
+} from '../src/lib/settings/design-system';
 
 const prisma = new PrismaClient();
 
@@ -102,6 +106,13 @@ async function main() {
   await prisma.senderType.createMany({
     data: [{ name: 'CLIENT' }, { name: 'AGENT' }, { name: 'SYSTEM' }],
     skipDuplicates: true,
+  });
+
+  console.log('   - Инициализация дизайн-системы...');
+  await prisma.systemSetting.upsert({
+    where: { key: DESIGN_SYSTEM_KEY },
+    update: { value: JSON.stringify(DEFAULT_DESIGN_SYSTEM_SETTINGS) },
+    create: { key: DESIGN_SYSTEM_KEY, value: JSON.stringify(DEFAULT_DESIGN_SYSTEM_SETTINGS) },
   });
 
   console.log('✅ СИДИНГ ФУНДАМЕНТА УСПЕШНО ЗАВЕРШЕН');

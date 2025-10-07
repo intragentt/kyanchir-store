@@ -36,9 +36,9 @@ const config: Config = {
       },
       // "Набор фирменных шрифтов"
       fontFamily: {
-        heading: ['var(--font-heading)', 'sans-serif'],
-        body: ['var(--font-body)', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        heading: ['var(--ds-font-heading, var(--font-heading))', 'sans-serif'],
+        body: ['var(--ds-font-body, var(--font-body))', 'sans-serif'],
+        mono: ['var(--ds-font-accent, var(--font-mono))', 'monospace'],
       },
       // "Типографика"
       fontSize: {
@@ -47,6 +47,55 @@ const config: Config = {
           'clamp(0.8rem, 3vw, 1.25rem)',
           { lineHeight: '1.2' },
         ],
+        'ds-h1': [
+          'var(--ds-heading-1-size)',
+          {
+            lineHeight: 'var(--ds-heading-1-line-height)',
+            letterSpacing: 'var(--ds-heading-1-letter-spacing, -0.03em)',
+            fontWeight: 'var(--ds-heading-1-weight)',
+          },
+        ],
+        'ds-h2': [
+          'var(--ds-heading-2-size)',
+          {
+            lineHeight: 'var(--ds-heading-2-line-height)',
+            letterSpacing: 'var(--ds-heading-2-letter-spacing, -0.02em)',
+            fontWeight: 'var(--ds-heading-2-weight)',
+          },
+        ],
+        'ds-h3': [
+          'var(--ds-heading-3-size)',
+          {
+            lineHeight: 'var(--ds-heading-3-line-height)',
+            letterSpacing: 'var(--ds-heading-3-letter-spacing, 0)',
+            fontWeight: 'var(--ds-heading-3-weight)',
+          },
+        ],
+        'ds-body': [
+          'var(--ds-body-font-size)',
+          {
+            lineHeight: 'var(--ds-body-line-height)',
+            letterSpacing: 'var(--ds-body-letter-spacing, 0)',
+            fontWeight: 'var(--ds-body-font-weight)',
+          },
+        ],
+        'ds-small': [
+          'var(--ds-small-font-size)',
+          {
+            lineHeight: 'var(--ds-small-line-height)',
+            letterSpacing: 'var(--ds-small-letter-spacing, 0)',
+            fontWeight: 'var(--ds-small-font-weight)',
+          },
+        ],
+      },
+      spacing: {
+        'ds-xs': 'var(--ds-spacing-xs)',
+        'ds-sm': 'var(--ds-spacing-sm)',
+        'ds-md': 'var(--ds-spacing-md)',
+        'ds-lg': 'var(--ds-spacing-lg)',
+        'ds-xl': 'var(--ds-spacing-xl)',
+        'ds-2xl': 'var(--ds-spacing-2xl)',
+        'ds-3xl': 'var(--ds-spacing-3xl)',
       },
       typographyStyles: ({ theme }: { theme: any }) => ({
         h1: {
