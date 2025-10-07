@@ -13,12 +13,12 @@
 /* --- ШАГ 2: ОПРЕДЕЛЕНИЕ БАЗОВОГО СЛОЯ --- */
 @layer base {
   :root {
-    --background-primary: #FFFFFF;
-    --text-primary: #272727;
-    --brand-lilac-color: #6B80C5;
-    --brand-lilac-light-color: #C1D0FF;
-    --heart-red: #D32F2F;
-    --feedback-error-color: #E06F6F;
+    --background-primary: var(--ds-color-background, #FFFFFF);
+    --text-primary: var(--ds-color-text-primary, #272727);
+    --brand-lilac-color: var(--ds-color-primary, #6B80C5);
+    --brand-lilac-light-color: var(--ds-color-accent, #C1D0FF);
+    --heart-red: var(--ds-color-danger, #D32F2F);
+    --feedback-error-color: var(--ds-color-danger, #E06F6F);
     --mobile-footer-height: 0px;
   }
 

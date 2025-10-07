@@ -4,6 +4,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { getDesignSystemSettings } from '@/lib/settings/design-system';
+import {
+  buildFontStack,
+  ensureFontLibraryIntegrity,
+  getFontById,
+} from '@/lib/settings/design-system.shared';
 
 const ADMIN_ROLES = new Set(['ADMIN', 'MANAGEMENT']);
 
@@ -27,6 +32,14 @@ export default async function AdminSettingsIndexPage() {
       }).format(updatedAt)
     : 'ещё не сохранялось';
 
+  const fontLibrary = ensureFontLibraryIntegrity(settings.fontLibrary);
+  const bodyFont = getFontById(fontLibrary, settings.fonts.body);
+  const headingFont = getFontById(fontLibrary, settings.fonts.heading);
+  const accentFont = getFontById(fontLibrary, settings.fonts.accent);
+  const bodyStack = bodyFont ? buildFontStack(bodyFont) : '—';
+  const headingName = headingFont?.name ?? 'Manrope';
+  const accentName = accentFont?.name ?? 'PT Mono';
+
   return (
     <div className="space-y-8">
       <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
@@ -45,7 +58,7 @@ export default async function AdminSettingsIndexPage() {
             <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               Основной шрифт
             </dt>
-            <dd className="mt-1 text-sm text-gray-900">{settings.fonts.body.stack}</dd>
+            <dd className="mt-1 text-sm text-gray-900">{bodyStack}</dd>
           </div>
           <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
             <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -66,7 +79,9 @@ export default async function AdminSettingsIndexPage() {
             </p>
             <ul className="mt-4 space-y-2 text-sm text-gray-600">
               <li>• Название сайта: {settings.siteName}</li>
-              <li>• Стек заголовков: {settings.fonts.heading.stack}</li>
+              <li>• Заголовки: {headingName}</li>
+              <li>• Основной текст: {bodyFont?.name ?? 'Manrope'}</li>
+              <li>• Акценты и моно: {accentName}</li>
               <li>• Типографика h1 → h3 и базовый текст</li>
               <li>• Шкала отступов (xs → 3xl)</li>
             </ul>

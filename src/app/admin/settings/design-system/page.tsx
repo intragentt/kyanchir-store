@@ -8,6 +8,7 @@ import {
 } from '@/lib/settings/design-system';
 import DesignSystemForm from '@/components/admin/settings/DesignSystemForm';
 import { ToastViewport } from '@/components/shared/ui';
+import { buildIconCatalog } from '@/lib/icons/catalog';
 
 const ADMIN_ROLES = new Set(['ADMIN', 'MANAGEMENT']);
 
@@ -26,6 +27,7 @@ export default async function DesignSystemSettingsPage() {
 
   const initialSettings = structuredClone(settings);
   const defaultSettings = structuredClone(DEFAULT_DESIGN_SYSTEM_SETTINGS);
+  const iconCatalog = buildIconCatalog();
 
   return (
     <div className="space-y-6">
@@ -48,7 +50,11 @@ export default async function DesignSystemSettingsPage() {
         </p>
       </div>
 
-      <DesignSystemForm initialSettings={initialSettings} defaultSettings={defaultSettings} />
+      <DesignSystemForm
+        initialSettings={initialSettings}
+        defaultSettings={defaultSettings}
+        icons={iconCatalog}
+      />
     </div>
   );
 }

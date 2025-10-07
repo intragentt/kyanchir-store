@@ -24,15 +24,46 @@ const config: Config = {
     extend: {
       // "Фирменная палитра"
       colors: {
-        brand: { lilac: '#6B80C5', 'lilac-light': '#C1D0FF' },
-        accent: {
-          pink: '#C1D0FF',
-          'pink-light': '#FBC0E3',
-          'pink-pale': '#FFE1F3',
+        brand: {
+          lilac: 'var(--ds-color-primary)',
+          'lilac-light': 'var(--ds-color-accent)',
         },
-        feedback: { error: '#E06F6F', red: '#D32F2F' },
-        text: { primary: '#272727', secondary: '#6B80C5' },
-        background: { primary: '#FFFFFF', secondary: '#FFE1F3' },
+        accent: {
+          pink: 'var(--ds-color-accent)',
+          'pink-light': 'var(--ds-color-surface)',
+          'pink-pale': 'var(--ds-color-muted)',
+        },
+        feedback: {
+          error: 'var(--ds-color-danger)',
+          red: 'var(--ds-color-danger)',
+          success: 'var(--ds-color-success)',
+          warning: 'var(--ds-color-warning)',
+        },
+        text: {
+          primary: 'var(--ds-color-text-primary)',
+          secondary: 'var(--ds-color-text-secondary)',
+          muted: 'var(--ds-color-muted-foreground)',
+        },
+        background: {
+          primary: 'var(--ds-color-background)',
+          secondary: 'var(--ds-color-surface)',
+        },
+        border: {
+          DEFAULT: 'var(--ds-color-border)',
+          neutral: 'var(--ds-color-neutral)',
+        },
+        ds: {
+          primary: 'var(--ds-color-primary)',
+          'primary-foreground': 'var(--ds-color-primary-foreground)',
+          accent: 'var(--ds-color-accent)',
+          'accent-foreground': 'var(--ds-color-accent-foreground)',
+          surface: 'var(--ds-color-surface)',
+          'surface-foreground': 'var(--ds-color-surface-foreground)',
+          neutral: 'var(--ds-color-neutral)',
+          'neutral-foreground': 'var(--ds-color-neutral-foreground)',
+          muted: 'var(--ds-color-muted)',
+          'muted-foreground': 'var(--ds-color-muted-foreground)',
+        },
       },
       // "Набор фирменных шрифтов"
       fontFamily: {
