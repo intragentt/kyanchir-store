@@ -1,3 +1,5 @@
+import 'server-only';
+
 import { createElement } from 'react';
 import type { SVGProps } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
