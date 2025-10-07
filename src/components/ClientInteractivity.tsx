@@ -38,6 +38,44 @@ export default function ClientInteractivity() {
     };
   }, [isMenuOpen]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    const currentState = url.searchParams.get('menu');
+
+    if (isMenuOpen && currentState !== 'open') {
+      url.searchParams.set('menu', 'open');
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${url.pathname}${url.search}${url.hash}`,
+      );
+    }
+
+    if (!isMenuOpen && currentState === 'open') {
+      url.searchParams.delete('menu');
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${url.pathname}${url.search}${url.hash}`,
+      );
+    }
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('menu') === 'open') {
+      setMenuOpen(true);
+    }
+  }, [setMenuOpen]);
+
   // --- НАЧАЛО ИЗМЕНЕНИЙ ---
   // Простая функция-переключатель
   const toggleMenu = () => {

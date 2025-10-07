@@ -3,6 +3,7 @@
 import { notFound } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import AdminHeader from '@/components/admin/AdminHeader';
+import AdminPathNormalizer from '@/components/admin/AdminPathNormalizer';
 
 const ADMIN_ROLES = ['ADMIN', 'MANAGEMENT'];
 
@@ -22,6 +23,7 @@ export default async function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">
+      <AdminPathNormalizer />
       <AdminHeader />
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем центральный контейнер для всего контента админки --- */}
       <main className="flex-grow">
