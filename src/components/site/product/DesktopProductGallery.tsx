@@ -1,7 +1,7 @@
 // Местоположение: src/components/product-details/DesktopProductGallery.tsx
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperCore } from 'swiper';
@@ -13,6 +13,31 @@ import 'swiper/css/thumbs';
 
 import { Image as PrismaImage } from '@prisma/client';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import ImagePlaceholder from '@/components/ImagePlaceholder';
+
+type GalleryItem =
+  | { type: 'image'; image: PrismaImage }
+  | { type: 'placeholder'; key: string };
+
+function useGalleryItems(images: PrismaImage[]): GalleryItem[] {
+  return useMemo(() => {
+    const actualItems: GalleryItem[] = images.map((image) => ({
+      type: 'image',
+      image,
+    }));
+
+    const placeholdersNeeded = Math.max(0, 2 - actualItems.length);
+    const placeholderItems: GalleryItem[] = Array.from(
+      { length: placeholdersNeeded },
+      (_, index) => ({
+        type: 'placeholder' as const,
+        key: `placeholder-${index}`,
+      }),
+    );
+
+    return [...actualItems, ...placeholderItems];
+  }, [images]);
+}
 
 interface GalleryProps {
   images: PrismaImage[];
@@ -24,6 +49,7 @@ export default function DesktopProductGallery({
   productName,
 }: GalleryProps) {
   const [thumbsSwiper, setThumbsSwiper] = useState<SwiperCore | null>(null);
+  const galleryItems = useGalleryItems(images);
 
   return (
     <div>
@@ -41,17 +67,23 @@ export default function DesktopProductGallery({
           }}
           className="mb-2.5 rounded-lg"
         >
-          {images.map((image, index) => (
-            <SwiperSlide key={image.id}>
-              <div className="relative aspect-[4/5] w-full overflow-hidden">
-                <Image
-                  src={image.url}
-                  alt={`${productName} - фото ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(min-width: 1024px) 45vw"
-                  priority={index < 2}
-                />
+          {galleryItems.map((item, index) => (
+            <SwiperSlide
+              key={item.type === 'image' ? item.image.id : item.key}
+            >
+              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-lg bg-gray-100">
+                {item.type === 'image' ? (
+                  <Image
+                    src={item.image.url}
+                    alt={`${productName} - фото ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 1024px) 45vw"
+                    priority={index < 2}
+                  />
+                ) : (
+                  <ImagePlaceholder />
+                )}
               </div>
             </SwiperSlide>
           ))}
@@ -69,24 +101,25 @@ export default function DesktopProductGallery({
         onSwiper={setThumbsSwiper}
         modules={[Thumbs, A11y]}
         spaceBetween={10}
-        slidesPerView={images.length < 5 ? images.length : 5}
+        slidesPerView={galleryItems.length < 5 ? galleryItems.length : 5}
         watchSlidesProgress={true}
         className="thumbs-swiper"
       >
-        {images.map((image, index) => (
-          <SwiperSlide key={image.id}>
-            {/* 
-              ИЗМЕНЕНИЕ: Заменили 'aspect-square' на 'aspect-[4/5]'.
-              Теперь миниатюры имеют такую же форму, как и большое изображение.
-            */}
-            <div className="thumbnail-wrapper relative aspect-[4/5] w-full cursor-pointer overflow-hidden rounded-md">
-              <Image
-                src={image.url}
-                alt={`Миниатюра ${index + 1}`}
-                fill
-                // Возвращаем 'object-cover', т.к. теперь форма контейнера и картинки совпадают
-                className="object-cover"
-              />
+        {galleryItems.map((item, index) => (
+          <SwiperSlide
+            key={item.type === 'image' ? item.image.id : `thumb-${item.key}`}
+          >
+            <div className="thumbnail-wrapper relative aspect-[4/5] w-full cursor-pointer overflow-hidden rounded-md bg-gray-100">
+              {item.type === 'image' ? (
+                <Image
+                  src={item.image.url}
+                  alt={`Миниатюра ${index + 1}`}
+                  fill
+                  className="object-cover"
+                />
+              ) : (
+                <ImagePlaceholder />
+              )}
             </div>
           </SwiperSlide>
         ))}
