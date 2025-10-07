@@ -103,6 +103,10 @@ const designSystemSchema = z.object({
   spacing: spacingSchema,
 });
 
+const designSystemPartialSchema = designSystemSchema.deepPartial();
+
+type DesignSystemPartial = z.infer<typeof designSystemPartialSchema>;
+
 export type DesignSystemSettings = z.infer<typeof designSystemSchema>;
 
 export interface DesignSystemSnapshot {
@@ -167,7 +171,7 @@ export const DEFAULT_DESIGN_SYSTEM_SETTINGS: DesignSystemSettings = {
 };
 
 function mergeWithDefaults(
-  value: Partial<DesignSystemSettings> | null | undefined,
+  value: DesignSystemPartial | null | undefined,
 ): DesignSystemSettings {
   if (!value) {
     return { ...DEFAULT_DESIGN_SYSTEM_SETTINGS };
@@ -226,7 +230,7 @@ function safeParseSettings(value: string | null): DesignSystemSettings {
 
   try {
     const parsed = JSON.parse(value);
-    const result = designSystemSchema.deepPartial().parse(parsed);
+    const result = designSystemPartialSchema.parse(parsed);
     return mergeWithDefaults(result);
   } catch (error) {
     console.error('[DesignSystem] Failed to parse settings, fallback to defaults', error);
