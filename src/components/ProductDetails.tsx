@@ -404,9 +404,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
   return (
     <>
-      <div className="mx-auto max-w-7xl px-[15px] lg:px-8 lg:pt-[95px]">
+      <div className="mx-auto w-full max-w-7xl px-4 lg:px-10">
         <div className="pb-32 lg:hidden">
-          <div className="mx-[-15px]">
+          <div className="-mx-4">
             <MobileProductGallery
               images={selectedVariant.images}
               productName={product.name}

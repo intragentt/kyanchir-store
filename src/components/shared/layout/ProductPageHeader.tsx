@@ -1,8 +1,11 @@
 // Местоположение: src/components/layout/ProductPageHeader.tsx
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useHybridHeader } from '@/components/hooks/useHybridHeader';
+import { useAppStore } from '@/store/useAppStore';
 import { HeartIcon, ShareIcon } from '@/components/shared/icons';
 
 const BackArrowIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -42,6 +45,33 @@ const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function ProductPageHeader() {
   const router = useRouter();
+  const headerRef = useRef<HTMLElement | null>(null);
+  const { isSearchActive, isFloatingMenuOpen } = useAppStore((state) => ({
+    isSearchActive: state.isSearchActive,
+    isFloatingMenuOpen: state.isFloatingMenuOpen,
+  }));
+  const { translateY, opacity } = useHybridHeader(
+    headerRef,
+    isSearchActive || isFloatingMenuOpen,
+  );
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (!headerRef.current) return;
+      document.documentElement.style.setProperty(
+        '--header-height',
+        `${headerRef.current.offsetHeight}px`,
+      );
+    };
+
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+
+    return () => {
+      window.removeEventListener('resize', updateHeaderHeight);
+      document.documentElement.style.removeProperty('--header-height');
+    };
+  }, []);
 
   const handleBackClick = () => {
     if (
@@ -74,8 +104,18 @@ export default function ProductPageHeader() {
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   return (
-    <header className="relative z-10 bg-white lg:hidden">
-      <div className="flex h-16 w-full items-center gap-x-3 px-4">
+    <header
+      ref={headerRef}
+      className="fixed inset-x-0 top-0 z-[100] bg-white shadow-sm lg:hidden"
+      style={{
+        transform: `translateY(${translateY}px)`,
+        transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)',
+      }}
+    >
+      <div
+        className="flex h-16 w-full items-center gap-x-3 px-4"
+        style={{ opacity }}
+      >
         <button
           onClick={handleBackClick}
           aria-label="Вернуться назад"
