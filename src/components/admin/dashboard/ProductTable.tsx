@@ -2,11 +2,14 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { OptimizedProductForTable } from '@/app/admin/dashboard/page';
 import { ProductTableRow } from '../product-table/ProductTableRow'; // ИСПРАВЛЕННЫЙ ПУТЬ
 import DashboardControls from './DashboardControls'; // ИСПРАВЛЕННЫЙ ПУТЬ
-import { Toaster } from 'react-hot-toast';
+import { SkeletonLoader, ToastViewport } from '@/components/shared/ui';
+import { useDebounce } from '@/hooks/useDebounce';
+import { logEvent } from '@/lib/monitoring';
+import { markEnd, markStart, measure } from '@/lib/performance';
 
 interface ReferenceData {
   id: string;
@@ -43,18 +46,68 @@ export default function ProductTable({
 }: ProductTableProps) {
   const [isEditMode, setIsEditMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isTableLoading, setIsTableLoading] = useState(true);
+  const [syncProgress, setSyncProgress] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const debouncedSearchTerm = useDebounce(searchTerm, 350, { maxWait: 1200 });
+
+  useEffect(() => {
+    markStart('admin-product-table');
+    console.log('🔄 ProductTable: начало отображения skeleton');
+    const timer = setTimeout(() => {
+      setIsTableLoading(false);
+      markEnd('admin-product-table');
+      measure('admin-product-table');
+      logEvent({
+        type: 'admin.table.ready',
+        timestamp: Date.now(),
+        payload: {
+          totalProducts: products.length,
+          totalTags: allTags.length,
+        },
+      });
+      console.log('✅ ProductTable: данные готовы, skeleton скрыт');
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [products.length, allTags.length]);
+
+  const handleSyncStart = useCallback(() => {
+    console.log('🔄 ProductTable: синхронизация началась');
+    setSyncProgress(5);
+  }, []);
+
+  const handleSyncProgress = useCallback((value: number) => {
+    console.log('🔄 ProductTable: прогресс синхронизации', { value });
+    setSyncProgress(value);
+  }, []);
+
+  const handleSyncComplete = useCallback(() => {
+    console.log('✅ ProductTable: синхронизация завершена');
+    setSyncProgress(null);
+  }, []);
+
+  const handleSyncError = useCallback(() => {
+    console.log('❌ ProductTable: синхронизация завершилась ошибкой');
+    setSyncProgress(null);
+  }, []);
 
   // Мемоизированная фильтрация для производительности
   const filteredProducts = useMemo(() => {
     let filtered = products;
 
-    if (searchTerm) {
+    if (debouncedSearchTerm) {
       filtered = filtered.filter(
         (product) =>
-          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          product.article?.toLowerCase().includes(searchTerm.toLowerCase()),
+          product.name
+            .toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()) ||
+          product.article
+            ?.toLowerCase()
+            .includes(debouncedSearchTerm.toLowerCase()),
       );
     }
 
@@ -71,7 +124,7 @@ export default function ProductTable({
     }
 
     return filtered;
-  }, [products, searchTerm, statusFilter, categoryFilter]);
+  }, [products, debouncedSearchTerm, statusFilter, categoryFilter]);
 
   // Статистика для отображения
   const stats = useMemo(() => {
@@ -96,13 +149,17 @@ export default function ProductTable({
 
   return (
     <div className="w-full space-y-6">
-      <Toaster position="top-center" />
+      <ToastViewport />
 
       {/* Панель управления с фильтрами */}
       <div className="space-y-4 rounded-lg border bg-white p-6">
         <DashboardControls
           isEditMode={isEditMode}
           setIsEditMode={setIsEditMode}
+          onSyncStart={handleSyncStart}
+          onSyncProgress={handleSyncProgress}
+          onSyncComplete={handleSyncComplete}
+          onSyncError={handleSyncError}
         />
 
         {/* Быстрая статистика */}
@@ -143,7 +200,10 @@ export default function ProductTable({
               type="text"
               placeholder="Название или артикул..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                console.log('🔄 ProductTable: ввод поиска', e.target.value);
+                setSearchTerm(e.target.value);
+              }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
             />
           </div>
@@ -186,10 +246,30 @@ export default function ProductTable({
         </div>
       </div>
 
+      {typeof syncProgress === 'number' && (
+        <div
+          className="rounded-lg border border-blue-200 bg-blue-50 p-4"
+          aria-live="assertive"
+        >
+          <p className="text-sm font-semibold text-blue-700">
+            🔄 Синхронизация склада: {syncProgress}%
+          </p>
+          <div className="mt-2 h-2 w-full rounded-full bg-blue-100">
+            <div
+              className="h-2 rounded-full bg-blue-600 transition-all duration-300 ease-out"
+              style={{ width: `${syncProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Таблица товаров */}
       <div className="overflow-hidden rounded-lg border bg-white">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table
+            className="min-w-full divide-y divide-gray-200"
+            aria-busy={isTableLoading}
+          >
             <thead className="bg-gray-50">
               <tr>
                 <th className="w-12 px-2 py-3">
@@ -216,19 +296,27 @@ export default function ProductTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
-              {filteredProducts.map((product) => (
-                <ProductTableRow
-                  key={product.id}
-                  product={product}
-                  isEditMode={isEditMode}
-                />
-              ))}
+              {isTableLoading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-10">
+                    <SkeletonLoader rows={5} columns={6} />
+                  </td>
+                </tr>
+              ) : (
+                filteredProducts.map((product) => (
+                  <ProductTableRow
+                    key={product.id}
+                    product={product}
+                    isEditMode={isEditMode}
+                  />
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Информация о пагинации */}
-        {filteredProducts.length === 0 && (
+        {!isTableLoading && filteredProducts.length === 0 && (
           <div className="py-12 text-center">
             <div className="text-gray-500">
               {products.length === 0

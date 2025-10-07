@@ -11,7 +11,7 @@ import { signOut } from 'next-auth/react';
 const adminNavLinks = [
   { href: '/admin/dashboard', label: 'Склад' },
   { href: '/admin/orders', label: 'Заказы' },
-  { href: '/admin/accounts', label: 'Аккаунты' },
+  { href: '/admin/users', label: 'Пользователи' },
   { href: '/admin/mail', label: 'Почта' },
   { href: '/admin/stats', label: 'Статистика' },
   { href: '/admin/sliders', label: 'Слайдеры' },

@@ -1,6 +1,7 @@
 // Местоположение: src/app/admin/dashboard/page.tsx
 
 import ProductTable from '@/components/admin/dashboard/ProductTable'; // ОБНОВЛЕННЫЙ ПУТЬ
+import { ErrorBoundary, ErrorFallback } from '@/components/shared/ui';
 import { PRODUCT_TABLE_CONFIG } from '@/lib/constants/admin';
 import { formatPrice, formatDate } from '@/lib/utils/formatting';
 import prisma from '@/lib/prisma';
@@ -132,13 +133,19 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <ProductTable
-        products={products}
-        allCategories={categories}
-        allTags={tags}
-        allStatuses={statuses}
-        filterPresets={filterPresets}
-      />
+      <ErrorBoundary
+        fallback={
+          <ErrorFallback message="Не удалось отобразить таблицу товаров." />
+        }
+      >
+        <ProductTable
+          products={products}
+          allCategories={categories}
+          allTags={tags}
+          allStatuses={statuses}
+          filterPresets={filterPresets}
+        />
+      </ErrorBoundary>
     </div>
   );
 }
