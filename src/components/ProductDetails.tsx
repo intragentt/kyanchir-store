@@ -19,6 +19,7 @@ import BottomSheet from '@/components/shared/ui/BottomSheet';
 import { CheckIcon, XMarkIcon } from '@/components/shared/icons';
 import { useCartStore } from '@/store/useCartStore';
 import { useAppStore } from '@/store/useAppStore';
+import { createSlug } from '@/utils/createSlug';
 
 // ... (компоненты CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
 const CountdownTimer = ({
@@ -348,6 +349,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     addItemToCart(
       {
         productId: product.id,
+        productSlug: product.slug ?? createSlug(product.name),
         variantId: selectedVariant.id,
         productSizeId: sizeInfo.id,
         name: product.name,

@@ -1,7 +1,8 @@
-// src/app/product/[id]/page.tsx
+// src/app/product/[slug]/page.tsx
 import prisma from '@/lib/prisma';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import ProductDetails from '@/components/ProductDetails';
+import { createSlug } from '@/utils/createSlug';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,13 +11,17 @@ const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'ONESIZE'];
 export default async function ProductPage({
   params,
 }: {
-  // --- НЕБОЛЬШОЕ УЛУЧШЕНИЕ: Убираем Promise, так как Next.js разрешает его автоматически ---
-  params: { id: string };
+  params: { slug: string };
 }) {
-  const { id } = params;
+  const { slug } = params;
 
-  const product = await prisma.product.findUnique({
-    where: { id },
+  const product = await prisma.product.findFirst({
+    where: {
+      OR: [
+        { slug },
+        { id: slug },
+      ],
+    },
     include: {
       variants: {
         include: {
@@ -43,10 +48,20 @@ export default async function ProductPage({
     notFound();
   }
 
+  const canonicalSlug = product.slug ?? createSlug(product.name);
+
+  if (canonicalSlug !== slug) {
+    redirect(`/product/${canonicalSlug}`);
+  }
+
+  const normalizedProduct = product.slug
+    ? product
+    : { ...product, slug: canonicalSlug };
+
   // Сортируем размеры внутри каждого варианта
   const sortedProduct = {
-    ...product,
-    variants: product.variants.map((variant) => ({
+    ...normalizedProduct,
+    variants: normalizedProduct.variants.map((variant) => ({
       ...variant,
       // --- НАЧАЛО ИЗМЕНЕНИЙ (2/2): Используем правильное имя 'sizes' и для сортировки ---
       sizes: [...variant.sizes].sort((a, b) => {

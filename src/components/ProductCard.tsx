@@ -10,6 +10,7 @@ import ImagePlaceholder from './ImagePlaceholder';
 import { HeartIcon } from '@/components/shared/icons'; // ОБНОВЛЕННЫЙ ИМПОРТ
 import { ProductWithInfo } from '@/lib/types';
 import { SkeletonLoader } from '@/components/shared/ui';
+import { createSlug } from '@/utils/createSlug';
 
 interface ProductCardProps {
   product: ProductWithInfo;
@@ -74,9 +75,11 @@ export default function ProductCard({ product }: ProductCardProps) {
     });
   };
 
+  const slug = product.slug ?? createSlug(product.name);
+
   return (
     <Link
-      href={`/product/${product.id}`}
+      href={`/product/${slug}`}
       className="group mx-auto flex w-full flex-col text-text-primary md:max-w-[330px]"
     >
       {/* ИЗМЕНЕНИЕ 3: Сетка теперь состоит только из 2-х колонок, без рядов */}
