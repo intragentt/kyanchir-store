@@ -35,6 +35,17 @@ interface CheckoutResult {
   totalAmount: number;
   items: CheckoutItemSummary[];
   customerEmail?: string;
+  payment?: {
+    id: string;
+    status: string;
+    confirmationUrl: string | null;
+    isTest: boolean;
+    amount: {
+      value: string;
+      currency: string;
+    };
+  };
+  paymentError?: string;
 }
 
 const initialFormState: CheckoutFormState = {
@@ -188,7 +199,7 @@ export default function CheckoutPage() {
         </h1>
         <p className="text-sm text-gray-500">
           {orderResult
-            ? 'Мы уже начинаем собирать посылку. Проверьте электронную почту для подтверждения.'
+            ? 'Мы уже начинаем собирать посылку. Проверьте электронную почту и следуйте инструкции по оплате.'
             : 'Заполните данные получателя, и мы подготовим заказ к отправке.'}
         </p>
       </header>
@@ -204,6 +215,48 @@ export default function CheckoutPage() {
               {orderResult.customerEmail && (
                 <p className="text-sm text-gray-500">
                   Подтверждение отправлено на: {orderResult.customerEmail}
+                </p>
+              )}
+              {orderResult.payment && (
+                <div className="mt-4 space-y-3 rounded-md bg-gray-50 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-gray-900">Оплата через ЮKassa</span>
+                    <span className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      {orderResult.payment.status}
+                      {orderResult.payment.isTest ? ' · ТЕСТ' : ''}
+                    </span>
+                  </div>
+                  {orderResult.payment.amount && (
+                    <p className="text-sm text-gray-600">
+                      К оплате: {orderResult.payment.amount.value}{' '}
+                      {orderResult.payment.amount.currency}
+                    </p>
+                  )}
+                  {orderResult.payment.confirmationUrl ? (
+                    <a
+                      href={orderResult.payment.confirmationUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex w-full items-center justify-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+                    >
+                      Перейти к оплате
+                    </a>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      Ссылка на оплату будет отправлена дополнительно.
+                    </p>
+                  )}
+                  {orderResult.payment.isTest && (
+                    <p className="text-xs text-gray-500">
+                      Сейчас используется тестовый магазин ЮKassa. После подключения боевого кабинета
+                      платежи будут проходить в стандартном режиме.
+                    </p>
+                  )}
+                </div>
+              )}
+              {orderResult.paymentError && (
+                <p className="mt-3 text-sm font-medium text-rose-600">
+                  {orderResult.paymentError}
                 </p>
               )}
               <Link
@@ -368,9 +421,21 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {!orderResult && (
+          {!orderResult ? (
             <p className="text-xs text-gray-500">
-              Оплата будет списана после подтверждения менеджером. Мы свяжемся с вами при необходимости уточнения деталей.
+              После оформления заказа мы сформируем ссылку на оплату через ЮKassa и отправим её на вашу почту.
+            </p>
+          ) : orderResult.payment ? (
+            <p className="text-xs text-gray-500">
+              Если ссылка не открывается, проверьте электронную почту или обратитесь в поддержку.
+            </p>
+          ) : orderResult.paymentError ? (
+            <p className="text-xs text-gray-500">
+              Мы уже получили заказ и скоро свяжемся с вами, чтобы завершить оплату удобным способом.
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500">
+              Платёжная система будет активирована после подтверждения профиля в ЮKassa. Мы сообщим детали оплаты дополнительно.
             </p>
           )}
         </aside>
