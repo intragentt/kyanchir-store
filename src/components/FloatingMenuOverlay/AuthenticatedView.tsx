@@ -123,7 +123,7 @@ const AuthenticatedView = ({
         </Link>
         {user?.role?.name === 'ADMIN' && (
           <Link
-            href="https://admin.kyanchir.ru/dashboard"
+            href="https://admin.kyanchir.ru/"
             onClick={onClose}
             aria-label="Админ-панель"
             className="p-2"
