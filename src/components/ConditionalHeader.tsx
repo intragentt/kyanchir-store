@@ -8,7 +8,8 @@ import { useAppStore } from '@/store/useAppStore';
 
 export default function ConditionalHeader() {
   const pathname = usePathname();
-  const isProductPage = pathname.startsWith('/product/');
+  const isProductPage =
+    pathname.startsWith('/p/') || pathname.startsWith('/product/');
   const isHomePage = pathname === '/';
   // --- НАЧАЛО ИЗМЕНЕНИЙ: Добавляем проверку на страницу профиля ---
   const isProfilePage = pathname === '/profile';
