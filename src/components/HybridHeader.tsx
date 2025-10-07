@@ -22,7 +22,10 @@ export default function HybridHeader() {
 
   // --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем состояние оверлея в хук ---
   const isOverlayOpen = isSearchActive || isFloatingMenuOpen;
-  const { translateY, opacity } = useHybridHeader(headerRef, isOverlayOpen);
+  const { translateY, opacity, isSnapping } = useHybridHeader(
+    headerRef,
+    isOverlayOpen,
+  );
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   useEffect(() => {
@@ -50,7 +53,9 @@ export default function HybridHeader() {
       className="fixed left-0 right-0 top-0 z-[100] will-change-transform"
       style={{
         transform: `translateY(${translateY}px)`,
-        transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)',
+        transition: isSnapping
+          ? 'transform 220ms cubic-bezier(.2,.8,.2,1)'
+          : 'transform 0s linear',
       }}
     >
       <Header
