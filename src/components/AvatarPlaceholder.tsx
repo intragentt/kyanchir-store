@@ -1,7 +1,7 @@
 // Местоположение: /src/components/AvatarPlaceholder.tsx
 // Этот компонент отвечает за отображение "заглушки" для аватара.
 
-import ShortLogo from './icons/ShortLogo';
+import { ShortLogo } from './shared/icons';
 
 export default function AvatarPlaceholder() {
   return (

@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import SettingsIcon from '../icons/SettingsIcon';
-import ShortLogo from '../icons/ShortLogo';
-import AdminIcon from '../icons/AdminIcon';
+import { AdminIcon, SettingsIcon, ShortLogo } from '../shared/icons';
 import AvatarPlaceholder from '../AvatarPlaceholder';
 
 interface UserSession {

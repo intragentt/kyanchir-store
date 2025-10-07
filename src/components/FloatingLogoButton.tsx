@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import ShortLogo from './icons/ShortLogo';
+import { ShortLogo } from './shared/icons';
 import { useFooter } from '@/context/FooterContext';
 
 interface FloatingLogoButtonProps {

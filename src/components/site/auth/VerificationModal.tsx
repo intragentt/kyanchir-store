@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { CloseIcon } from '@/components/shared/icons';
 import CodeInput from './CodeInput';
-import CloseIcon from '../icons/CloseIcon';
 
 interface VerificationModalProps {
   isOpen: boolean;

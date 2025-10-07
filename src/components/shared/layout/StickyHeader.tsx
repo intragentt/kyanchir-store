@@ -3,11 +3,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Logo from '../icons/Logo';
-import CloseIcon from '../icons/CloseIcon';
-import BurgerIcon from '../icons/BurgerIcon';
-import SearchIcon from '../icons/SearchIcon';
-import DesktopNav from '../header/DesktopNav';
+import { BurgerIcon, CloseIcon, Logo, SearchIcon } from '../icons';
+import DesktopNav from '@/components/site/layout/DesktopNav';
 import { useAppStore } from '@/store/useAppStore';
 
 interface StickyHeaderProps {

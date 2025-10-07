@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation'; // <-- ШАГ 1: Импортиру
 import { signIn } from 'next-auth/react';
 // useAppStore больше не нужен для обновления, но может понадобиться для чего-то еще, пока оставим
 import { useAppStore } from '@/store/useAppStore';
+import { CloseIcon } from '../icons';
 import CodeInput from './CodeInput';
-import CloseIcon from '../icons/CloseIcon';
 
 interface VerificationModalProps {
   isOpen: boolean;

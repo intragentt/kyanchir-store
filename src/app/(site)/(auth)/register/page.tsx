@@ -4,14 +4,8 @@
 import { useState, FormEvent, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
-import Logo from '@/components/icons/Logo';
+import { ClearIcon, EyeIcon, EyeOffIcon, Logo, TelegramOfficialIcon } from '@/components/shared/icons';
 import Link from 'next/link';
-import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
-import { EyeIcon } from '@/components/icons/EyeIcon';
-import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
-// --- НАЧАЛО ИЗМЕНЕНИЙ: Импортируем иконку крестика ---
-import ClearIcon from '@/components/icons/ClearIcon';
-// --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const validateEmail = (email: string) => {
   const re =

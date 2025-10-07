@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import CloseIcon from '@/components/icons/CloseIcon';
+import { CloseIcon } from '@/components/shared/icons';
 
 interface BottomSheetProps {
   isOpen: boolean;

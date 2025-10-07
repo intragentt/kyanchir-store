@@ -3,9 +3,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 // --- НАЧАЛО ИЗМЕНЕНИЙ: Исправляем импорт CopyIcon ---
-import CopyIcon from '@/components/icons/CopyIcon'; // Импорт по умолчанию
+import { CheckIcon, CopyIcon } from '@/components/shared/icons';
 import { useAppStore } from '@/store/useAppStore';
-import { CheckIcon } from '@/components/icons/CheckIcon'; // Именованный импорт
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 const ChevronIcon = ({ isOpen }: { isOpen: boolean }) => (

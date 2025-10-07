@@ -4,7 +4,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
-import ClearIcon from '@/components/icons/ClearIcon'; // Импортируем иконку
+import { ClearIcon } from '@/components/shared/icons'; // Импортируем иконку
 
 export function ForgotPasswordForm() {
   const searchParams = useSearchParams();

@@ -2,12 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
-import TelegramOfficialIcon from '@/components/icons/TelegramOfficialIcon';
-import ClearIcon from '@/components/icons/ClearIcon';
-import { EyeIcon } from '@/components/icons/EyeIcon';
-import { EyeOffIcon } from '@/components/icons/EyeOffIcon';
+import { ClearIcon, EyeIcon, EyeOffIcon, Logo, TelegramOfficialIcon } from '@/components/shared/icons';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');

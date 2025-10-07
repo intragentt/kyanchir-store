@@ -1,8 +1,8 @@
 // Местоположение: src/components/product-details/ProductHeader.tsx
 'use client';
 
+import { ShortLogo } from '@/components/shared/icons';
 import { formatPrice } from '@/utils/formatPrice';
-import ShortLogo from '../icons/ShortLogo';
 
 interface ProductHeaderProps {
   name: string;

@@ -1,7 +1,7 @@
 // Местоположение: src/components/layout/StickyCategoryFilter.tsx
 'use client';
 
-import CategoryFilter from '../CategoryFilter';
+import CategoryFilter from '@/components/CategoryFilter';
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем "должностную инструкцию" (Props) ---
 // Добавляем все недостающие "пункты", чтобы соответствовать CatalogHeaderController.

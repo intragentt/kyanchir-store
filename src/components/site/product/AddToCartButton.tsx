@@ -1,7 +1,7 @@
 // Местоположение: src/components/product-details/AddToCartButton.tsx
 'use client';
 
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/shared/ui';
 
 // --- Иконки для счетчика ---
 const MinusIcon = (props: React.SVGProps<SVGSVGElement>) => (

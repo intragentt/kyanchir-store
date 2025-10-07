@@ -6,10 +6,7 @@ import type { Prisma } from '@prisma/client';
 import toast from 'react-hot-toast';
 import { Copy, Check } from 'lucide-react';
 
-import { PencilIcon } from '@/components/icons/PencilIcon';
-import { CheckIcon } from '@/components/icons/CheckIcon';
-import { XMarkIcon } from '@/components/icons/XMarkIcon';
-import { SpinnerIcon } from '@/components/icons/SpinnerIcon';
+import { CheckIcon, PencilIcon, SpinnerIcon, XMarkIcon } from '@/components/shared/icons';
 
 const useCopyToClipboard = () => {
   const [isCopied, setIsCopied] = useState(false);

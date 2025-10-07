@@ -3,12 +3,12 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Header from '@/components/Header';
-import StickyHeader from './StickyHeader';
-import CategoryFilter from '../CategoryFilter';
-import StickyCategoryFilter from './StickyCategoryFilter';
-import CatalogContent from '../CatalogContent';
+import CatalogContent from '@/components/CatalogContent';
+import CategoryFilter from '@/components/CategoryFilter';
 import { useAppStore } from '@/store/useAppStore';
 import { ProductWithInfo } from '@/lib/types';
+import StickyCategoryFilter from './StickyCategoryFilter';
+import StickyHeader from './StickyHeader';
 
 interface Category {
   id: string;
