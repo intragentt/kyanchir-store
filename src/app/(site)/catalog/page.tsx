@@ -37,20 +37,27 @@ export default async function CatalogPage() {
 
   const productsForCatalog = products.reduce<ProductWithInfo[]>(
     (acc, product) => {
-      const firstVariant = product.variants[0];
-      if (firstVariant) {
-        let imageUrls = firstVariant.images.map((image) => image.url);
-        if (product.name === 'Комплект двойка') {
-          imageUrls.push('/Фото - 3.png', '/Фото - 4.png');
-        }
-        acc.push({
-          ...product,
-          price: firstVariant.price,
-          oldPrice: firstVariant.oldPrice,
-          imageUrls: imageUrls,
-          categoryIds: product.categories.map((category) => category.id),
-        });
+      const variantWithPrice = product.variants.find(
+        (variant) => variant.price !== null && variant.price > 0,
+      );
+
+      if (!variantWithPrice) {
+        return acc;
       }
+
+      const imageUrls = variantWithPrice.images.map((image) => image.url);
+      if (product.name === 'Комплект двойка') {
+        imageUrls.push('/Фото - 3.png', '/Фото - 4.png');
+      }
+
+      acc.push({
+        ...product,
+        price: variantWithPrice.price,
+        oldPrice: variantWithPrice.oldPrice,
+        imageUrls,
+        categoryIds: product.categories.map((category) => category.id),
+      });
+
       return acc;
     },
     [],

@@ -5,31 +5,25 @@ export interface PriceParts {
   currency: string; // "RUB"
 }
 
-// ИЗМЕНЕНИЕ: Функция теперь знает, что цена приходит в копейках.
+// ИЗМЕНЕНИЕ: Цена приходит уже в рублях, но функция защищает от некорректных значений.
 export function formatPrice(
-  priceInCents: number | null | undefined,
+  price: number | null | undefined,
 ): PriceParts | null {
-  // Если цена не предоставлена, невалидна или равна 0, возвращаем null
-  if (
-    priceInCents === null ||
-    priceInCents === undefined ||
-    priceInCents === 0
-  ) {
+  if (price === null || price === undefined) {
     return null;
   }
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ ---
-  // 1. Переводим копейки в рубли
-  const priceInRubles = priceInCents / 100;
+  const normalizedPrice = Number(price);
 
-  // 2. Форматируем число в строку с пробелами в качестве разделителей
-  //    и отбрасываем дробную часть, если она равна .00
+  if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
+    return null;
+  }
+
   const formattedValue = new Intl.NumberFormat('ru-RU', {
     style: 'decimal',
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
-  }).format(priceInRubles);
+  }).format(normalizedPrice);
 
   return { value: formattedValue, currency: 'RUB' };
-  // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }
