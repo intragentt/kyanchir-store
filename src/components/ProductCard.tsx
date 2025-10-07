@@ -79,7 +79,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link
-      href={`/product/${slug}`}
+      href={`/p/${slug}`}
       className="group mx-auto flex w-full flex-col text-text-primary md:max-w-[330px]"
     >
       {/* ИЗМЕНЕНИЕ 3: Сетка теперь состоит только из 2-х колонок, без рядов */}
