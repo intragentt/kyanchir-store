@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentType, CSSProperties } from 'react';
 import { toast } from 'react-hot-toast';
 import { LoadingButton } from '@/components/shared/ui';
 import { cn } from '@/lib/utils';
@@ -25,16 +25,11 @@ import {
   typographyLabels,
   typographyOrder,
 } from '@/lib/settings/design-system.shared';
-
-interface IconCatalogEntry {
-  name: string;
-  svg: string;
-}
+import * as sharedIcons from '@/components/shared/icons';
 
 interface DesignSystemFormProps {
   initialSettings: DesignSystemSettings;
   defaultSettings: DesignSystemSettings;
-  icons: IconCatalogEntry[];
 }
 
 const weightOptions = [100, 200, 300, 400, 500, 600, 700, 800, 900];
@@ -104,7 +99,6 @@ function useDesignSystemState(initial: DesignSystemSettings) {
 export default function DesignSystemForm({
   initialSettings,
   defaultSettings,
-  icons,
 }: DesignSystemFormProps) {
   const { settings, setSettings, snapshot, setSnapshot, isDirty } =
     useDesignSystemState(initialSettings);
@@ -113,6 +107,36 @@ export default function DesignSystemForm({
   const [newFontUrl, setNewFontUrl] = useState('');
   const [newFontCategory, setNewFontCategory] = useState(fontCategoryOptions[0]?.value ?? 'sans-serif');
   const [newFontPreview, setNewFontPreview] = useState(defaultPreviewText);
+  const iconRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [iconMarkup, setIconMarkup] = useState<Record<string, string>>({});
+
+  const iconEntries = useMemo(() => {
+    return Object.entries(sharedIcons)
+      .filter((entry): entry is [string, ComponentType<Record<string, any>>] => {
+        const [, component] = entry;
+        return typeof component === 'function';
+      })
+      .sort((a, b) => a[0].localeCompare(b[0]));
+  }, []);
+
+  useEffect(() => {
+    const nextMarkup: Record<string, string> = {};
+
+    for (const [name] of iconEntries) {
+      const container = iconRefs.current[name];
+      if (!container) continue;
+
+      const svgElement = container.querySelector('svg');
+      if (!svgElement) continue;
+
+      nextMarkup[name] = svgElement.outerHTML;
+    }
+
+    setIconMarkup((prev) => {
+      const hasChanges = iconEntries.some(([name]) => prev[name] !== nextMarkup[name]);
+      return hasChanges ? nextMarkup : prev;
+    });
+  }, [iconEntries]);
 
   const designSystemStyle = useMemo(() => {
     const map = buildDesignSystemVariableMap(settings);
@@ -365,7 +389,13 @@ export default function DesignSystemForm({
     [settings, setSnapshot],
   );
 
-  const handleCopyIconMarkup = useCallback(async (svg: string) => {
+  const handleCopyIconMarkup = useCallback(async (name: string) => {
+    const svg = iconMarkup[name];
+    if (!svg) {
+      toast.error('SVG ещё не готов — попробуйте позже');
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(svg);
       toast.success('SVG скопирован в буфер обмена');
@@ -373,7 +403,7 @@ export default function DesignSystemForm({
       console.error('[DesignSystem] Не удалось скопировать SVG', error);
       toast.error('Не удалось скопировать SVG');
     }
-  }, []);
+  }, [iconMarkup]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-10">
@@ -850,24 +880,32 @@ export default function DesignSystemForm({
           Все SVG, используемые на сайте. Можно скопировать код и при необходимости заменить иконку через админку в будущем.
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
-          {icons.map((icon) => (
-            <div key={icon.name} className="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-4">
+          {iconEntries.map(([name, Icon]) => (
+            <div key={name} className="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-gray-900">{icon.name}</p>
+                <p className="text-sm font-semibold text-gray-900">{name}</p>
                 <button
                   type="button"
-                  onClick={() => handleCopyIconMarkup(icon.svg)}
+                  onClick={() => handleCopyIconMarkup(name)}
                   className="text-xs font-semibold text-gray-500 transition hover:text-gray-700"
                 >
                   Скопировать SVG
                 </button>
               </div>
               <div
+                ref={(node) => {
+                  if (node) {
+                    iconRefs.current[name] = node;
+                  } else {
+                    delete iconRefs.current[name];
+                  }
+                }}
                 className="flex h-16 items-center justify-center rounded-md border border-dashed border-gray-300 bg-white"
-                dangerouslySetInnerHTML={{ __html: icon.svg }}
-              />
+              >
+                <Icon className="h-10 w-10 text-gray-800" aria-hidden="true" />
+              </div>
               <textarea
-                value={icon.svg}
+                value={iconMarkup[name] ?? ''}
                 readOnly
                 className="h-28 w-full rounded-md border border-gray-300 px-3 py-2 text-xs font-mono text-gray-600 focus:outline-none"
               />
