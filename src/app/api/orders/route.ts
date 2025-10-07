@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
+import {
+  createYookassaPayment,
+  isYookassaConfigured,
+} from '@/lib/payments/yookassa';
 
 const orderItemSchema = z.object({
   productSizeId: z.string().min(1),
@@ -160,6 +164,42 @@ export async function POST(request: Request) {
       return order;
     });
 
+    let paymentSummary: Awaited<ReturnType<typeof createYookassaPayment>> = null;
+    let paymentError: string | null = null;
+
+    if (isYookassaConfigured()) {
+      try {
+        paymentSummary = await createYookassaPayment({
+          orderId: createdOrder.id,
+          orderNumber: createdOrder.orderNumber,
+          totalAmount,
+          customerName: data.customerName,
+          customerEmail: data.customerEmail,
+          customerPhone: data.customerPhone,
+          shippingCity: data.shippingCity,
+          shippingAddress: data.shippingAddress,
+          items: itemsPayload.map((item) => ({
+            productName: item.productName,
+            productSizeValue: item.productSizeValue,
+            productColor: item.productColor,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+          })),
+        });
+
+        if (paymentSummary?.id) {
+          await prisma.order.update({
+            where: { id: createdOrder.id },
+            data: { paymentTransactionId: paymentSummary.id },
+          });
+        }
+      } catch (error) {
+        console.error('Failed to create YooKassa payment', error);
+        paymentError =
+          'Заказ создан, но не удалось инициировать оплату. Мы свяжемся с вами для завершения покупки.';
+      }
+    }
+
     return NextResponse.json(
       {
         orderNumber: createdOrder.orderNumber,
@@ -173,6 +213,16 @@ export async function POST(request: Request) {
           quantity: item.quantity,
           unitPrice: item.priceAtPurchase,
         })),
+        payment: paymentSummary
+          ? {
+              id: paymentSummary.id,
+              status: paymentSummary.status,
+              confirmationUrl: paymentSummary.confirmationUrl ?? null,
+              amount: paymentSummary.amount,
+              isTest: paymentSummary.isTest,
+            }
+          : undefined,
+        paymentError: paymentError ?? undefined,
       },
       { status: 201 },
     );
