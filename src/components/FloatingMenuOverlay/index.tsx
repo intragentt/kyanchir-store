@@ -67,7 +67,7 @@ export default function FloatingMenuOverlay({
               className="mt-6"
             />
 
-            <CartSummary />
+            <CartSummary onNavigate={onClose} />
 
             <MenuButton
               href="/orders"

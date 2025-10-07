@@ -16,6 +16,9 @@ import SizeGuideContent from '@/components/site/product/SizeGuideContent';
 import SizeSelector from '@/components/site/product/SizeSelector';
 import AddToCartButton from '@/components/site/product/AddToCartButton';
 import BottomSheet from '@/components/shared/ui/BottomSheet';
+import { CheckIcon, XMarkIcon } from '@/components/shared/icons';
+import { useCartStore } from '@/store/useCartStore';
+import { useAppStore } from '@/store/useAppStore';
 
 // ... (компоненты CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
 const CountdownTimer = ({
@@ -262,6 +265,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     'sizeSelector' | 'sizeChart' | null
   >(null);
 
+  const addItemToCart = useCartStore((state) => state.addItem);
+  const showNotification = useAppStore((state) => state.showNotification);
+
   const [isDiscountActive, setIsDiscountActive] = useState(() => {
     const hasOldPrice =
       selectedVariant.oldPrice &&
@@ -323,19 +329,71 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
       setActiveSheet('sizeSelector');
       return;
     }
-    setQuantity(1);
-    console.log(`Товар размера ${selectedSize} добавлен в корзину`);
+    const sizeInfo = selectedVariant.sizes.find(
+      (size) => size.size.value === selectedSize,
+    );
+
+    if (!sizeInfo || sizeInfo.stock <= 0) {
+      showNotification(
+        'Выбранный размер временно недоступен',
+        'error',
+        XMarkIcon,
+      );
+      return;
+    }
+
+    const quantityToAdd = quantity > 0 ? quantity : 1;
+    const safeQuantity = Math.min(quantityToAdd, sizeInfo.stock);
+
+    addItemToCart(
+      {
+        productId: product.id,
+        variantId: selectedVariant.id,
+        productSizeId: sizeInfo.id,
+        name: product.name,
+        size: sizeInfo.size.value,
+        color: selectedVariant.color,
+        price: sizeInfo.price ?? selectedVariant.price,
+        imageUrl: selectedVariant.images[0]?.url ?? null,
+        maxQuantity: sizeInfo.stock,
+      },
+      safeQuantity,
+    );
+
+    setQuantity(safeQuantity);
+    showNotification('Товар добавлен в корзину', 'success', CheckIcon);
   };
 
   const handleIncrease = () => {
-    setQuantity((prev) => prev + 1);
+    setQuantity((prev) => {
+      if (!selectedSize) {
+        return 0;
+      }
+
+      if (availableStock <= 0) {
+        return 0;
+      }
+
+      const baseQuantity = prev <= 0 ? 1 : prev;
+      return Math.min(baseQuantity + 1, availableStock);
+    });
   };
 
   const handleDecrease = () => {
-    setQuantity((prev) => (prev > 0 ? prev - 1 : 0));
+    setQuantity((prev) => {
+      if (!selectedSize) {
+        return 0;
+      }
+
+      if (prev <= 1) {
+        return 1;
+      }
+
+      return prev - 1;
+    });
   };
 
-  const isAddToCartDisabled = !selectedSize;
+  const isAddToCartDisabled = !selectedSize || availableStock <= 0;
   const isIncreaseDisabled = quantity >= availableStock;
 
   if (!product || !selectedVariant) {
