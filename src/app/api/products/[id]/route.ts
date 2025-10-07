@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 // --- ИЗМЕНЕНИЕ: Импортируем новую функцию архивации ---
 import { archiveMoySkladProducts } from '@/lib/moysklad-api';
+import { createSlug, ensureUniqueSlug } from '@/utils/createSlug';
 
 type RouteContext = {
   params: {
@@ -127,12 +128,26 @@ export async function PUT(req: NextRequest, { params }: RouteContext) {
       alternativeNames,
     } = body;
 
+    const baseSlug = createSlug(name);
+    const slug = await ensureUniqueSlug(baseSlug, async (candidate) => {
+      const existing = await prisma.product.findFirst({
+        where: {
+          slug: candidate,
+          NOT: { id: productId },
+        },
+        select: { id: true },
+      });
+
+      return Boolean(existing);
+    });
+
     const updatedProduct = await prisma.$transaction(
       async (tx) => {
         await tx.product.update({
           where: { id: productId },
           data: {
             name,
+            slug,
             article,
             statusId: status.id,
             categories: {

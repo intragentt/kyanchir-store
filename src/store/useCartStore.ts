@@ -7,6 +7,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 export type CartItem = {
   id: string;
   productId: string;
+  productSlug: string;
   variantId: string;
   productSizeId: string;
   name: string;
@@ -20,7 +21,10 @@ export type CartItem = {
 
 interface CartState {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'id' | 'quantity'>, quantity: number) => void;
+  addItem: (
+    item: Omit<CartItem, 'id' | 'quantity'>,
+    quantity: number,
+  ) => void;
   updateQuantity: (productSizeId: string, quantity: number) => void;
   removeItem: (productSizeId: string) => void;
   clearCart: () => void;
@@ -38,9 +42,14 @@ export const useCartStore = create<CartState>()(
     (set) => ({
       items: [],
       addItem: (item, quantity) => {
+        const normalizedItem = {
+          ...item,
+          productSlug: item.productSlug ?? item.productId,
+        };
+
         set((state) => {
           const existingItem = state.items.find(
-            (cartItem) => cartItem.productSizeId === item.productSizeId,
+            (cartItem) => cartItem.productSizeId === normalizedItem.productSizeId,
           );
 
           if (existingItem) {
@@ -58,7 +67,7 @@ export const useCartStore = create<CartState>()(
             };
           }
 
-          const safeQuantity = clampQuantity(quantity, item.maxQuantity);
+          const safeQuantity = clampQuantity(quantity, normalizedItem.maxQuantity);
           if (safeQuantity === 0) {
             return state;
           }
@@ -67,8 +76,8 @@ export const useCartStore = create<CartState>()(
             items: [
               ...state.items,
               {
-                ...item,
-                id: item.productSizeId,
+                ...normalizedItem,
+                id: normalizedItem.productSizeId,
                 quantity: safeQuantity,
               },
             ],
@@ -100,6 +109,25 @@ export const useCartStore = create<CartState>()(
       name: 'kyanchir-store-cart',
       storage: createJSONStorage<Pick<CartState, 'items'>>(() => localStorage),
       partialize: (state) => ({ items: state.items }),
+      version: 2,
+      migrate: (persistedState, version) => {
+        if (!persistedState || typeof persistedState !== 'object') {
+          return { items: [] };
+        }
+
+        if (version < 2) {
+          return {
+            items: (persistedState as { items?: CartItem[] }).items?.map(
+              (item) => ({
+                ...item,
+                productSlug: item.productSlug ?? item.productId,
+              }),
+            ) ?? [],
+          };
+        }
+
+        return persistedState as Pick<CartState, 'items'>;
+      },
     },
   ),
 );
