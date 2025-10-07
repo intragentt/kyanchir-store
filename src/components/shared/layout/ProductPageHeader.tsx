@@ -50,7 +50,7 @@ export default function ProductPageHeader() {
     isSearchActive: state.isSearchActive,
     isFloatingMenuOpen: state.isFloatingMenuOpen,
   }));
-  const { translateY, opacity, isSnapping } = useHybridHeader(
+  const { translateY, opacity } = useHybridHeader(
     headerRef,
     isSearchActive || isFloatingMenuOpen,
   );
@@ -106,12 +106,10 @@ export default function ProductPageHeader() {
   return (
     <header
       ref={headerRef}
-      className="fixed inset-x-0 top-0 z-[100] bg-white lg:hidden"
+      className="fixed inset-x-0 top-0 z-[100] bg-white shadow-sm lg:hidden"
       style={{
         transform: `translateY(${translateY}px)`,
-        transition: isSnapping
-          ? 'transform 220ms cubic-bezier(.2,.8,.2,1)'
-          : 'transform 0s linear',
+        transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)',
       }}
     >
       <div
