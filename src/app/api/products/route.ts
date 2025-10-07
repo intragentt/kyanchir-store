@@ -2,6 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { createSlug, ensureUniqueSlug } from '@/utils/createSlug';
 
 /**
  * GET-хендлер для получения ВСЕХ продуктов, включая их варианты
@@ -40,9 +41,19 @@ export async function POST(request: Request) {
 
     // Используем вложенную запись (nested write), чтобы создать продукт
     // и связанный с ним вариант в одной атомарной операции.
+    const baseSlug = createSlug(name);
+    const slug = await ensureUniqueSlug(baseSlug, async (candidate) => {
+      const existing = await prisma.product.findUnique({
+        where: { slug: candidate },
+        select: { id: true },
+      });
+      return Boolean(existing);
+    });
+
     const newProduct = await prisma.product.create({
       data: {
         name,
+        slug,
         description,
         status, // DRAFT, PUBLISHED, etc.
         variants: {
