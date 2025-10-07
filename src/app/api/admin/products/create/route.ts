@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { createMoySkladProduct } from '@/lib/moysklad-api';
 import { generateProductSku } from '@/lib/sku-generator';
+import { createSlug, ensureUniqueSlug } from '@/utils/createSlug';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -25,6 +26,15 @@ export async function POST(req: NextRequest) {
 
     // 1. Генерируем базовый артикул
     const article = await generateProductSku(prisma, categoryId);
+
+    const baseSlug = createSlug(name);
+    const slug = await ensureUniqueSlug(baseSlug, async (candidate) => {
+      const existing = await prisma.product.findUnique({
+        where: { slug: candidate },
+        select: { id: true },
+      });
+      return Boolean(existing);
+    });
 
     // 2. Находим категорию для ее moyskladId
     const category = await prisma.category.findUnique({
@@ -58,6 +68,7 @@ export async function POST(req: NextRequest) {
     const newProduct = await prisma.product.create({
       data: {
         name,
+        slug,
         article,
         description,
         statusId,
