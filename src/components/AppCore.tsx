@@ -20,6 +20,8 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isHomePage = pathname === '/';
   const isProfilePage = pathname === '/profile';
+  const isProductPage =
+    pathname.startsWith('/p/') || pathname.startsWith('/product/');
 
   const isAuthPage =
     pathname.startsWith('/login') ||
@@ -92,22 +94,24 @@ export default function AppCore({ children }: { children: React.ReactNode }) {
     return <main>{children}</main>;
   }
 
+  const mainStyle =
+    isHomePage || isProfilePage || isProductPage
+      ? { paddingTop: 'var(--header-height, 70px)' }
+      : {};
+
+  const contentClassName = isProductPage
+    ? 'mx-auto w-full px-0 pb-16 pt-4 sm:px-4 lg:px-10 xl:px-16'
+    : 'sm-px-6 container mx-auto px-4 py-12 lg:px-8 xl:px-12';
+
   return (
     <FooterProvider>
       <NetworkStatusManager />
       <NotificationManager />
       <ConditionalHeader />
       <SearchOverlay />
-      <main
-        className="flex-grow"
-        style={
-          isHomePage || isProfilePage
-            ? { paddingTop: 'var(--header-height, 70px)' }
-            : {}
-        }
-      >
+      <main className="flex-grow" style={mainStyle}>
         {isHomePage && <DynamicHeroSection />}
-        <div className="sm-px-6 container mx-auto px-4 py-12 lg:px-8 xl:px-12">
+        <div className={contentClassName}>
           {children}
         </div>
       </main>
