@@ -9,16 +9,21 @@ import { formatPrice, PriceParts } from '@/utils/formatPrice';
 import ImagePlaceholder from './ImagePlaceholder';
 import { HeartIcon } from '@/components/shared/icons'; // ОБНОВЛЕННЫЙ ИМПОРТ
 import { ProductWithInfo } from '@/lib/types';
+import { SkeletonLoader } from '@/components/shared/ui';
 
 interface ProductCardProps {
   product: ProductWithInfo;
 }
+
+const BLUR_DATA_URL =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJhZGlhbEdyYWRpZW50IGlkPSJhIiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiPjxzdG9wIG9mZnNldD0iMCIgc3RvcC1jb2xvcj0iI2Y0ZjVmNiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2Q2ZDllOCIvPjwvcmFkaWFsR3JhZGllbnQ+PHJlY3Qgd2lkdGg9IjEyIiBoZWlnaHQ9IjE4IiBmaWxsPSJ1cmwoI2EpIiByeD0iMiIgcnk9IjIiLz48L3N2Zz4=';
 
 export default function ProductCard({ product }: ProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
 
   // ИЗМЕНЕНИЕ 1: Теперь нам нужно отслеживать ошибки только для 2-х картинок
   const [imageErrors, setImageErrors] = useState([false, false]);
+  const [imageLoaded, setImageLoaded] = useState([false, false]);
 
   useEffect(() => {
     const savedLiked = localStorage.getItem(`liked-${product.id}`);
@@ -30,6 +35,11 @@ export default function ProductCard({ product }: ProductCardProps) {
   useEffect(() => {
     localStorage.setItem(`liked-${product.id}`, String(isLiked));
   }, [isLiked, product.id]);
+
+  useEffect(() => {
+    setImageErrors([false, false]);
+    setImageLoaded([false, false]);
+  }, [product.id]);
 
   // ИЗМЕНЕНИЕ 2: Получаем ссылки только на 2 первых изображения
   const imageUrls = [product.imageUrls?.[0], product.imageUrls?.[1]];
@@ -46,6 +56,22 @@ export default function ProductCard({ product }: ProductCardProps) {
       newErrors[index] = true;
       return newErrors;
     });
+    console.log('❌ ProductCard: изображение не загрузилось', {
+      productId: product.id,
+      index,
+    });
+  };
+
+  const handleImageLoaded = (index: number) => {
+    setImageLoaded((prev) => {
+      const updated = [...prev];
+      updated[index] = true;
+      return updated;
+    });
+    console.log('✅ ProductCard: изображение загружено', {
+      productId: product.id,
+      index,
+    });
   };
 
   return (
@@ -56,24 +82,42 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* ИЗМЕНЕНИЕ 3: Сетка теперь состоит только из 2-х колонок, без рядов */}
       <div className="relative z-10 grid grid-cols-2 gap-x-2.5">
         {/* ИЗМЕНЕНИЕ 4: Используем `map` для рендеринга 2-х изображений */}
-        {imageUrls.map((url, index) => (
-          <div
-            key={index}
-            className="relative aspect-[3/4] w-full overflow-hidden rounded-md border border-gray-200"
-          >
-            <ImagePlaceholder />
-            {url && !imageErrors[index] && (
-              <Image
-                src={url}
-                alt={`${product.name} - фото ${index + 1}`}
-                fill
-                sizes="(max-width: 768px) 50vw, 33vw"
-                className="object-cover"
-                onError={() => handleImageError(index)}
-              />
-            )}
-          </div>
-        ))}
+        {imageUrls.map((url, index) => {
+          const shouldShowFallback = !url || imageErrors[index];
+          const isLoaded = imageLoaded[index];
+
+          return (
+            <div
+              key={index}
+              className="relative aspect-[3/4] w-full overflow-hidden rounded-md border border-gray-200"
+            >
+              {!isLoaded && !shouldShowFallback && (
+                <SkeletonLoader
+                  variant="card"
+                  rows={1}
+                  columns={1}
+                  className="absolute inset-0 h-full w-full"
+                />
+              )}
+              {shouldShowFallback ? (
+                <ImagePlaceholder />
+              ) : (
+                <Image
+                  src={url as string}
+                  alt={`${product.name} - фото ${index + 1}`}
+                  fill
+                  sizes="(max-width: 768px) 50vw, (max-width: 1024px) 25vw, 20vw"
+                  className="object-cover transition-transform duration-500 ease-out group-active:scale-95 group-hover:scale-105"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  placeholder="blur"
+                  blurDataURL={BLUR_DATA_URL}
+                  onError={() => handleImageError(index)}
+                  onLoadingComplete={() => handleImageLoaded(index)}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="relative z-0 mx-auto mt-[-12px] flex w-[calc(100%-10px)] flex-grow flex-col justify-between rounded-b-md border-x border-b border-gray-200 bg-white px-3 pb-2 pt-5">
@@ -101,6 +145,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         <div className="absolute bottom-1 right-1 overflow-visible sm:bottom-2 sm:right-2">
           <button
             aria-label="Добавить в избранное"
+            aria-pressed={isLiked}
             className="flex h-10 w-10 items-center justify-center transition-all duration-300 ease-in-out"
             onClick={(e) => {
               e.preventDefault();
