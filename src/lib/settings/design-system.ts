@@ -230,7 +230,7 @@ function safeParseSettings(value: string | null): DesignSystemSettings {
 
   try {
     const parsed = JSON.parse(value);
-    const result = designSystemPartialSchema.parse(parsed);
+    const result: DesignSystemPartial = designSystemPartialSchema.parse(parsed);
     return mergeWithDefaults(result);
   } catch (error) {
     console.error('[DesignSystem] Failed to parse settings, fallback to defaults', error);
