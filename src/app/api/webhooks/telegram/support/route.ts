@@ -2,7 +2,7 @@
 // Новая, единственно верная точка входа для вебхуков Бота Поддержки.
 
 import { NextResponse } from 'next/server';
-import { supportBot } from '@/lib/telegram';
+import { getSupportBot } from '@/lib/telegram';
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     // 3. Главная магия Telegraf: передаем все обновление на обработку.
     // Telegraf сам разберется, что это было - команда, нажатие кнопки или сообщение,
     // и вызовет нужный обработчик, который мы определим позже.
+    const supportBot = getSupportBot();
     await supportBot.handleUpdate(body);
 
     // 4. Отвечаем Telegram, что все в порядке, чтобы он не слал обновление повторно.

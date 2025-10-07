@@ -2,7 +2,7 @@
 
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { supportBot } from '@/lib/telegram'; // <-- ИЗМЕНЕНО: Импортируем наш новый Telegraf-бот
+import { getSupportBot } from '@/lib/telegram'; // <-- ИЗМЕНЕНО: Импортируем ленивый доступ к Telegraf-боту
 import { Markup } from 'telegraf'; // <-- ДОБАВЛЕНО: Импортируем хелпер для клавиатур
 
 interface SupportFormRequestBody {
@@ -32,6 +32,8 @@ async function notifyAgents(ticket: {
     console.warn(`Нет агентов для уведомления о тикете ${ticket.id}`);
     return;
   }
+
+  const supportBot = getSupportBot();
 
   const messageText = `
 📬 **Новое обращение!** (на ${ticket.assignedEmail || 'support'})
