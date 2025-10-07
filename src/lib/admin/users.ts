@@ -105,19 +105,16 @@ function safeDecrypt(value: string | null | undefined): string | null {
   }
 }
 
-function buildOrderBy(
-  sortBy: AdminUserSortKey,
-  sortOrder: 'asc' | 'desc',
-): Prisma.UserOrderByWithRelationInput | undefined {
+function buildOrderBy(sortBy: AdminUserSortKey, sortOrder: 'asc' | 'desc') {
   switch (sortBy) {
     case 'role':
       return { role: { name: sortOrder } } satisfies Prisma.UserOrderByWithRelationInput;
     case 'ordersCount':
       return { orders: { _count: sortOrder } } satisfies Prisma.UserOrderByWithRelationInput;
     case 'totalSpent':
-      return undefined;
+      return { orders: { _sum: { totalAmount: sortOrder } } } satisfies Prisma.UserOrderByWithRelationInput;
     case 'lastLoginAt':
-      return undefined;
+      return { sessions: { _max: { expires: sortOrder } } } satisfies Prisma.UserOrderByWithRelationInput;
     case 'createdAt':
     default:
       return { createdAt: sortOrder } satisfies Prisma.UserOrderByWithRelationInput;
@@ -132,21 +129,6 @@ function buildWhereClause(query: AdminUsersQuery): Prisma.UserWhereInput {
     where.role = { name: normalizedRole };
   }
 
-  function appendAnd(clause: Prisma.UserWhereInput) {
-    const current = where.AND;
-    if (!current) {
-      where.AND = [clause];
-      return;
-    }
-
-    if (Array.isArray(current)) {
-      where.AND = [...current, clause];
-      return;
-    }
-
-    where.AND = [current, clause];
-  }
-
   if (query.status && query.status !== 'all') {
     if (query.status === 'active') {
       where.emailVerified = { not: null };
@@ -155,9 +137,12 @@ function buildWhereClause(query: AdminUsersQuery): Prisma.UserWhereInput {
       where.emailVerified = null;
     }
     if (query.status === 'blocked') {
-      appendAnd({
-        sessions: { none: {} },
-      });
+      where.AND = [
+        ...(where.AND ?? []),
+        {
+          sessions: { none: {} },
+        },
+      ];
     }
   }
 
@@ -179,7 +164,7 @@ function buildWhereClause(query: AdminUsersQuery): Prisma.UserWhereInput {
     }
 
     if (orConditions.length > 0) {
-      appendAnd({ OR: orConditions });
+      where.AND = [...(where.AND ?? []), { OR: orConditions }];
     }
   }
 
@@ -258,9 +243,6 @@ export async function fetchAdminUsers(
   const sortBy = query.sortBy ?? 'createdAt';
   const sortOrder = query.sortOrder === 'asc' ? 'asc' : 'desc';
   const searchTerm = query.search?.trim();
-  const isTotalSpentSort = sortBy === 'totalSpent';
-  const isLastLoginSort = sortBy === 'lastLoginAt';
-  const requiresManualSort = isTotalSpentSort || isLastLoginSort;
 
   console.log('🔄 admin/users: получение пользователей', {
     page,
@@ -283,17 +265,6 @@ export async function fetchAdminUsers(
   const skip = isNameSearch ? 0 : (page - 1) * perPage;
   const take = isNameSearch ? MAX_SAMPLE_FOR_NAME_SEARCH : perPage;
 
-  let manualOrderBy: Prisma.UserOrderByWithRelationInput | undefined;
-  if (requiresManualSort) {
-    if (isTotalSpentSort) {
-      console.log('🔄 admin/users: ручная сортировка по сумме покупок');
-    }
-    if (isLastLoginSort) {
-      console.log('🔄 admin/users: ручная сортировка по последнему входу');
-    }
-    manualOrderBy = { createdAt: 'desc' } satisfies Prisma.UserOrderByWithRelationInput;
-  }
-
   const [summary, rawUsers] = await Promise.all([
     collectSummary(where),
     prisma.user.findMany({
@@ -304,57 +275,22 @@ export async function fetchAdminUsers(
         _count: { select: { orders: true } },
         sessions: { select: { expires: true }, orderBy: { expires: 'desc' }, take: 1 },
       },
-      ...(requiresManualSort
-        ? { orderBy: manualOrderBy }
-        : {
-            orderBy: orderBy ?? { createdAt: sortOrder },
-            skip,
-            take,
-          }),
+      orderBy,
+      skip,
+      take,
     }),
   ]);
 
   const mapped = rawUsers.map(mapToAdminRecord);
   const filteredByName = filterByNameIfNeeded(mapped, searchTerm);
 
-  const manuallySorted = requiresManualSort
-    ? [...filteredByName].sort((a, b) => {
-        if (isTotalSpentSort) {
-          return sortOrder === 'asc' ? a.totalSpent - b.totalSpent : b.totalSpent - a.totalSpent;
-        }
-
-        if (isLastLoginSort) {
-          const aTime = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : null;
-          const bTime = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : null;
-
-          if (aTime === bTime) {
-            return 0;
-          }
-
-          if (aTime === null) {
-            return sortOrder === 'asc' ? -1 : 1;
-          }
-
-          if (bTime === null) {
-            return sortOrder === 'asc' ? 1 : -1;
-          }
-
-          return sortOrder === 'asc' ? aTime - bTime : bTime - aTime;
-        }
-
-        return 0;
-      })
-    : filteredByName;
-
-  const total = isNameSearch || requiresManualSort
-    ? manuallySorted.length
+  const total = isNameSearch
+    ? filteredByName.length
     : await prisma.user.count({ where });
 
   const totalPages = Math.max(Math.ceil(total / perPage), 1);
   const start = (page - 1) * perPage;
-  const paginated = isNameSearch || requiresManualSort
-    ? manuallySorted.slice(start, start + perPage)
-    : manuallySorted;
+  const paginated = isNameSearch ? filteredByName.slice(start, start + perPage) : filteredByName;
 
   console.log('✅ admin/users: пользователи загружены', {
     count: paginated.length,
