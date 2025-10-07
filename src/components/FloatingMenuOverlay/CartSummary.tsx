@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import CartIcon from '../icons/CartIcon';
-import ChevronIcon from '../icons/ChevronIcon';
+import { CartIcon, ChevronIcon } from '../shared/icons';
 
 const CartSummary = () => {
   const [isCartOpen, setIsCartOpen] = useState(false);

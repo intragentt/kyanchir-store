@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRightIcon } from './icons/ArrowRightIcon';
+import { ArrowRightIcon } from './shared/icons';
 
 export default function CookieConsentBanner() {
   const [isVisible, setIsVisible] = useState(false);

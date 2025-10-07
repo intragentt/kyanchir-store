@@ -3,8 +3,8 @@
 import { signIn } from 'next-auth/react';
 import { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Logo from '@/components/icons/Logo';
 import Link from 'next/link';
+import { Logo } from '@/components/shared/icons';
 
 export default function VerifyCodePageWrapper() {
   return (

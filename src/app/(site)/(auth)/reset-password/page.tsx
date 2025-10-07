@@ -1,8 +1,8 @@
 // Местоположение: /src/app/(auth)/reset-password/page.tsx
-import { ResetPasswordForm } from '@/components/auth/ResetPasswordForm';
+import { ResetPasswordForm } from '@/components/site/auth/ResetPasswordForm';
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
-import Logo from '@/components/icons/Logo';
+import { Logo } from '@/components/shared/icons';
 
 const MessageDisplay = ({
   title,

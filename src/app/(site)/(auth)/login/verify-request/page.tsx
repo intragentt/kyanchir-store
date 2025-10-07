@@ -1,6 +1,6 @@
 // Местоположение: src/app/login/verify-request/page.tsx
-import EmailIcon from '@/components/icons/EmailIcon';
 import Link from 'next/link';
+import { EmailIcon } from '@/components/shared/icons';
 
 export default function VerifyRequestPage() {
   return (

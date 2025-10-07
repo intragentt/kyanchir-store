@@ -1,4 +1,4 @@
-import ShortLogo from './icons/ShortLogo';
+import { ShortLogo } from './shared/icons';
 
 interface PreloaderProps {
   top: number;

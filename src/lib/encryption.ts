@@ -11,22 +11,43 @@ import crypto from 'crypto';
 const algorithm = 'aes-256-cbc';
 const ivLength = 16;
 
-const keyHex = process.env.ENCRYPTION_KEY;
-if (!keyHex || keyHex.length !== 64) {
-  throw new Error(
-    'Критическая ошибка: ENCRYPTION_KEY не определен или имеет неверную длину. Требуется 64-символьная hex-строка.',
-  );
-}
-const key = Buffer.from(keyHex, 'hex');
+let cachedKey: Buffer | null = null;
+let cachedSalt: string | null = null;
 
-const saltFromEnv = process.env.ENCRYPTION_SALT;
-if (!saltFromEnv) {
-  throw new Error(
-    'Критическая ошибка: ENCRYPTION_SALT не определен в .env файле.',
-  );
+function ensureKey(): Buffer {
+  if (cachedKey) {
+    return cachedKey;
+  }
+
+  const keyHex = process.env.ENCRYPTION_KEY;
+  if (!keyHex || keyHex.length !== 64) {
+    throw new Error(
+      'Критическая ошибка: ENCRYPTION_KEY не определен или имеет неверную длину. Требуется 64-символьная hex-строка.',
+    );
+  }
+
+  cachedKey = Buffer.from(keyHex, 'hex');
+  return cachedKey;
+}
+
+function ensureSalt(): string {
+  if (cachedSalt) {
+    return cachedSalt;
+  }
+
+  const saltFromEnv = process.env.ENCRYPTION_SALT;
+  if (!saltFromEnv) {
+    throw new Error(
+      'Критическая ошибка: ENCRYPTION_SALT не определен в .env файле.',
+    );
+  }
+
+  cachedSalt = saltFromEnv;
+  return cachedSalt;
 }
 
 export function encrypt(text: string): string {
+  const key = ensureKey();
   const iv = crypto.randomBytes(ivLength);
   const cipher = crypto.createCipheriv(algorithm, key, iv);
   const encrypted = Buffer.concat([
@@ -37,6 +58,7 @@ export function encrypt(text: string): string {
 }
 
 export function decrypt(text: string): string {
+  const key = ensureKey();
   const parts = text.split(':');
   if (parts.length !== 2) {
     throw new Error('Неверный формат зашифрованных данных.');
@@ -52,11 +74,6 @@ export function decrypt(text: string): string {
 }
 
 export function createHash(text: string): string {
-  const salt = process.env.ENCRYPTION_SALT;
-  if (!salt) {
-    throw new Error(
-      'Критическая ошибка: ENCRYPTION_SALT не доступен в createHash.',
-    );
-  }
+  const salt = ensureSalt();
   return crypto.createHmac('sha256', salt).update(text).digest('hex');
 }

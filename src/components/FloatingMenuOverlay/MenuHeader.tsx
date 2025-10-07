@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAppStore } from '@/store/useAppStore';
-import Logo from '../icons/Logo';
-import SearchIcon from '../icons/SearchIcon';
-import CloseIcon from '../icons/CloseIcon';
+import { CloseIcon, Logo, SearchIcon } from '../shared/icons';
 
 interface MenuHeaderProps {
   onClose: () => void;

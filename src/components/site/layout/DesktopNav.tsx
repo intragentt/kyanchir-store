@@ -1,11 +1,9 @@
 // Местоположение: src/components/header/DesktopNav.tsx
 import Link from 'next/link';
-import SearchIcon from '../icons/SearchIcon';
-import CartIcon from '../icons/CartIcon';
 import { NAV_LINKS } from '@/config/navigation';
 // --- НАЧАЛО ИЗМЕНЕНИЙ ---
 import { Session } from 'next-auth'; // Импортируем тип Session
-import UserIcon from '../icons/UserIcon';
+import { CartIcon, SearchIcon, UserIcon } from '@/components/shared/icons';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ ---

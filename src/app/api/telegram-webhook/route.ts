@@ -2,7 +2,7 @@
 // МОДЕРНИЗИРОВАННАЯ ВЕРСИЯ
 
 import { NextResponse } from 'next/server';
-import { clientBot } from '@/lib/telegram'; // <-- ИЗМЕНЕНО: Импортируем наш Telegraf-бот
+import { getClientBot } from '@/lib/telegram'; // <-- ИЗМЕНЕНО: Импортируем ленивый доступ к Telegraf-боту
 
 const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     // 3. Передаем все обновление на обработку в Telegraf.
     // Telegraf сам разберется, что это было, и вызовет нужный обработчик,
     // который мы определим в /lib/telegram.ts
+    const clientBot = getClientBot();
     await clientBot.handleUpdate(body);
 
     // 4. Отвечаем Telegram, что все в порядке.

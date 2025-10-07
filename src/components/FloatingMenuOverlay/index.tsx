@@ -12,9 +12,8 @@ import MenuButton from './MenuButton';
 import ShopNavigation from './ShopNavigation';
 import InfoLinks from './InfoLinks';
 import MenuFooter from './MenuFooter';
-import HeartIcon from '../icons/HeartIcon';
-import ReceiptIcon from '../icons/ReceiptIcon';
-import VerificationModal from '../modals/VerificationModal'; // <-- ШАГ 1: Импортируем модальное окно
+import { HeartIcon, ReceiptIcon } from '../shared/icons';
+import VerificationModal from '../shared/modals/VerificationModal'; // <-- ШАГ 1: Импортируем модальное окно
 
 interface FloatingMenuOverlayProps {
   isOpen: boolean;

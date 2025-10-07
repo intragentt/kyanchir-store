@@ -7,6 +7,13 @@ import { addMinutes } from 'date-fns';
 // Эта функция - наша "Касса", выдающая уникальные билеты.
 export async function GET() {
   try {
+    if (process.env.NEXT_PHASE === 'phase-production-build') {
+      console.log(
+        '⚠️ create-login-token: пропускаем обращение к базе во время сборки.',
+      );
+      return NextResponse.json({ token: 'build-token-placeholder' });
+    }
+
     // 1. Генерируем криптографически случайный, безопасный номер для "билета".
     const token = crypto.randomBytes(32).toString('hex');
 

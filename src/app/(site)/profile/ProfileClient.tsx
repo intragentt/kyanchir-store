@@ -5,12 +5,12 @@ import type { User } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 
 import { updateUserProfile, updateUserPassword } from './actions';
-import ProfileHeader from '@/components/profile/ProfileHeader';
-import EditProfileForm from '@/components/profile/EditProfileForm';
-import EditPasswordForm from '@/components/profile/EditPasswordForm';
+import EditPasswordForm from '@/components/site/profile/EditPasswordForm';
+import EditProfileForm from '@/components/site/profile/EditProfileForm';
+import ProfileHeader from '@/components/site/profile/ProfileHeader';
+import ProfileInfoBlock from '@/components/site/profile/ProfileInfoBlock';
+import VerificationModal from '@/components/shared/modals/VerificationModal'; // <-- ШАГ 1: Импортируем модальное окно
 import SignOutButton from './SignOutButton';
-import ProfileInfoBlock from '@/components/profile/ProfileInfoBlock';
-import VerificationModal from '@/components/auth/VerificationModal'; // <-- ШАГ 1: Импортируем модальное окно
 
 type DecryptedUser = User & {
   name: string;
@@ -131,6 +131,7 @@ export default function ProfileClient({
       <VerificationModal
         isOpen={isVerificationModalOpen}
         onClose={() => setIsVerificationModalOpen(false)}
+        email={user.email}
       />
 
       <div className="space-y-0 pb-8 pt-6">

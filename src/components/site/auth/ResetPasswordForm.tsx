@@ -4,7 +4,7 @@
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import ClearIcon from '@/components/icons/ClearIcon';
+import { ClearIcon } from '@/components/shared/icons';
 
 export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
