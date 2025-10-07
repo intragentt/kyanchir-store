@@ -105,16 +105,31 @@ function safeDecrypt(value: string | null | undefined): string | null {
   }
 }
 
-function buildOrderBy(sortBy: AdminUserSortKey, sortOrder: 'asc' | 'desc') {
+function appendAndCondition(
+  where: Prisma.UserWhereInput,
+  condition: Prisma.UserWhereInput,
+) {
+  const existingConditions = Array.isArray(where.AND)
+    ? where.AND
+    : where.AND
+      ? [where.AND]
+      : [];
+
+  where.AND = [...existingConditions, condition];
+}
+
+function buildOrderBy(
+  sortBy: AdminUserSortKey,
+  sortOrder: 'asc' | 'desc',
+): Prisma.UserOrderByWithRelationInput | undefined {
   switch (sortBy) {
     case 'role':
       return { role: { name: sortOrder } } satisfies Prisma.UserOrderByWithRelationInput;
     case 'ordersCount':
       return { orders: { _count: sortOrder } } satisfies Prisma.UserOrderByWithRelationInput;
     case 'totalSpent':
-      return { orders: { _sum: { totalAmount: sortOrder } } } satisfies Prisma.UserOrderByWithRelationInput;
     case 'lastLoginAt':
-      return { sessions: { _max: { expires: sortOrder } } } satisfies Prisma.UserOrderByWithRelationInput;
+      return undefined;
     case 'createdAt':
     default:
       return { createdAt: sortOrder } satisfies Prisma.UserOrderByWithRelationInput;
@@ -137,12 +152,9 @@ function buildWhereClause(query: AdminUsersQuery): Prisma.UserWhereInput {
       where.emailVerified = null;
     }
     if (query.status === 'blocked') {
-      where.AND = [
-        ...(where.AND ?? []),
-        {
-          sessions: { none: {} },
-        },
-      ];
+      appendAndCondition(where, {
+        sessions: { none: {} },
+      });
     }
   }
 
@@ -164,7 +176,7 @@ function buildWhereClause(query: AdminUsersQuery): Prisma.UserWhereInput {
     }
 
     if (orConditions.length > 0) {
-      where.AND = [...(where.AND ?? []), { OR: orConditions }];
+      appendAndCondition(where, { OR: orConditions });
     }
   }
 
@@ -254,6 +266,9 @@ export async function fetchAdminUsers(
 
   const where = buildWhereClause({ ...query, page, perPage, sortOrder });
   const orderBy = buildOrderBy(sortBy, sortOrder);
+  const requiresManualTotalSpentSort = sortBy === 'totalSpent';
+  const requiresManualLastLoginSort = sortBy === 'lastLoginAt';
+  const requiresManualSort = requiresManualTotalSpentSort || requiresManualLastLoginSort;
 
   const isNameSearch = Boolean(
     searchTerm &&
@@ -262,8 +277,12 @@ export async function fetchAdminUsers(
       !/^[a-z0-9-]{8,}$/i.test(searchTerm),
   );
 
-  const skip = isNameSearch ? 0 : (page - 1) * perPage;
-  const take = isNameSearch ? MAX_SAMPLE_FOR_NAME_SEARCH : perPage;
+  const skip = isNameSearch || requiresManualSort ? 0 : (page - 1) * perPage;
+  const take = isNameSearch
+    ? MAX_SAMPLE_FOR_NAME_SEARCH
+    : requiresManualSort
+      ? undefined
+      : perPage;
 
   const [summary, rawUsers] = await Promise.all([
     collectSummary(where),
@@ -275,14 +294,25 @@ export async function fetchAdminUsers(
         _count: { select: { orders: true } },
         sessions: { select: { expires: true }, orderBy: { expires: 'desc' }, take: 1 },
       },
-      orderBy,
-      skip,
-      take,
+      ...(orderBy ? { orderBy } : {}),
+      ...(skip ? { skip } : {}),
+      ...(typeof take === 'number' ? { take } : {}),
     }),
   ]);
 
   const mapped = rawUsers.map(mapToAdminRecord);
   const filteredByName = filterByNameIfNeeded(mapped, searchTerm);
+  const manuallySorted = requiresManualSort
+    ? [...filteredByName].sort((a, b) => {
+        if (sortBy === 'totalSpent') {
+          return sortOrder === 'asc' ? a.totalSpent - b.totalSpent : b.totalSpent - a.totalSpent;
+        }
+
+        const aTime = a.lastLoginAt ? new Date(a.lastLoginAt).getTime() : Number.NEGATIVE_INFINITY;
+        const bTime = b.lastLoginAt ? new Date(b.lastLoginAt).getTime() : Number.NEGATIVE_INFINITY;
+        return sortOrder === 'asc' ? aTime - bTime : bTime - aTime;
+      })
+    : filteredByName;
 
   const total = isNameSearch
     ? filteredByName.length
@@ -290,7 +320,9 @@ export async function fetchAdminUsers(
 
   const totalPages = Math.max(Math.ceil(total / perPage), 1);
   const start = (page - 1) * perPage;
-  const paginated = isNameSearch ? filteredByName.slice(start, start + perPage) : filteredByName;
+  const paginated = isNameSearch || requiresManualSort
+    ? manuallySorted.slice(start, start + perPage)
+    : manuallySorted;
 
   console.log('✅ admin/users: пользователи загружены', {
     count: paginated.length,
