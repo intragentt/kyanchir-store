@@ -1,29 +1,29 @@
 // Местоположение: src/app/fonts.ts
 
-// 1. Импортируем все три нужных нам шрифты из библиотеки Google Fonts.
-import { Unbounded, Manrope, PT_Mono } from 'next/font/google';
+// 1. Импортируем актуальные шрифты из библиотеки Google Fonts.
+import { Manrope, PT_Mono } from 'next/font/google';
 
-// 2. Настраиваем шрифт для ЗАГОЛОВКОВ (Unbounded).
-export const fontHeading = Unbounded({
+// 2. Заголовки используют Manrope с переменной --font-heading.
+export const fontHeading = Manrope({
   subsets: ['cyrillic', 'latin'],
   display: 'swap',
-  variable: '--font-heading', // Переменная для заголовков
-  weight: 'variable',
+  variable: '--font-heading',
+  weight: ['400', '500', '600', '700', '800'],
 });
 
-// 3. Настраиваем шрифт для ОСНОВНОГО ТЕКСТА (Manrope).
+// 3. Основной текст также использует Manrope, но со своей переменной.
 export const fontBody = Manrope({
   subsets: ['cyrillic', 'latin'],
   display: 'swap',
-  variable: '--font-body', // Переменная для основного текста
-  weight: ['200', '300', '400', '500', '600', '700', '800'], 
+  variable: '--font-body',
+  weight: ['300', '400', '500', '600', '700'],
 });
 
-// 4. НОВЫЙ ШРИФТ! Настраиваем шрифт для АКЦЕНТНОГО/МОНОШИРИННОГО ТЕКСТА (PT Mono).
+// 4. Акцентный / моноширинный шрифт — PT Mono.
 export const fontMono = PT_Mono({
   subsets: ['cyrillic', 'latin'],
   display: 'swap',
   variable: '--font-mono', // Переменная для ацентного/моношириного
   // У PT Mono только одно стандартное начертание, поэтому указываем '400' (Regular).
-  weight: '400', 
+  weight: '400',
 });

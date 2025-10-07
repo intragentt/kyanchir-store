@@ -5,15 +5,52 @@ import { fontHeading, fontBody, fontMono } from './fonts';
 import AuthProvider from '@/components/providers/AuthProvider';
 // AppCore был удален отсюда
 import Script from 'next/script';
+import type { Metadata } from 'next';
+import { getDesignSystemSettings } from '@/lib/settings/design-system';
+import {
+  buildDesignSystemVariableMap,
+  collectFontCssLinks,
+  type DesignSystemSettings,
+} from '@/lib/settings/design-system.shared';
 
-export const metadata = {
-  title: 'Kyanchir',
-  description: 'Мини-приложение / сайт',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { settings } = await getDesignSystemSettings();
 
-export default function RootLayout({
+  const description = 'Мини-приложение / сайт';
+
+  return {
+    title: settings.siteName,
+    description,
+    openGraph: {
+      title: settings.siteName,
+      description,
+      siteName: settings.siteName,
+    },
+    twitter: {
+      title: settings.siteName,
+      description,
+    },
+  };
+}
+
+function buildDesignSystemStyle(settings: DesignSystemSettings) {
+  const variables = buildDesignSystemVariableMap(settings);
+  const declarations = Object.entries(variables)
+    .map(([key, value]) => `${key}: ${value};`)
+    .join('\n    ');
+
+  return `:root {\n    ${declarations}\n  }`;
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const { settings } = await getDesignSystemSettings();
+
+  const fontSources = collectFontCssLinks(settings.fontLibrary);
+
+  const designSystemStyle = buildDesignSystemStyle(settings);
+
   return (
     <html
       lang="ru"
@@ -24,11 +61,16 @@ export default function RootLayout({
           name="viewport"
           content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
         />
-        <meta name="theme-color" content="#FFFFFF" />
+        <meta name="theme-color" content={settings.colors.background} />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="format-detection" content="telephone=no" />
+        <meta name="og:site_name" content={settings.siteName} />
+        {fontSources.map((href) => (
+          <link key={href} rel="stylesheet" href={href} />
+        ))}
+        <style id="design-system-variables" dangerouslySetInnerHTML={{ __html: designSystemStyle }} />
       </head>
 
       <body className="h-full">
