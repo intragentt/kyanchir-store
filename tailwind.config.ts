@@ -24,21 +24,52 @@ const config: Config = {
     extend: {
       // "Фирменная палитра"
       colors: {
-        brand: { lilac: '#6B80C5', 'lilac-light': '#C1D0FF' },
-        accent: {
-          pink: '#C1D0FF',
-          'pink-light': '#FBC0E3',
-          'pink-pale': '#FFE1F3',
+        brand: {
+          lilac: 'var(--ds-color-primary)',
+          'lilac-light': 'var(--ds-color-accent)',
         },
-        feedback: { error: '#E06F6F', red: '#D32F2F' },
-        text: { primary: '#272727', secondary: '#6B80C5' },
-        background: { primary: '#FFFFFF', secondary: '#FFE1F3' },
+        accent: {
+          pink: 'var(--ds-color-accent)',
+          'pink-light': 'var(--ds-color-surface)',
+          'pink-pale': 'var(--ds-color-muted)',
+        },
+        feedback: {
+          error: 'var(--ds-color-danger)',
+          red: 'var(--ds-color-danger)',
+          success: 'var(--ds-color-success)',
+          warning: 'var(--ds-color-warning)',
+        },
+        text: {
+          primary: 'var(--ds-color-text-primary)',
+          secondary: 'var(--ds-color-text-secondary)',
+          muted: 'var(--ds-color-muted-foreground)',
+        },
+        background: {
+          primary: 'var(--ds-color-background)',
+          secondary: 'var(--ds-color-surface)',
+        },
+        border: {
+          DEFAULT: 'var(--ds-color-border)',
+          neutral: 'var(--ds-color-neutral)',
+        },
+        ds: {
+          primary: 'var(--ds-color-primary)',
+          'primary-foreground': 'var(--ds-color-primary-foreground)',
+          accent: 'var(--ds-color-accent)',
+          'accent-foreground': 'var(--ds-color-accent-foreground)',
+          surface: 'var(--ds-color-surface)',
+          'surface-foreground': 'var(--ds-color-surface-foreground)',
+          neutral: 'var(--ds-color-neutral)',
+          'neutral-foreground': 'var(--ds-color-neutral-foreground)',
+          muted: 'var(--ds-color-muted)',
+          'muted-foreground': 'var(--ds-color-muted-foreground)',
+        },
       },
       // "Набор фирменных шрифтов"
       fontFamily: {
-        heading: ['var(--font-heading)', 'sans-serif'],
-        body: ['var(--font-body)', 'sans-serif'],
-        mono: ['var(--font-mono)', 'monospace'],
+        heading: ['var(--ds-font-heading, var(--font-heading))', 'sans-serif'],
+        body: ['var(--ds-font-body, var(--font-body))', 'sans-serif'],
+        mono: ['var(--ds-font-accent, var(--font-mono))', 'monospace'],
       },
       // "Типографика"
       fontSize: {
@@ -47,6 +78,55 @@ const config: Config = {
           'clamp(0.8rem, 3vw, 1.25rem)',
           { lineHeight: '1.2' },
         ],
+        'ds-h1': [
+          'var(--ds-heading-1-size)',
+          {
+            lineHeight: 'var(--ds-heading-1-line-height)',
+            letterSpacing: 'var(--ds-heading-1-letter-spacing, -0.03em)',
+            fontWeight: 'var(--ds-heading-1-weight)',
+          },
+        ],
+        'ds-h2': [
+          'var(--ds-heading-2-size)',
+          {
+            lineHeight: 'var(--ds-heading-2-line-height)',
+            letterSpacing: 'var(--ds-heading-2-letter-spacing, -0.02em)',
+            fontWeight: 'var(--ds-heading-2-weight)',
+          },
+        ],
+        'ds-h3': [
+          'var(--ds-heading-3-size)',
+          {
+            lineHeight: 'var(--ds-heading-3-line-height)',
+            letterSpacing: 'var(--ds-heading-3-letter-spacing, 0)',
+            fontWeight: 'var(--ds-heading-3-weight)',
+          },
+        ],
+        'ds-body': [
+          'var(--ds-body-font-size)',
+          {
+            lineHeight: 'var(--ds-body-line-height)',
+            letterSpacing: 'var(--ds-body-letter-spacing, 0)',
+            fontWeight: 'var(--ds-body-font-weight)',
+          },
+        ],
+        'ds-small': [
+          'var(--ds-small-font-size)',
+          {
+            lineHeight: 'var(--ds-small-line-height)',
+            letterSpacing: 'var(--ds-small-letter-spacing, 0)',
+            fontWeight: 'var(--ds-small-font-weight)',
+          },
+        ],
+      },
+      spacing: {
+        'ds-xs': 'var(--ds-spacing-xs)',
+        'ds-sm': 'var(--ds-spacing-sm)',
+        'ds-md': 'var(--ds-spacing-md)',
+        'ds-lg': 'var(--ds-spacing-lg)',
+        'ds-xl': 'var(--ds-spacing-xl)',
+        'ds-2xl': 'var(--ds-spacing-2xl)',
+        'ds-3xl': 'var(--ds-spacing-3xl)',
       },
       typographyStyles: ({ theme }: { theme: any }) => ({
         h1: {

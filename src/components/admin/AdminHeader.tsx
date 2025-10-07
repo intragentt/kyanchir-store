@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronIcon, ShortLogo } from '@/components/shared/icons';
@@ -13,9 +13,21 @@ const adminNavLinks = [
   { href: '/admin/orders', label: 'Заказы' },
   { href: '/admin/users', label: 'Пользователи' },
   { href: '/admin/mail', label: 'Почта' },
+  { href: '/admin/settings', label: 'Настройки' },
   { href: '/admin/stats', label: 'Статистика' },
   { href: '/admin/sliders', label: 'Слайдеры' },
 ];
+
+const ADMIN_PREFIX = '/admin';
+
+function normalizeHref(path: string) {
+  if (!path.startsWith(ADMIN_PREFIX)) {
+    return path || '/';
+  }
+
+  const trimmed = path.slice(ADMIN_PREFIX.length) || '/';
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}
 
 // Этот компонент - просто шапка. Он НЕ ПРИНИМАЕТ children.
 export default function AdminHeader() {
@@ -24,9 +36,22 @@ export default function AdminHeader() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const currentPage =
-    adminNavLinks.find((link) => link.href === pathname)?.label ||
-    'Панель управления';
+  const normalizedPathname = pathname ? normalizeHref(pathname) : '/';
+
+  const navigationLinks = useMemo(
+    () => adminNavLinks.map((link) => ({ ...link, normalized: normalizeHref(link.href) })),
+    [],
+  );
+
+  const activeLink = navigationLinks
+    .filter(
+      (link) =>
+        normalizedPathname === link.normalized ||
+        normalizedPathname.startsWith(`${link.normalized}/`),
+    )
+    .sort((a, b) => b.normalized.length - a.normalized.length)[0];
+
+  const currentPage = activeLink?.label ?? 'Панель управления';
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -70,20 +95,26 @@ export default function AdminHeader() {
 
               {isDropdownOpen && (
                 <div className="animate-in fade-in zoom-in-95 absolute left-0 top-full mt-2 w-48 origin-top-left rounded-md border border-gray-200 bg-white p-1 shadow-lg ring-1 ring-black ring-opacity-5">
-                  {adminNavLinks.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      onClick={() => setIsDropdownOpen(false)}
-                      className={`block w-full rounded-md px-3 py-1.5 text-left text-sm ${
-                        pathname === link.href
-                          ? 'bg-gray-100 font-semibold text-gray-900'
-                          : 'text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
+                  {navigationLinks.map((link) => {
+                    const isActive =
+                      normalizedPathname === link.normalized ||
+                      normalizedPathname.startsWith(`${link.normalized}/`);
+
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setIsDropdownOpen(false)}
+                        className={`block w-full rounded-md px-3 py-1.5 text-left text-sm ${
+                          isActive
+                            ? 'bg-gray-100 font-semibold text-gray-900'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        {link.label}
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </div>

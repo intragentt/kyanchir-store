@@ -1,6 +1,6 @@
 # ⚙️ Конституция проекта «Kyanchir»
 
-Последнее обновление: 2025‑10‑07
+Последнее обновление: 2025‑10‑18
 
 Этот документ фиксирует актуальное устройство приложения, архитектурные договорённости и зоны риска. Используйте его как исходную точку перед планированием задач, ревью и внедрением новых фич.
 
@@ -13,7 +13,8 @@
 | Админка | ⚠️ Риски консистентности | Обновление остатков вызывает внешнее API и Prisma вне транзакции и без retry/логирования. Требуется service‑слой и аудит ролей.【F:src/app/api/admin/products/update-stock/route.ts†L13-L54】 |
 | Конфигурации | ⚠️ Исправить ошибки | `tsconfig.json` содержит ошибочный путь `route.ts.дtkk`, `vercel.json` публикует `cron_secret`, NextAuth relies on env secrets — вынести в переменные окружения и починить include.【F:tsconfig.json†L1-L30】【F:vercel.json†L1-L9】 |
 | Качество и тесты | ⚠️ Низкое покрытие | Всего два node:test файла, нет e2e, bundle‑аналитики и мониторинга. Настройте Lighthouse/Sentry и расширьте тесты для стора и API.【F:tests/lib-utils.test.ts†L1-L32】【F:tests/ui-components.test.tsx†L1-L128】 |
-| Завершённые элементы | ✅ Стабильно | Конфиги Prettier/PostCSS, `tsconfig.seed.json`, дизайн‑система (Tailwind + кастомные шрифты) и базовые "dumb"-компоненты подтверждены и поддерживаются.【F:postcss.config.mjs†L1-L20】【F:prettier.config.js†L1-L15】【F:src/app/fonts.ts†L1-L120】 |
+| Завершённые элементы | ✅ Стабильно | Конфиги Prettier/PostCSS, `tsconfig.seed.json`, админ-конструктор дизайн-системы (шрифты, палитры, иконки) и базовые "dumb"-компоненты подтверждены и поддерживаются.【F:postcss.config.mjs†L1-L20】【F:prettier.config.js†L1-L15】【F:src/components/admin/settings/DesignSystemForm.tsx†L1-L120】 |
+| Дизайн-система | ✅ Управляется из админки | Выбор шрифтов (Manrope, PT Mono), палитры и отступов выполняется через настройки, данные хранятся в Prisma и транслируются в CSS-переменные и Tailwind-токены при рендере макета.【F:src/lib/settings/design-system.ts†L1-L200】【F:src/app/layout.tsx†L1-L140】 |
 
 ## 2. Архитектура и слои
 
@@ -29,11 +30,12 @@
 - **Заказы**: API `/api/orders` валидирует payload, проверяет остатки и создаёт заказ с позициями. После транзакции обновляет `productSize.stock` и инициирует платёж через `src/lib/payments/yookassa.ts`, сохраняя `paymentTransactionId`. Любые новые сценарии (отмена, частичный возврат) также должны проходить через `$transaction` и учитывать статусы платежей.【F:src/app/api/orders/route.ts†L1-L220】【F:src/lib/payments/yookassa.ts†L1-L210】
 - **Интеграции**: библиотека `src/lib/moysklad-api.ts` синхронизирует остатки, `src/lib/telegram.ts` и `src/lib/mail.ts` отвечают за коммуникации. Секреты загружаются из env, поэтому при локальном запуске обязательны ключи.【F:src/lib/moysklad-api.ts†L1-L160】【F:src/lib/telegram.ts†L1-L200】
 - **Платежи (ЮKassa)**: модуль `src/lib/payments/yookassa.ts` собирает данные для чека, нормализует телефон, добавляет ИНН/ФИО ИП в `supplier`, выбирает тестовый или боевой магазин по `YOOKASSA_MODE` и создаёт платёж через REST API.【F:src/lib/payments/yookassa.ts†L1-L210】
+- **Дизайн-система**: `src/lib/settings/design-system.ts` хранит настройки цвета, типографики, отступов и библиотеку шрифтов; админская форма (`DesignSystemForm`) управляет этими данными и синхронизирует значения с Tailwind через CSS-переменные.【F:src/lib/settings/design-system.ts†L1-L200】【F:src/components/admin/settings/DesignSystemForm.tsx†L1-L120】
 
 ### 2.3 Утилиты и инфраструктура
 - `src/lib/prisma.ts` реализует singleton Prisma Client; любой доступ к БД должен идти через него, чтобы избежать множественных соединений в dev.【F:src/lib/prisma.ts†L1-L60】
 - Шифрование PII выносится в `src/lib/encryption.ts` и снабжено директивой `server-only`. Любая работа с персональными данными должна использовать эти хелперы.【F:src/lib/encryption.ts†L1-L80】
-- Глобальные настройки UI находятся в `src/app/layout.tsx`, `src/app/globals.css` и `src/app/fonts.ts`. Стили управляются Tailwind + custom токены (см. `tailwind.config.ts`).【F:src/app/layout.tsx†L1-L180】【F:src/app/globals.css†L1-L160】【F:tailwind.config.ts†L1-L240】
+- Глобальные настройки UI находятся в `src/app/layout.tsx`, `src/app/globals.css`, `src/app/fonts.ts` и `src/lib/settings/design-system.ts`. Стили управляются Tailwind + custom токены, которые заполняются данными из дизайн-системы.【F:src/app/layout.tsx†L1-L180】【F:src/app/globals.css†L1-L160】【F:src/lib/settings/design-system.ts†L1-L200】【F:tailwind.config.ts†L1-L240】
 
 ## 3. Конфигурации и стандарты
 
@@ -44,6 +46,7 @@
 - **tsconfig.json**: исправьте путь `route.ts.дtkk` перед запуском `tsc --noEmit`. После правки включите проверку типов в CI. До исправления скрипт падает на неверном глифе.【F:tsconfig.json†L1-L30】
 - **vercel.json**: хранит cron‑секрет в URL. Перенесите секрет в `VERCEL_CRON_SECRET` и проверяйте подпись в хэндлере, иначе любой сможет дернуть синк продуктов.【F:vercel.json†L1-L9】
 - **ЮKassa env**: модуль платежей читает `YOOKASSA_MODE`, пары `YOOKASSA_TEST_*`/`YOOKASSA_*`, а также данные ИП (`YOOKASSA_MERCHANT_INN`, `YOOKASSA_MERCHANT_FULL_NAME`). Без них платёж не создастся, поэтому обеспечьте значения в `.env.local` на стейдже и проде.【F:src/lib/payments/yookassa.ts†L1-L210】
+- **Playwright скриншоты**: скрипт `npm run screenshot -- --url ...` использует Playwright и хранится в `scripts/capture-screenshot.ts`; поддерживает параметры размера, задержки и `--fullPage` для визуальных регрессов.【F:package.json†L6-L35】【F:scripts/capture-screenshot.ts†L1-L117】
 
 ## 4. Правила разработки
 

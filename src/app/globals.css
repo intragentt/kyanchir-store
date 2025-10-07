@@ -13,12 +13,12 @@
 /* --- ШАГ 2: ОПРЕДЕЛЕНИЕ БАЗОВОГО СЛОЯ --- */
 @layer base {
   :root {
-    --background-primary: #FFFFFF;
-    --text-primary: #272727;
-    --brand-lilac-color: #6B80C5;
-    --brand-lilac-light-color: #C1D0FF;
-    --heart-red: #D32F2F;
-    --feedback-error-color: #E06F6F;
+    --background-primary: var(--ds-color-background, #FFFFFF);
+    --text-primary: var(--ds-color-text-primary, #272727);
+    --brand-lilac-color: var(--ds-color-primary, #6B80C5);
+    --brand-lilac-light-color: var(--ds-color-accent, #C1D0FF);
+    --heart-red: var(--ds-color-danger, #D32F2F);
+    --feedback-error-color: var(--ds-color-danger, #E06F6F);
     --mobile-footer-height: 0px;
   }
 
@@ -31,7 +31,7 @@
     -webkit-font-smoothing: antialiased;
     background-color: var(--background-primary);
     color: var(--text-primary);
-    font-family: var(--font-body);
+    font-family: var(--ds-font-body, var(--font-body));
     overscroll-behavior-y: contain;
 
     padding-left: env(safe-area-inset-left);
@@ -48,7 +48,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
+    font-family: var(--ds-font-heading, var(--font-heading));
     word-break: break-word;
     hyphens: auto;
   }
@@ -58,23 +58,24 @@
   }
 
   h1 {
-    font-size: clamp(2rem, 6vw + 1rem, 6rem);
-    line-height: 1.1;
-    letter-spacing: -0.03em;
-    font-weight: 900;
+    font-size: var(--ds-heading-1-size);
+    line-height: var(--ds-heading-1-line-height);
+    letter-spacing: var(--ds-heading-1-letter-spacing, -0.03em);
+    font-weight: var(--ds-heading-1-weight);
   }
 
   h2 {
-    font-size: clamp(1.75rem, 4vw + 0.5rem, 3.75rem);
-    line-height: 1.2;
-    letter-spacing: -0.02em;
-    font-weight: 800;
+    font-size: var(--ds-heading-2-size);
+    line-height: var(--ds-heading-2-line-height);
+    letter-spacing: var(--ds-heading-2-letter-spacing, -0.02em);
+    font-weight: var(--ds-heading-2-weight);
   }
 
   h3 {
-    font-size: clamp(1.3rem, 3vw + 0.5rem, 2.5rem);
-    line-height: 1.2;
-    font-weight: 700;
+    font-size: var(--ds-heading-3-size);
+    line-height: var(--ds-heading-3-line-height);
+    letter-spacing: var(--ds-heading-3-letter-spacing, 0em);
+    font-weight: var(--ds-heading-3-weight);
   }
 
   h4, h5, h6 {
@@ -82,17 +83,25 @@
   }
 
   p, button {
-    font-size: clamp(1rem, 0.8vw + 0.5rem, 1.125rem);
+    font-size: var(--ds-body-font-size);
   }
 
   p {
-    line-height: 1.6;
-    font-weight: 400;
+    line-height: var(--ds-body-line-height);
+    font-weight: var(--ds-body-font-weight);
+    letter-spacing: var(--ds-body-letter-spacing, 0);
   }
-  
+
   button {
     line-height: 1;
     font-weight: 700;
+  }
+
+  small {
+    font-size: var(--ds-small-font-size);
+    line-height: var(--ds-small-line-height);
+    font-weight: var(--ds-small-font-weight);
+    letter-spacing: var(--ds-small-letter-spacing, 0);
   }
 }
 
