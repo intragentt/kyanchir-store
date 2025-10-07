@@ -2,20 +2,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Prisma } from '@prisma/client';
-import MobileProductGallery from './product-details/MobileProductGallery';
-import DesktopProductGallery from './product-details/DesktopProductGallery';
-import ProductHeader from './product-details/ProductHeader';
-import AddToCartButton from './product-details/AddToCartButton';
-import SizeSelector from './product-details/SizeSelector';
-import SizeChart from './product-details/SizeChart';
-import ProductAttributes from './product-details/ProductAttributes';
-import BottomSheet from '@/components/ui/BottomSheet';
-import SizeGuideContent from './product-details/SizeGuideContent';
-import DesktopActionButtons from './product-details/DesktopActionButtons';
-import ArrowStep1 from '@/components/illustrations/ArrowStep1';
 import Image from 'next/image';
-import ProductActions from './product-details/ProductActions';
+import { Prisma } from '@prisma/client';
+import ArrowStep1 from '@/components/illustrations/ArrowStep1';
+import DesktopActionButtons from '@/components/site/product/DesktopActionButtons';
+import DesktopProductGallery from '@/components/site/product/DesktopProductGallery';
+import MobileProductGallery from '@/components/site/product/MobileProductGallery';
+import ProductActions from '@/components/site/product/ProductActions';
+import ProductAttributes from '@/components/site/product/ProductAttributes';
+import ProductHeader from '@/components/site/product/ProductHeader';
+import SizeChart from '@/components/site/product/SizeChart';
+import SizeGuideContent from '@/components/site/product/SizeGuideContent';
+import SizeSelector from '@/components/site/product/SizeSelector';
+import AddToCartButton from '@/components/site/product/AddToCartButton';
+import BottomSheet from '@/components/shared/ui/BottomSheet';
 
 // ... (компоненты CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
 const CountdownTimer = ({

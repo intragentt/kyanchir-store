@@ -5,8 +5,7 @@ import type { User } from '@prisma/client'; // <-- ИЗМЕНЕНО: Возвр�
 import Image from 'next/image';
 
 import AvatarPlaceholder from '@/components/AvatarPlaceholder';
-import ShortLogo from '@/components/icons/ShortLogo';
-import SettingsIcon from '../icons/SettingsIcon';
+import { SettingsIcon, ShortLogo } from '@/components/shared/icons';
 // --- УДАЛЕНО: Убираем импорт серверной утилиты ---
 // import { decrypt } from '@/lib/encryption';
 

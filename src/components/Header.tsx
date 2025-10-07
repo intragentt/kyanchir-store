@@ -2,10 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Logo from './icons/Logo';
-import CloseIcon from './icons/CloseIcon';
-import BurgerIcon from './icons/BurgerIcon';
-import SearchIcon from './icons/SearchIcon';
+import { BurgerIcon, CloseIcon, Logo, SearchIcon } from './shared/icons';
 import { useAppStore } from '@/store/useAppStore';
 
 interface HeaderProps {

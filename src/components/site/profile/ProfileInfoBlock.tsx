@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import SettingsIcon from '../icons/SettingsIcon';
+import { SettingsIcon } from '@/components/shared/icons';
 
 interface ProfileInfoBlockProps {
   title: string;

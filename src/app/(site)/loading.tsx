@@ -8,7 +8,7 @@
 
 import { useEffect } from 'react';
 import { usePathname } from 'next/navigation'; // Инструмент, чтобы узнать текущий URL
-import ShortLogo from '@/components/icons/ShortLogo'; // Наш брендированный логотип
+import { ShortLogo } from '@/components/shared/icons'; // Наш брендированный логотип
 
 export default function Loading() {
   // "Смотрим, на какой сцене мы выступаем". Получаем текущий путь, например, "/" или "/catalog".

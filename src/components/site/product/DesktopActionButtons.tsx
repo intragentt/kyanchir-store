@@ -4,7 +4,7 @@
 // Убираем ненужные хуки для отслеживания скролла
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import HeartIcon from '../icons/HeartIcon';
+import { HeartIcon } from '@/components/shared/icons';
 
 const BackArrowIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg

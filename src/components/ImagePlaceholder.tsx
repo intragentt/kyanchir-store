@@ -1,5 +1,5 @@
 // Местоположение: src/components/ImagePlaceholder.tsx
-import ShortLogo from './icons/ShortLogo';
+import { ShortLogo } from './shared/icons';
 
 // Этот компонент отвечает за серую подложку во время загрузки фото
 export default function ImagePlaceholder() {

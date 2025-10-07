@@ -1,7 +1,7 @@
 // Местоположение: /src/app/(auth)/forgot-password/page.tsx
-import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
+import { ForgotPasswordForm } from '@/components/site/auth/ForgotPasswordForm';
 import Link from 'next/link';
-import Logo from '@/components/icons/Logo';
+import { Logo } from '@/components/shared/icons';
 
 export default function ForgotPasswordPage() {
   return (

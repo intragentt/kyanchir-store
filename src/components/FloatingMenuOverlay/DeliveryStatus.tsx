@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import TruckIcon from '../icons/TruckIcon';
-import ChevronIcon from '../icons/ChevronIcon';
+import { ChevronIcon, TruckIcon } from '../shared/icons';
 import StatusStep from './StatusStep';
 
 const DeliveryStatus = () => {

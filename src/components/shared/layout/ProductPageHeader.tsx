@@ -3,8 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import HeartIcon from '@/components/icons/HeartIcon';
-import ShareIcon from '@/components/icons/ShareIcon';
+import { HeartIcon, ShareIcon } from '@/components/shared/icons';
 
 const BackArrowIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg

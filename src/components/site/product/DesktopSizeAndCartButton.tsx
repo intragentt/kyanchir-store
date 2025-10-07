@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/shared/ui';
 
 // --- Иконки для счетчика ---
 const MinusIcon = (props: React.SVGProps<SVGSVGElement>) => (

@@ -1,8 +1,8 @@
 // Местоположение: src/components/product-details/SizeSelector.tsx
 'use client';
 
+import { HeartIcon } from '@/components/shared/icons';
 import LowStockBadge from './LowStockBadge';
-import HeartIcon from '../icons/HeartIcon';
 
 interface InventoryItem {
   size: { id: string; value: string };

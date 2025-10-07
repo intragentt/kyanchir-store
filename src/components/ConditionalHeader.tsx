@@ -2,8 +2,8 @@
 
 import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
-import ProductPageHeader from '@/components/layout/ProductPageHeader';
 import HybridHeader from './HybridHeader';
+import ProductPageHeader from '@/components/shared/layout/ProductPageHeader';
 import { useAppStore } from '@/store/useAppStore';
 
 export default function ConditionalHeader() {
