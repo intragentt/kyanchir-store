@@ -72,14 +72,15 @@ export default function UsersTable({
   const [refreshKey, setRefreshKey] = useState(0);
 
   const debouncedSearch = useDebounce(search, 400, { maxWait: 1200 });
+  const handleRetryToast = useCallback((attempt: number) => {
+    toast.loading(`Повторная попытка загрузки (${attempt + 1})...`, {
+      id: 'users-retry',
+    });
+  }, []);
   const { execute } = useRetry({
     retries: 2,
     delay: 600,
-    onRetry: (attempt) => {
-      toast.loading(`Повторная попытка загрузки (${attempt + 1})...`, {
-        id: 'users-retry',
-      });
-    },
+    onRetry: handleRetryToast,
   });
 
   useEffect(() => {
