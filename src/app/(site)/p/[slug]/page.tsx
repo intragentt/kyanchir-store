@@ -81,16 +81,18 @@ export default async function ProductPage({
     notFound();
   }
 
-  const resolvedSlug = slug.toLowerCase();
-  let canonicalSlug = product.slug ?? createSlug(product.name);
+  let ensuredProduct = product!;
 
-  if (!product.slug) {
+  const resolvedSlug = slug.toLowerCase();
+  let canonicalSlug = ensuredProduct.slug ?? createSlug(ensuredProduct.name);
+
+  if (!ensuredProduct.slug) {
     const uniqueSlug = await ensureUniqueSlug(canonicalSlug, async (candidate) => {
       const existing = await prisma.product.findFirst({
         where: {
           slug: candidate,
           NOT: {
-            id: product.id,
+            id: ensuredProduct.id,
           },
         },
         select: { id: true },
@@ -99,14 +101,14 @@ export default async function ProductPage({
       return Boolean(existing);
     });
 
-    if (uniqueSlug !== product.slug) {
+    if (uniqueSlug !== ensuredProduct.slug) {
       await prisma.product.update({
-        where: { id: product.id },
+        where: { id: ensuredProduct.id },
         data: { slug: uniqueSlug },
       });
 
-      product = {
-        ...product,
+      ensuredProduct = {
+        ...ensuredProduct,
         slug: uniqueSlug,
       };
       canonicalSlug = uniqueSlug;
@@ -117,9 +119,9 @@ export default async function ProductPage({
     redirect(`/p/${canonicalSlug}`);
   }
 
-  const normalizedProduct = product.slug
-    ? product
-    : { ...product, slug: canonicalSlug };
+  const normalizedProduct = ensuredProduct.slug
+    ? ensuredProduct
+    : { ...ensuredProduct, slug: canonicalSlug };
 
   // Сортируем размеры внутри каждого варианта
   const sortedProduct = {
