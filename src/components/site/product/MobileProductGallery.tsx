@@ -1,7 +1,7 @@
 // Местоположение: src/components/product-details/MobileProductGallery.tsx
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { A11y, Zoom } from 'swiper/modules'; // Убираем Pagination, он больше не нужен
@@ -9,6 +9,31 @@ import type { Swiper as SwiperInstance } from 'swiper';
 import 'swiper/css';
 import 'swiper/css/zoom';
 import { Image as PrismaImage } from '@prisma/client';
+import ImagePlaceholder from '@/components/ImagePlaceholder';
+
+type GalleryItem =
+  | { type: 'image'; image: PrismaImage }
+  | { type: 'placeholder'; key: string };
+
+function useGalleryItems(images: PrismaImage[]): GalleryItem[] {
+  return useMemo(() => {
+    const actualItems: GalleryItem[] = images.map((image) => ({
+      type: 'image',
+      image,
+    }));
+
+    const placeholdersNeeded = Math.max(0, 2 - actualItems.length);
+    const placeholderItems: GalleryItem[] = Array.from(
+      { length: placeholdersNeeded },
+      (_, index) => ({
+        type: 'placeholder' as const,
+        key: `placeholder-${index}`,
+      }),
+    );
+
+    return [...actualItems, ...placeholderItems];
+  }, [images]);
+}
 
 interface GalleryProps {
   images: PrismaImage[];
@@ -24,11 +49,18 @@ export default function MobileProductGallery({
   );
   const galleryRef = useRef<HTMLDivElement | null>(null);
   const zoomedSlideRef = useRef<HTMLElement | null>(null);
+  const galleryItems = useGalleryItems(images);
 
   // --- НАЧАЛО ИЗМЕНЕНИЙ: Состояния для нашей кастомной пагинации ---
-  const [slideCount, setSlideCount] = useState(images.length);
   const [activeIndex, setActiveIndex] = useState(0);
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
+
+  useEffect(() => {
+    setActiveIndex(0);
+    if (swiperInstance) {
+      swiperInstance.slideTo(0, 0);
+    }
+  }, [galleryItems.length, swiperInstance]);
 
   const handleGalleryClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if (!galleryRef.current || !swiperInstance) return;
@@ -81,18 +113,25 @@ export default function MobileProductGallery({
         // --- ИЗМЕНЕНИЕ: Опция pagination полностью удалена ---
         className="!px-4"
       >
-        {images.map((image, index) => (
-          <SwiperSlide key={image.id} className="!w-[85%]">
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md">
+        {galleryItems.map((item, index) => (
+          <SwiperSlide
+            key={item.type === 'image' ? item.image.id : item.key}
+            className="!w-[85%]"
+          >
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-md bg-gray-100">
               <div className="swiper-zoom-container">
-                <Image
-                  src={image.url}
-                  alt={`${productName} - фото ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="85vw"
-                  priority={index === 0}
-                />
+                {item.type === 'image' ? (
+                  <Image
+                    src={item.image.url}
+                    alt={`${productName} - фото ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="85vw"
+                    priority={index === 0}
+                  />
+                ) : (
+                  <ImagePlaceholder />
+                )}
               </div>
             </div>
           </SwiperSlide>
@@ -101,7 +140,7 @@ export default function MobileProductGallery({
 
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Наша собственная, полностью управляемая пагинация --- */}
       <div className="mt-[15px] flex h-[10px] items-center justify-center gap-x-2">
-        {Array.from({ length: slideCount }).map((_, index) => {
+        {Array.from({ length: galleryItems.length }).map((_, index) => {
           const isActive = index === activeIndex;
           return (
             <button
