@@ -4,6 +4,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { CartIcon, HeartIcon } from '@/components/shared/icons';
+import { useCartStore, selectCartItemCount } from '@/store/useCartStore';
 
 const BackArrowIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -67,6 +68,8 @@ export default function StickyProductPageHeader({
   isTransitionEnabled,
 }: StickyHeaderProps) {
   const router = useRouter();
+  const cartItemCount = useCartStore(selectCartItemCount);
+  const formattedCartCount = cartItemCount > 99 ? '99+' : cartItemCount.toString();
 
   const handleBackClick = () => {
     if (
@@ -116,6 +119,18 @@ export default function StickyProductPageHeader({
         <div className="flex flex-shrink-0 items-center gap-x-3">
           <Link href="/favorites" aria-label="Избранное">
             <HeartIcon className="h-6 w-6" />
+          </Link>
+          <Link
+            href="/cart"
+            aria-label="Открыть корзину"
+            className="relative"
+          >
+            <CartIcon className="h-6 w-6" />
+            {cartItemCount > 0 && (
+              <span className="absolute -right-2 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gray-900 px-1 text-xs font-semibold text-white">
+                {formattedCartCount}
+              </span>
+            )}
           </Link>
           <button
             aria-label="Поделиться"

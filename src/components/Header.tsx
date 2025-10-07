@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { BurgerIcon, CloseIcon, Logo, SearchIcon } from './shared/icons';
+import { BurgerIcon, CartIcon, CloseIcon, Logo, SearchIcon } from './shared/icons';
 import { useAppStore } from '@/store/useAppStore';
+import { useCartStore, selectCartItemCount } from '@/store/useCartStore';
 
 interface HeaderProps {
   className?: string;
@@ -24,6 +25,8 @@ export default function Header({
 }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const setFloatingMenuOpen = useAppStore((state) => state.setFloatingMenuOpen);
+  const cartItemCount = useCartStore(selectCartItemCount);
+  const formattedCartCount = cartItemCount > 99 ? '99+' : cartItemCount.toString();
 
   return (
     <header className={`w-full bg-white ${className}`}>
@@ -50,6 +53,18 @@ export default function Header({
               >
                 <SearchIcon className="h-6 w-6" />
               </button>
+              <Link
+                href="/cart"
+                aria-label="Открыть корзину"
+                className="relative py-2 pl-2 pr-2"
+              >
+                <CartIcon className="h-6 w-6" />
+                {cartItemCount > 0 && (
+                  <span className="absolute -right-1 top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gray-900 px-1 text-xs font-semibold text-white">
+                    {formattedCartCount}
+                  </span>
+                )}
+              </Link>
               <button
                 onClick={() => setFloatingMenuOpen(true)}
                 className="relative z-50 py-2 pl-2"
@@ -83,6 +98,18 @@ export default function Header({
                 autoFocus
               />
             </div>
+            <Link
+              href="/cart"
+              aria-label="Открыть корзину"
+              className="relative z-50 py-2 pl-2 text-gray-700"
+            >
+              <CartIcon className="h-6 w-6" />
+              {cartItemCount > 0 && (
+                <span className="absolute -right-1 top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gray-900 px-1 text-xs font-semibold text-white">
+                  {formattedCartCount}
+                </span>
+              )}
+            </Link>
             <button
               onClick={() => setFloatingMenuOpen(true)}
               className="relative z-50 py-2 pl-2 text-gray-700"

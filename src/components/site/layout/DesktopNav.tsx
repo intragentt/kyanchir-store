@@ -1,9 +1,13 @@
+'use client';
+
 // Местоположение: src/components/header/DesktopNav.tsx
+
 import Link from 'next/link';
 import { NAV_LINKS } from '@/config/navigation';
 // --- НАЧАЛО ИЗМЕНЕНИЙ ---
 import { Session } from 'next-auth'; // Импортируем тип Session
 import { CartIcon, SearchIcon, UserIcon } from '@/components/shared/icons';
+import { useCartStore, selectCartItemCount } from '@/store/useCartStore';
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ ---
@@ -13,6 +17,9 @@ interface DesktopNavProps {
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
 export default function DesktopNav({ user }: DesktopNavProps) {
+  const cartItemCount = useCartStore(selectCartItemCount);
+  const formattedCartCount = cartItemCount > 99 ? '99+' : cartItemCount.toString();
+
   return (
     <>
       <nav className="flex items-center space-x-6">
@@ -31,9 +38,18 @@ export default function DesktopNav({ user }: DesktopNavProps) {
         <button className="text-text-primary hover:text-brand-lilac p-2">
           <SearchIcon className="h-6 w-6" />
         </button>
-        <button className="text-text-primary hover:text-brand-lilac p-2">
+        <Link
+          href="/cart"
+          className="relative text-text-primary hover:text-brand-lilac p-2"
+          aria-label="Открыть корзину"
+        >
           <CartIcon className="h-6 w-6" />
-        </button>
+          {cartItemCount > 0 && (
+            <span className="absolute -right-1 top-0 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gray-900 px-1 text-xs font-semibold text-white">
+              {formattedCartCount}
+            </span>
+          )}
+        </Link>
 
         {user ? (
           <Link
