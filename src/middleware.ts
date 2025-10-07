@@ -26,7 +26,14 @@ export function middleware(req: NextRequest) {
     // URL в браузере остается красивым (например, admin.kyanchir.ru/dashboard),
     // а Next.js "под капотом" рендерит страницу /app/admin/dashboard.
     // Никаких редиректов, никаких потерь сессии.
-    return NextResponse.rewrite(new URL(`/admin${pathname}`, req.url));
+    const targetPath =
+      pathname === '/' || pathname === ''
+        ? '/admin'
+        : pathname.startsWith('/admin')
+          ? pathname
+          : `/admin${pathname}`;
+
+    return NextResponse.rewrite(new URL(targetPath, req.url));
   }
 
   // Сценарий 2: Пользователь зашел на ОСНОВНОЙ домен (kyanchir.ru)
