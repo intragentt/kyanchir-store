@@ -1,11 +1,174 @@
 import { Telegraf, Context, Markup } from 'telegraf';
+import crypto from 'crypto';
+import { addMinutes } from 'date-fns';
 import prisma from '@/lib/prisma';
 import nodemailer from 'nodemailer';
+import { encrypt } from '@/lib/encryption';
 
 const AGENT_KEYBOARD = Markup.keyboard([
   ['📝 Открытые тикеты'],
   ['🆘 Помощь'],
 ]).resize();
+
+const TELEGRAM_CHANNEL_URL = 'https://t.me/kyanchiruw';
+
+const NEW_USER_KEYBOARD = Markup.keyboard([
+  [Markup.button.contactRequest('💖 Принять и поделиться контактом')],
+])
+  .resize()
+  .oneTime();
+
+const LOGGED_IN_MENU_KEYBOARD = Markup.keyboard([
+  ['🛍️ Каталог', '💖 Мой аккаунт'],
+  ['💌 Мои заказы'],
+  ['🧚‍♀️ Помощь и поддержка', '✨ Частые вопросы'],
+  ['🔑 Получить ссылку для входа'],
+]).resize();
+
+const pendingLoginTokens = new Map<string, string>();
+
+function normalizePhoneNumber(raw: string): string {
+  const digits = raw.replace(/[^\d+]/g, '');
+  if (digits.startsWith('+')) {
+    return digits;
+  }
+  if (digits.startsWith('8') && digits.length === 11) {
+    return `+7${digits.slice(1)}`;
+  }
+  if (digits.startsWith('7') && digits.length === 11) {
+    return `+${digits}`;
+  }
+  return digits.startsWith('+') ? digits : `+${digits}`;
+}
+
+async function sendLoginLink(
+  ctx: Context,
+  user: { id: string },
+  baseUrl: string,
+  options?: { introKey?: 'firstTime' | 'refresh' },
+) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = addMinutes(new Date(), 5);
+
+  await prisma.loginToken.create({
+    data: {
+      token,
+      expires,
+      userId: user.id,
+    },
+  });
+
+  const introTextMap: Record<'firstTime' | 'refresh', string> = {
+    firstTime:
+      'Выберите, где удобнее продолжить: мини-приложение или сайт. Ссылка активна примерно 5 минут ✨',
+    refresh:
+      'Вот новая безопасная ссылка. Она тоже будет активна около 5 минут — используйте её скорее ✨',
+  };
+
+  const message = introTextMap[options?.introKey ?? 'refresh'];
+  const loginUrl = `${baseUrl.replace(/\/?$/, '')}/login?token=${token}`;
+  const webAppUrl = `${baseUrl.replace(/\/?$/, '')}?token=${token}`;
+
+  await ctx.replyWithHTML(message, {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          {
+            text: '✨ Открыть Mini App',
+            web_app: { url: webAppUrl },
+          },
+        ],
+        [
+          {
+            text: '🌐 Перейти на сайт',
+            url: loginUrl,
+          },
+        ],
+        [
+          {
+            text: '🔄 Создать ссылку заново',
+            callback_data: 'regenerate_login_link',
+          },
+        ],
+      ],
+    },
+  });
+}
+
+async function promptForContact(ctx: Context) {
+  await ctx.replyWithHTML(
+    'Чтобы защитить ваш аккаунт, поделитесь номером телефона кнопкой ниже.',
+    NEW_USER_KEYBOARD,
+  );
+}
+
+async function processPendingToken(
+  ctx: Context,
+  loginToken: string,
+  user: { id: string; phone?: string | null } | null,
+  baseUrl: string,
+) {
+  const telegramId = ctx.from?.id;
+  if (!telegramId) return;
+
+  if (!user || !user.phone) {
+    pendingLoginTokens.set(String(telegramId), loginToken);
+    await ctx.reply(
+      'Нашла ваш запрос! Поделитесь контактом, и я завершу вход автоматически 💖',
+      NEW_USER_KEYBOARD,
+    );
+    return;
+  }
+
+  const tokenRecord = await prisma.loginToken.findUnique({
+    where: { token: loginToken },
+  });
+
+  if (!tokenRecord) {
+    pendingLoginTokens.delete(String(telegramId));
+    await ctx.reply(
+      'Не удалось найти эту ссылку. Вернитесь на сайт и создайте новую, пожалуйста.',
+    );
+    return;
+  }
+
+  if (new Date(tokenRecord.expires) < new Date()) {
+    pendingLoginTokens.delete(String(telegramId));
+    await ctx.reply(
+      'Ссылка уже истекла. Запросите новую на сайте — я буду ждать здесь ✨',
+    );
+    return;
+  }
+
+  await prisma.loginToken.update({
+    where: { token: loginToken },
+    data: { userId: user.id },
+  });
+
+  pendingLoginTokens.delete(String(telegramId));
+
+  await ctx.replyWithHTML(
+    '✨ Готово! Возвращайтесь на сайт Kyanchir и завершите вход — дверь уже открыта.',
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: 'Открыть магазин',
+              url: `${baseUrl.replace(/\/?$/, '')}/login`,
+            },
+          ],
+          [
+            {
+              text: 'Наш уютный канал ✨',
+              url: TELEGRAM_CHANNEL_URL,
+            },
+          ],
+        ],
+      },
+    },
+  );
+}
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -24,28 +187,231 @@ let supportBotInstance: Telegraf<Context> | null = null;
 
 function setupClientBot(bot: Telegraf<Context>, baseUrl: string) {
   bot.command('start', async (ctx) => {
-    const loginToken = ctx.payload;
+    try {
+      const telegramId = ctx.from?.id;
+      if (!telegramId) {
+        return;
+      }
 
-    if (loginToken) {
-      console.log(`[Client Bot] Найден login token: ${loginToken}`);
-      await ctx.reply(`Обрабатываем ваш токен для входа...`);
+      const loginToken = ctx.payload?.trim();
+      const user = await prisma.user.findUnique({
+        where: { telegramId: String(telegramId) },
+      });
+
+      if (loginToken) {
+        await ctx.reply('Проверяю магическую ссылку...');
+        await processPendingToken(ctx, loginToken, user, baseUrl);
+        return;
+      }
+
+      if (!user || !user.phone) {
+        await ctx.replyWithHTML(
+          'Привет! Я ваш гид по Kyanchir. Нажмите кнопку ниже, чтобы поделиться контактом и открыть доступ к магазину ✨',
+          NEW_USER_KEYBOARD,
+        );
+        return;
+      }
+
+      await ctx.reply(
+        `Снова привет, ${ctx.from.first_name || 'друг'}! Чем могу помочь сегодня?`,
+        LOGGED_IN_MENU_KEYBOARD,
+      );
+      await ctx.reply(
+        'Нужно войти на сайте? Нажмите «🔑 Получить ссылку для входа», и я всё подготовлю.',
+      );
+    } catch (error) {
+      handleBotError(error, 'ClientBot');
+      await ctx.reply('Что-то пошло не так. Попробуйте ещё раз чуть позже.');
+    }
+  });
+
+  bot.on('contact', async (ctx) => {
+    try {
+      const contact = ctx.message?.contact;
+      const telegramId = ctx.from?.id;
+
+      if (!contact || !telegramId) {
+        return;
+      }
+
+      if (contact.user_id !== telegramId) {
+        await ctx.reply('Пожалуйста, отправьте свой контакт, а не чужой.');
+        return;
+      }
+
+      const phone = normalizePhoneNumber(contact.phone_number);
+      const encryptedPhone = encrypt(phone);
+      const encryptedName =
+        (contact.first_name || ctx.from?.first_name)
+          ? encrypt(contact.first_name || ctx.from!.first_name)
+          : null;
+
+      const user = await prisma.user.upsert({
+        where: { telegramId: String(telegramId) },
+        update: {
+          phone: encryptedPhone,
+          ...(encryptedName ? { name_encrypted: encryptedName } : {}),
+        },
+        create: {
+          telegramId: String(telegramId),
+          phone: encryptedPhone,
+          ...(encryptedName ? { name_encrypted: encryptedName } : {}),
+          role: {
+            connect: { name: 'USER' },
+          },
+        },
+      });
+
+      await ctx.reply(
+        'Спасибо! Контакт сохранён. Сейчас пришлю свежую ссылку для входа 💌',
+        LOGGED_IN_MENU_KEYBOARD,
+      );
+
+      const pendingToken = pendingLoginTokens.get(String(telegramId));
+      if (pendingToken) {
+        await ctx.reply('Подтверждаю ваш запрос со страницы входа...');
+        await processPendingToken(ctx, pendingToken, user, baseUrl);
+      } else {
+        await sendLoginLink(ctx, user, baseUrl, { introKey: 'firstTime' });
+        await ctx.reply(
+          'А ещё у нас есть уютный канал. Заглядывайте, чтобы вдохновиться новинками ✨',
+          Markup.inlineKeyboard([
+            [
+              {
+                text: 'Перейти в канал',
+                url: TELEGRAM_CHANNEL_URL,
+              },
+            ],
+          ]),
+        );
+      }
+    } catch (error) {
+      handleBotError(error, 'ClientBot');
+      await ctx.reply(
+        'Не удалось сохранить контакт. Попробуйте ещё раз или напишите в поддержку.',
+      );
+    }
+  });
+
+  bot.hears('🔑 Получить ссылку для входа', async (ctx) => {
+    try {
+      const telegramId = ctx.from?.id;
+      if (!telegramId) return;
+      const user = await prisma.user.findUnique({
+        where: { telegramId: String(telegramId) },
+      });
+      if (!user || !user.phone) {
+        await promptForContact(ctx);
+        return;
+      }
+      await sendLoginLink(ctx, user, baseUrl);
+    } catch (error) {
+      handleBotError(error, 'ClientBot');
+      await ctx.reply('Не удалось создать ссылку. Попробуйте снова чуть позже.');
+    }
+  });
+
+  bot.action('regenerate_login_link', async (ctx) => {
+    try {
+      await ctx.answerCbQuery();
+      const telegramId = ctx.from?.id;
+      if (!telegramId) return;
+      const user = await prisma.user.findUnique({
+        where: { telegramId: String(telegramId) },
+      });
+      if (!user || !user.phone) {
+        await promptForContact(ctx);
+        return;
+      }
+      await sendLoginLink(ctx, user, baseUrl);
+    } catch (error) {
+      handleBotError(error, 'ClientBot');
+      await ctx.answerCbQuery('Не получилось создать ссылку, попробуйте позже.', {
+        show_alert: true,
+      });
+    }
+  });
+
+  bot.hears('🛍️ Каталог', async (ctx) => {
+    await ctx.reply('Открываю витрину Kyanchir ✨', {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: 'Перейти в каталог',
+              web_app: { url: baseUrl.replace(/\/?$/, '') },
+            },
+          ],
+        ],
+      },
+    });
+  });
+
+  bot.hears('💖 Мой аккаунт', async (ctx) => {
+    await ctx.reply(
+      'Чтобы управлять аккаунтом, я подготовлю ссылку на личный кабинет ✨',
+    );
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return;
+    const user = await prisma.user.findUnique({
+      where: { telegramId: String(telegramId) },
+    });
+    if (!user || !user.phone) {
+      await promptForContact(ctx);
+      return;
+    }
+    await sendLoginLink(ctx, user, baseUrl);
+  });
+
+  bot.hears('💌 Мои заказы', async (ctx) => {
+    await ctx.reply(
+      'Ссылку на ваши заказы можно получить через личный кабинет. Создать новую?',
+    );
+    const telegramId = ctx.from?.id;
+    if (!telegramId) return;
+    const user = await prisma.user.findUnique({
+      where: { telegramId: String(telegramId) },
+    });
+    if (!user || !user.phone) {
+      await promptForContact(ctx);
+      return;
+    }
+    await sendLoginLink(ctx, user, baseUrl);
+  });
+
+  bot.hears('🧚‍♀️ Помощь и поддержка', async (ctx) => {
+    await ctx.reply(
+      'Наша фея поддержки всегда на связи: напишите @kyanchir_support или воспользуйтесь формой на сайте 💌',
+    );
+  });
+
+  bot.hears('✨ Частые вопросы', async (ctx) => {
+    await ctx.reply(
+      'Скоро здесь появится раздел с ответами на самые популярные вопросы. А пока загляните на сайт ✨',
+    );
+  });
+
+  bot.on('message', async (ctx) => {
+    const telegramId = ctx.from?.id;
+    if (!telegramId) {
       return;
     }
 
-    console.log(
-      '[Client Bot] Команда /start без токена, отправляем приветствие.',
-    );
-    const welcomeText =
-      'Добро пожаловать в Kyanchir Store!\n\nЧтобы войти на сайт, нажмите кнопку ниже.';
+    const user = await prisma.user.findUnique({
+      where: { telegramId: String(telegramId) },
+    });
 
-    const keyboard = Markup.keyboard([
-      [Markup.button.webApp('Войти на сайт', `${baseUrl}/login`)],
-      [Markup.button.contactRequest('📱 Поделиться номером')],
-    ])
-      .resize()
-      .oneTime();
+    if (!user || !user.phone) {
+      await promptForContact(ctx);
+      return;
+    }
 
-    await ctx.reply(welcomeText, keyboard);
+    if ('text' in ctx.message) {
+      await ctx.reply(
+        'Я пока понимаю только кнопки на клавиатуре. Попробуйте воспользоваться ими 💖',
+        LOGGED_IN_MENU_KEYBOARD,
+      );
+    }
   });
 
   bot.catch((err) => handleBotError(err, 'ClientBot'));
