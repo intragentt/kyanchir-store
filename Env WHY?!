@@ -66,7 +66,7 @@
 | Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
 | --- | --- | --- | --- |
 | `NEXT_PUBLIC_ENABLE_TEST_PAYMENT_REDIRECT` | включает кнопку «Оплатить (тест)» | `'true'`/`'false'` (по умолчанию true, если задан URL)【F:src/config/payments.ts†L4-L14】 | Ручное значение. |
-| `NEXT_PUBLIC_TEST_PAYMENT_URL` | ссылка на тестовый платёж | Полный URL【F:src/config/payments.ts†L6-L14】 | Выдаёт тестовая платформа (например, YooKassa sandbox). |
+| `NEXT_PUBLIC_TEST_PAYMENT_URL` | ссылка на тестовый платёж | Полный URL【F:src/config/payments.ts†L6-L14】 | Выдаёт тестовая платформа (например, YooKassa sandbox). См. памятку: `docs/payments/yookassa-sandbox.md`. |
 | `NEXT_PUBLIC_TEST_PAYMENT_KEY` | ключ для тестовых оплат | произвольная строка (используется в UI)【F:src/config/payments.ts†L6-L14】 | Генерирует платёжный сервис. |
 | `NEXT_PUBLIC_TEST_PAYMENT_BUTTON_LABEL` (опц.) | текст кнопки | строка | Любой текст. |
 
