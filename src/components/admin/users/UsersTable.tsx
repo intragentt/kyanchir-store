@@ -290,6 +290,9 @@ export default function UsersTable({
                   Заказы
                 </th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Конусные баллы
+                </th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
                   Создан
                 </th>
                 <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">
@@ -303,13 +306,13 @@ export default function UsersTable({
             <tbody className="divide-y divide-gray-200 bg-white">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6">
-                    <SkeletonLoader rows={Math.min(perPage, 5)} columns={4} />
+                  <td colSpan={8} className="px-4 py-6">
+                    <SkeletonLoader rows={Math.min(perPage, 5)} columns={6} />
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-500">
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-500">
                     Пользователи не найдены. Попробуйте изменить условия фильтра.
                   </td>
                 </tr>

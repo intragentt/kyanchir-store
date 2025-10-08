@@ -38,6 +38,10 @@ export interface AdminUsersQuery {
  */
 export interface AdminUserRecord {
   id: string;
+  /**
+   * 🔢 Человеко-понятный идентификатор для отображения в таблице
+   */
+  displayId: number;
   firstName: string | null;
   lastName: string | null;
   fullName: string;
@@ -50,7 +54,13 @@ export interface AdminUserRecord {
   lastLoginAt: string | null;
   ordersCount: number;
   totalSpent: number;
+  /**
+   * 🎁 Накопленные бонусные ("конусные") баллы
+   */
+  bonusPoints: number;
 }
+
+type AdminUserRecordBase = Omit<AdminUserRecord, 'displayId'>;
 
 /**
  * 📈 Общая статистика по выборке пользователей
@@ -184,9 +194,9 @@ function buildWhereClause(query: AdminUsersQuery): Prisma.UserWhereInput {
 }
 
 function filterByNameIfNeeded(
-  records: AdminUserRecord[],
+  records: AdminUserRecordBase[],
   searchTerm: string | undefined,
-): AdminUserRecord[] {
+): AdminUserRecordBase[] {
   if (!searchTerm) {
     return records;
   }
@@ -208,7 +218,7 @@ function mapToAdminRecord(user: Prisma.UserGetPayload<{
     _count: { select: { orders: true } };
     sessions: { select: { expires: true }; orderBy: { expires: 'desc' }; take: 1 };
   };
-}>): AdminUserRecord {
+}>): AdminUserRecordBase {
   const firstName = safeDecrypt(user.name_encrypted);
   const lastName = safeDecrypt(user.surname_encrypted);
   const email = safeDecrypt(user.email_encrypted);
@@ -233,6 +243,7 @@ function mapToAdminRecord(user: Prisma.UserGetPayload<{
     lastLoginAt: lastSession ? lastSession.toISOString() : null,
     ordersCount: user._count.orders,
     totalSpent,
+    bonusPoints: user.bonusPoints ?? 0,
   };
 }
 
@@ -320,21 +331,54 @@ export async function fetchAdminUsers(
 
   const totalPages = Math.max(Math.ceil(total / perPage), 1);
   const start = (page - 1) * perPage;
-  const paginated = isNameSearch || requiresManualSort
+  const paginated = (isNameSearch || requiresManualSort
     ? manuallySorted.slice(start, start + perPage)
-    : manuallySorted;
+    : manuallySorted) satisfies AdminUserRecordBase[];
 
   console.log('✅ admin/users: пользователи загружены', {
     count: paginated.length,
     total,
   });
 
+  const withDisplayIds = paginated.map((record, index) => ({
+    ...record,
+    displayId: start + index + 1,
+  }));
+
   return {
-    users: paginated,
+    users: withDisplayIds,
     page,
     perPage,
     total,
     totalPages,
     summary,
   };
+}
+
+interface UpdateUserRoleParams {
+  userId: string;
+  roleName: string;
+}
+
+export async function updateUserRoleByAdmin({ userId, roleName }: UpdateUserRoleParams) {
+  const normalizedRole = roleName.trim().toUpperCase();
+
+  const role = await prisma.userRole.findUnique({
+    where: { name: normalizedRole },
+  });
+
+  if (!role) {
+    throw new Error('Роль не найдена');
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { roleId: role.id },
+  });
+}
+
+export async function deleteUserByAdmin(userId: string) {
+  await prisma.user.delete({
+    where: { id: userId },
+  });
 }
