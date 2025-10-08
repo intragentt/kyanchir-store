@@ -1,0 +1,140 @@
+# Env WHY?!
+
+Документ фиксирует, **какие переменные окружения нужны проекту**, где их брать и какие
+значения задавать локально и на Vercel. Ниже — разбивка по доменам (БД, платежи,
+боты и т. д.) и отдельный чек-лист для Production/Preview/Development окружений.
+
+> ⚠️ **Всегда держите реальные секреты вне Git.** Этот файл — справочник с
+> фейковыми примерами и командами генерации.
+
+## Локальная разработка (`.env.local`)
+
+### База данных и Prisma
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | строка подключения Prisma | `postgresql://<user>:<password>@<host>/<db>?sslmode=require` | Neon: https://console.neon.tech → проект → **Connection Details**. |
+| `PRISMA_MIGRATE_MAX_ATTEMPTS` (опц.) | количество повторов `prisma migrate deploy` | целое число ≥1, по умолчанию `5`【F:scripts/prisma-migrate-deploy-with-retry.mjs†L4-L105】 | Задавайте только если нужно перезаписать дефолт. |
+| `PRISMA_MIGRATE_RETRY_DELAY_MS` (опц.) | пауза между ретраями миграций | целое число в миллисекундах, по умолчанию `5000`【F:scripts/prisma-migrate-deploy-with-retry.mjs†L4-L120】 | Необязательно. |
+
+### Auth.js и общие URL
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `AUTH_SECRET` | ключ подписи JWT Auth.js | base64-строка ≥32 байт (например, 43 символа)【F:src/lib/auth.ts†L11-L143】 | `openssl rand -base64 32` |
+| `NEXTAUTH_URL` | базовый URL витрины/админки | Полный URL без завершающего `/` (пример: `https://kyanchir.ru`)【F:src/lib/settings/yookassa.ts†L84-L90】【F:src/lib/telegram.ts†L613-L621】 | Укажите домен окружения (локально `http://localhost:3000`). |
+
+### Шифрование пользовательских данных
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `ENCRYPTION_KEY` | ключ AES-256-CBC для телефонов/имён | 64 hex-символа (32 байта)【F:src/lib/encryption.ts†L17-L58】 | `openssl rand -hex 32` |
+| `ENCRYPTION_SALT` | соль для HMAC-SHA256 | строка ≥32 символов (рекомендуем 64 hex)【F:src/lib/encryption.ts†L33-L79】 | `openssl rand -hex 32` |
+
+### Email (SendGrid)
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `EMAIL_SERVER_HOST` | SMTP-хост | обычно `smtp.sendgrid.net`【F:src/lib/mail.ts†L3-L31】 | https://app.sendgrid.com/settings/mail_settings |
+| `EMAIL_SERVER_PORT` | SMTP-порт | `465` (SSL) или `587` (STARTTLS)【F:src/lib/mail.ts†L23-L44】 | Настройки SendGrid. |
+| `EMAIL_SERVER_USER` | SMTP-логин | для SendGrid всегда `apikey`【F:src/lib/mail.ts†L3-L31】 | Фиксированное значение. |
+| `EMAIL_SERVER_PASSWORD` | SMTP-пароль / SendGrid API Key | Строка вида `SG.xxxxx` длиной ~69 символов【F:src/app/api/auth/send-verification-link/route.ts†L42-L67】 | SendGrid → Settings → API Keys: https://app.sendgrid.com/settings/api_keys |
+| `EMAIL_FROM` | отображаемый отправитель | Формат `"Имя" <email@example.com>`【F:src/lib/mail.ts†L43-L74】 | Любой проверенный адрес SendGrid. |
+
+### Telegram — клиентский бот (`@kyanchir_store_bot`)
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | отображается в UI/мини-приложении | Telegram username без `@`【F:src/app/(site)/(auth)/login/page.tsx†L151-L159】【F:src/app/api/auth/telegram/start/route.ts†L16-L21】 | BotFather → `/setusername` для клиентского бота. |
+| `TELEGRAM_BOT_USERNAME` (опц.) | для консистентности с БД | такой же, как `NEXT_PUBLIC_*` | BotFather. |
+| `TELEGRAM_BOT_TOKEN` | токен API клиента | Формат `<digits>:<alphanum>`【F:src/lib/telegram.ts†L613-L621】 | BotFather → `/token`: https://t.me/BotFather |
+| `TELEGRAM_WEBHOOK_SECRET` | защита вебхука `/api/telegram-webhook` | случайная строка 32–64 символа【F:src/app/api/telegram-webhook/route.ts†L1-L29】 | `openssl rand -hex 32` и сконфигурируйте в `setWebhook`. |
+
+### Telegram — бот поддержки (`@kyanchir_uw_mail_bot`)
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `TELEGRAM_SUPPORT_BOT_TOKEN` | токен саппорт-бота | `<digits>:<alphanum>`【F:src/lib/telegram.ts†L624-L632】 | BotFather → `/token`. |
+| `TELEGRAM_SUPPORT_WEBHOOK_SECRET` | секрет для вебхука поддержки | случайная строка 32–64 символа【F:docs/SECURITY_AUDIT.md†L24-L31】 | `openssl rand -hex 32`. |
+| `TELEGRAM_ADMIN_IDS` | кто получает тикеты | список ID через запятую (например, `6028909187,123456789`)【F:docs/SECURITY_AUDIT.md†L24-L31】 | Узнать ID можно через @userinfobot. |
+
+### Bot API шлюз
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `BOT_API_SECRET` | авторизация `/api/bot/*` | случайная строка 32+ символа【F:src/app/api/bot/route.ts†L10-L66】【F:docs/SECURITY_AUDIT.md†L29-L38】 | `openssl rand -hex 32`; распределите среди доверенных сервисов. |
+
+### Email + поддержка
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `NEXTAUTH_URL` | ссылка в уведомлениях поддержки | URL【F:src/app/api/support-form/route.ts†L46-L68】 | Совпадает с основным доменом. |
+
+### Платёжные настройки (UI тестового платежа)
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_ENABLE_TEST_PAYMENT_REDIRECT` | включает кнопку «Оплатить (тест)» | `'true'`/`'false'` (по умолчанию true, если задан URL)【F:src/config/payments.ts†L4-L14】 | Ручное значение. |
+| `NEXT_PUBLIC_TEST_PAYMENT_URL` | ссылка на тестовый платёж | Полный URL【F:src/config/payments.ts†L6-L14】 | Выдаёт тестовая платформа (например, YooKassa sandbox). |
+| `NEXT_PUBLIC_TEST_PAYMENT_KEY` | ключ для тестовых оплат | произвольная строка (используется в UI)【F:src/config/payments.ts†L6-L14】 | Генерирует платёжный сервис. |
+| `NEXT_PUBLIC_TEST_PAYMENT_BUTTON_LABEL` (опц.) | текст кнопки | строка | Любой текст. |
+
+### YooKassa (боевой и тестовый режим)
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `YOOKASSA_MODE` | `test` или `live` | строка `test`/`live`【F:src/lib/settings/yookassa.ts†L99-L125】 | Вкл. боевой режим после верификации. |
+| `YOOKASSA_TEST_SHOP_ID` | ID тестового магазина | числовой ID【F:src/lib/settings/yookassa.ts†L118-L125】 | Личный кабинет YooKassa sandbox: https://yookassa.ru/developers |
+| `YOOKASSA_TEST_SECRET_KEY` | ключ тестового магазина | строка 40+ символов【F:src/lib/settings/yookassa.ts†L118-L125】 | YooKassa sandbox. |
+| `YOOKASSA_SHOP_ID` | боевой ID магазина | числовой ID【F:src/lib/settings/yookassa.ts†L118-L125】 | YooKassa кабинет: https://yookassa.ru/my |
+| `YOOKASSA_SECRET_KEY` | боевой секрет | строка 40+ символов【F:src/lib/settings/yookassa.ts†L118-L125】 | YooKassa кабинет. |
+| `YOOKASSA_RETURN_URL` | URL после оплаты | URL без завершающего `/` (по умолчанию `.../checkout/success`)【F:src/lib/settings/yookassa.ts†L78-L91】 | Совпадает с доменом магазина. |
+| `YOOKASSA_MERCHANT_INN` | ИНН продавца | 12 цифр (для ИП)【F:src/lib/settings/yookassa.ts†L99-L125】 | Реквизиты бизнеса. |
+| `YOOKASSA_MERCHANT_FULL_NAME` | Полное наименование | строка | Реквизиты бизнеса. |
+| `YOOKASSA_TAX_SYSTEM_CODE` | код системы налогообложения | число 1–6 (или пусто)【F:src/lib/settings/yookassa.ts†L99-L145】 | См. https://yookassa.ru/docs/support/shop/tax-system |
+| `YOOKASSA_RECEIPT_VAT_CODE` | ставка НДС | число 1–6 (или пусто)【F:src/lib/settings/yookassa.ts†L99-L145】 | YooKassa → Справка по vat_code. |
+| `YOOKASSA_RECEIPT_ENABLED` | включение чеков | `'true'`/`'false'`【F:src/lib/settings/yookassa.ts†L99-L145】 | Решается по бухгалтерии. |
+
+### MoySklad
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `MOYSKLAD_API_TOKEN` | OAuth токен API | строка Bearer-токена【F:src/lib/moysklad-api.ts†L1-L75】 | Личный кабинет МойСклад → Профиль → API-токены: https://online.moysklad.ru/app/#/profile/api |
+
+### Cron и фоновые задачи
+| Переменная | Назначение | Формат / длина | Где взять / сгенерировать |
+| --- | --- | --- | --- |
+| `CRON_SECRET` | авторизация планировщика | случайная строка 48+ hex символов【F:docs/operations/cron.md†L1-L13】 | `openssl rand -hex 48`, добавить в Vercel Scheduler. |
+
+## Продакшн и Vercel окружения
+
+Создайте переменные во вкладке **Vercel → Project Settings → Environment Variables**.
+Рекомендуемый маппинг:
+
+| Переменная | Development | Preview | Production | Комментарий |
+| --- | --- | --- | --- | --- |
+| `DATABASE_URL` | ✅ (локальный Neon dev или Docker) | ✅ (staging БД) | ✅ (production БД) | Проверяйте привилегии БД. |
+| `AUTH_SECRET` | ✅ | ✅ | ✅ | Не делитесь между средами. |
+| `NEXTAUTH_URL` | `http://localhost:3000` | preview-домен Vercel | `https://kyanchir.ru` | Совпадает с доменом окружения.【F:src/lib/telegram.ts†L613-L621】 |
+| `ENCRYPTION_KEY` / `ENCRYPTION_SALT` | ✅ | ✅ | ✅ | У каждого окружения свой набор.【F:src/lib/encryption.ts†L17-L79】 |
+| `EMAIL_SERVER_*` / `EMAIL_FROM` | ✅ (по желанию) | ✅ | ✅ | Проверьте доступ SendGrid.【F:src/lib/mail.ts†L3-L74】 |
+| `NEXT_PUBLIC_TELEGRAM_BOT_USERNAME` | ✅ | ✅ | ✅ | Одинаковый username во всех средах. |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_WEBHOOK_SECRET` | опц. (если тестируете) | ✅ | ✅ | Настройте `setWebhook` с соответствующим URL.【F:src/app/api/telegram-webhook/route.ts†L1-L29】 |
+| `TELEGRAM_SUPPORT_BOT_TOKEN` / `TELEGRAM_SUPPORT_WEBHOOK_SECRET` / `TELEGRAM_ADMIN_IDS` | опц. | ✅ | ✅ | Должны совпадать с ботом поддержки.【F:src/lib/telegram.ts†L624-L632】【F:docs/SECURITY_AUDIT.md†L24-L31】 |
+| `BOT_API_SECRET` | опц. (если есть локальные интеграции) | ✅ | ✅ | Обязателен для внешних ботов.【F:src/app/api/bot/route.ts†L10-L66】 |
+| `NEXT_PUBLIC_TEST_PAYMENT_*` / `NEXT_PUBLIC_ENABLE_TEST_PAYMENT_REDIRECT` | опц. | опц. | опц. | В продакшне отключайте, если есть боевые платежи.【F:src/config/payments.ts†L4-L14】 |
+| `YOOKASSA_*` | ✅ (sandbox) | ✅ (staging) | ✅ (боевые) | Production должен содержать live-ключи.【F:src/lib/settings/yookassa.ts†L78-L125】【F:docs/SECURITY_AUDIT.md†L19-L31】 |
+| `MOYSKLAD_API_TOKEN` | ✅ | ✅ | ✅ | Желательно разные токены по средам.【F:src/lib/moysklad-api.ts†L1-L75】 |
+| `CRON_SECRET` | опц. | ✅ | ✅ | Нужен для Scheduler.【F:docs/operations/cron.md†L1-L13】 |
+| `PRISMA_MIGRATE_MAX_ATTEMPTS` / `PRISMA_MIGRATE_RETRY_DELAY_MS` | опц. | опц. | ✅ (если нестабильная БД) | Настройте только при необходимости ретраев.【F:scripts/prisma-migrate-deploy-with-retry.mjs†L4-L120】 |
+
+### Проверка перед деплоем
+1. Сверьте список выше с `Settings → Environment Variables` на Vercel.
+2. Убедитесь, что Production и Preview используют разные секреты (`AUTH_SECRET`,
+   `ENCRYPTION_KEY`, токены ботов, YooKassa).
+3. После обновления секретов заново задеплойте проект и выполните smoke-тесты:
+   - авторизация (email + Telegram);
+   - отправка писем (Reset / Verification);
+   - создание заказа и формирование платежа YooKassa.
+4. Для cron-задач проверьте, что Scheduler шлёт запрос с корректным `CRON_SECRET`.
+
+## Полезные команды и ссылки
+- `openssl rand -base64 32` — быстрый генератор секрета для Auth.js/Bot API.
+- `openssl rand -hex 32` — генерация hex-ключей (ENCRYPTION_KEY, webhook секреты).
+- BotFather: https://t.me/BotFather — управление токенами Telegram.
+- SendGrid API Keys: https://app.sendgrid.com/settings/api_keys
+- YooKassa кабинет: https://yookassa.ru/my, Sandbox: https://yookassa.ru/developers
+- МойСклад API токены: https://online.moysklad.ru/app/#/profile/api
+- Neon DB Dashboard: https://console.neon.tech/
+
+> При добавлении новых интеграций обязательно обновляйте этот файл и `docs/SECURITY_AUDIT.md`,
+> чтобы команда видела полный список секретов.
