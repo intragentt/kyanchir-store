@@ -30,7 +30,9 @@ export default function LoginPage() {
   const emailInputRef = useRef<HTMLInputElement | null>(null);
   const passwordInputRef = useRef<HTMLInputElement | null>(null);
   const telegramTokenRef = useRef<string | null>(null);
-  const telegramPollingRef = useRef<NodeJS.Timeout | null>(null);
+  const telegramPollingRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
   const validateEmail = (value: string) => {
     const isValid = /\S+@\S+\.\S+/.test(value);
@@ -169,13 +171,13 @@ export default function LoginPage() {
   }, [stopTelegramPolling]);
 
   const finalizeTelegramLogin = useCallback(
-    async (userId: string) => {
+    async (token: string) => {
       try {
         setTelegramStatus('Подтверждение получено! Завершаем вход...');
         const finalizeRes = await fetch('/api/auth/telegram/finalize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId }),
+          body: JSON.stringify({ token }),
         });
 
         if (!finalizeRes.ok) {
@@ -198,6 +200,7 @@ export default function LoginPage() {
         }
 
         setTelegramStatus('Готово! Перенаправляем вас в магазин Kyanchir.');
+        stopTelegramPolling();
         setIsTelegramFlowActive(false);
         telegramTokenRef.current = null;
         router.push('/');
@@ -207,17 +210,23 @@ export default function LoginPage() {
         setTelegramError(
           'Не удалось завершить вход через Telegram. Попробуйте ещё раз.',
         );
+        stopTelegramPolling();
         setIsTelegramFlowActive(false);
+        telegramTokenRef.current = null;
       }
     },
-    [router],
+    [router, stopTelegramPolling],
   );
 
   const startTelegramPolling = useCallback(
     (token: string) => {
       stopTelegramPolling();
-      telegramPollingRef.current = setInterval(async () => {
+      telegramPollingRef.current = window.setInterval(async () => {
         try {
+          if (telegramTokenRef.current !== token) {
+            return;
+          }
+
           const response = await fetch('/api/auth/telegram/check', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -228,12 +237,12 @@ export default function LoginPage() {
             throw new Error('Failed to check Telegram login status');
           }
 
-          const data: { status?: string; userId?: string } =
+          const data: { status?: 'pending' | 'activated' | 'expired' } =
             await response.json();
 
-          if (data.status === 'activated' && data.userId) {
+          if (data.status === 'activated') {
             stopTelegramPolling();
-            await finalizeTelegramLogin(data.userId);
+            await finalizeTelegramLogin(token);
           } else if (data.status === 'expired') {
             stopTelegramPolling();
             setIsTelegramFlowActive(false);
@@ -241,6 +250,8 @@ export default function LoginPage() {
             setTelegramError(
               'Время на подтверждение истекло. Создайте новую ссылку и попробуйте снова.',
             );
+          } else {
+            setTelegramStatus('Ожидаем подтверждения в Telegram...');
           }
         } catch (error) {
           console.error('Telegram polling error:', error);
@@ -273,7 +284,7 @@ export default function LoginPage() {
         throw new Error('Failed to create Telegram login token');
       }
 
-      const data: { token?: string } = await response.json();
+      const data: { token?: string; botUsername?: string } = await response.json();
       if (!data?.token) {
         throw new Error('Missing Telegram login token');
       }
@@ -284,8 +295,7 @@ export default function LoginPage() {
         'Мы открыли бот Kyanchir в Telegram. Подтвердите вход и вернитесь на сайт.',
       );
 
-      const botUsername =
-        process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'kyanchir_store_bot';
+      const botUsername = data.botUsername ?? 'kyanchir_store_bot';
       const deepLink = `https://t.me/${botUsername}?start=${data.token}`;
       const popup = window.open(deepLink, '_blank', 'noopener,noreferrer');
       if (!popup) {
@@ -300,6 +310,7 @@ export default function LoginPage() {
       );
       setIsTelegramFlowActive(false);
       stopTelegramPolling();
+      telegramTokenRef.current = null;
     } finally {
       setIsTelegramLoading(false);
     }
@@ -474,7 +485,7 @@ export default function LoginPage() {
           </div>
           <button
             onClick={handleTelegramLogin}
-            disabled={isTelegramLoading}
+            disabled={isTelegramLoading || isTelegramFlowActive}
             className="flex w-full items-center justify-center gap-x-2 rounded-md border border-zinc-300 bg-white px-4 py-2 font-body text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <TelegramOfficialIcon className="h-6 w-6" />

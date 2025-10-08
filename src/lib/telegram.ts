@@ -142,7 +142,7 @@ async function processPendingToken(
 
   await prisma.loginToken.update({
     where: { token: loginToken },
-    data: { userId: user.id },
+    data: { userId: user.id, expires: addMinutes(new Date(), 5) },
   });
 
   pendingLoginTokens.delete(String(telegramId));
