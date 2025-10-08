@@ -71,8 +71,16 @@ const DEFAULT_SETTINGS: SdekPersistedSettings = {
 const cloneDefaults = (): SdekPersistedSettings =>
   JSON.parse(JSON.stringify(DEFAULT_SETTINGS)) as SdekPersistedSettings;
 
+type PartialPersistedSettings = Omit<
+  Partial<SdekPersistedSettings>,
+  'test' | 'production'
+> & {
+  test?: Partial<SdekCredentials>;
+  production?: Partial<SdekCredentials>;
+};
+
 const mergeWithDefaults = (
-  partial: Partial<SdekPersistedSettings>,
+  partial: PartialPersistedSettings,
 ): SdekPersistedSettings => {
   const base = cloneDefaults();
 
@@ -148,7 +156,10 @@ const loadPersistedSettings = async (): Promise<PersistedSnapshot> => {
       return { settings: cloneDefaults(), updatedAt: record.updatedAt };
     }
 
-    return { settings: mergeWithDefaults(result.data), updatedAt: record.updatedAt };
+    return {
+      settings: mergeWithDefaults(result.data as PartialPersistedSettings),
+      updatedAt: record.updatedAt,
+    };
   } catch (error) {
     console.warn('[SdekSettings] Ошибка чтения сохранённых настроек', error);
     return { settings: cloneDefaults(), updatedAt: record.updatedAt };

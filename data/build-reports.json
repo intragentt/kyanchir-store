@@ -1,0 +1,174 @@
+[
+  {
+    "timestamp": "2025-10-08T23:17:08.732Z",
+    "status": "success",
+    "commit": "720c4fe",
+    "environment": "production",
+    "steps": [
+      {
+        "key": "test",
+        "label": "Unit tests",
+        "status": "success",
+        "durationMs": 1027
+      },
+      {
+        "key": "prismaGenerate",
+        "label": "Prisma generate",
+        "status": "success",
+        "durationMs": 2450
+      },
+      {
+        "key": "nextBuild",
+        "label": "Next.js build",
+        "status": "success",
+        "durationMs": 39688
+      },
+      {
+        "key": "prismaMigrate",
+        "label": "Prisma migrate deploy",
+        "status": "skipped",
+        "durationMs": 0
+      }
+    ]
+  },
+  {
+    "timestamp": "2025-10-08T23:16:05.032Z",
+    "status": "failed",
+    "commit": "720c4fe",
+    "environment": "production",
+    "steps": [
+      {
+        "key": "test",
+        "label": "Unit tests",
+        "status": "success",
+        "durationMs": 1119
+      },
+      {
+        "key": "prismaGenerate",
+        "label": "Prisma generate",
+        "status": "success",
+        "durationMs": 2169
+      },
+      {
+        "key": "nextBuild",
+        "label": "Next.js build",
+        "status": "failed",
+        "durationMs": 36428,
+        "error": "Process exited with code 1"
+      },
+      {
+        "key": "prismaMigrate",
+        "label": "Prisma migrate deploy",
+        "status": "skipped",
+        "durationMs": 0
+      }
+    ],
+    "error": "Process exited with code 1",
+    "failedStep": "nextBuild"
+  },
+  {
+    "timestamp": "2025-10-08T23:15:05.488Z",
+    "status": "failed",
+    "commit": "720c4fe",
+    "environment": "production",
+    "steps": [
+      {
+        "key": "test",
+        "label": "Unit tests",
+        "status": "success",
+        "durationMs": 1145
+      },
+      {
+        "key": "prismaGenerate",
+        "label": "Prisma generate",
+        "status": "success",
+        "durationMs": 2503
+      },
+      {
+        "key": "nextBuild",
+        "label": "Next.js build",
+        "status": "failed",
+        "durationMs": 46608,
+        "error": "Process exited with code 1"
+      },
+      {
+        "key": "prismaMigrate",
+        "label": "Prisma migrate deploy",
+        "status": "skipped",
+        "durationMs": 0
+      }
+    ],
+    "error": "Process exited with code 1",
+    "failedStep": "nextBuild"
+  },
+  {
+    "timestamp": "2025-10-08T23:13:23.584Z",
+    "status": "failed",
+    "commit": "720c4fe",
+    "environment": "production",
+    "steps": [
+      {
+        "key": "test",
+        "label": "Unit tests",
+        "status": "success",
+        "durationMs": 1057
+      },
+      {
+        "key": "prismaMigrate",
+        "label": "Prisma migrate deploy",
+        "status": "failed",
+        "durationMs": 2228,
+        "error": "Process exited with code 1"
+      },
+      {
+        "key": "prismaGenerate",
+        "label": "Prisma generate",
+        "status": "skipped",
+        "durationMs": 0
+      },
+      {
+        "key": "nextBuild",
+        "label": "Next.js build",
+        "status": "skipped",
+        "durationMs": 0
+      }
+    ],
+    "error": "Process exited with code 1",
+    "failedStep": "prismaMigrate"
+  },
+  {
+    "timestamp": "2025-10-08T23:13:16.078Z",
+    "status": "failed",
+    "commit": "720c4fe",
+    "environment": "production",
+    "steps": [
+      {
+        "key": "test",
+        "label": "Unit tests",
+        "status": "success",
+        "durationMs": 1057
+      },
+      {
+        "key": "prismaMigrate",
+        "label": "Prisma migrate deploy",
+        "status": "failed",
+        "durationMs": 2188,
+        "error": "Process exited with code 1"
+      },
+      {
+        "key": "prismaGenerate",
+        "label": "Prisma generate",
+        "status": "skipped",
+        "durationMs": 0
+      },
+      {
+        "key": "nextBuild",
+        "label": "Next.js build",
+        "status": "skipped",
+        "durationMs": 0
+      }
+    ],
+    "error": "Process exited with code 1",
+    "failedStep": "prismaMigrate"
+  }
+]
