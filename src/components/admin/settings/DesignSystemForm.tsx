@@ -112,7 +112,7 @@ export default function DesignSystemForm({
 
   const iconEntries = useMemo(() => {
     return Object.entries(sharedIcons)
-      .filter((entry): entry is [string, ComponentType<Record<string, any>>] => {
+      .filter((entry): entry is [string, ComponentType<any>] => {
         const [, component] = entry;
         return typeof component === 'function';
       })
