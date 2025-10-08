@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { LoadingButton } from '@/components/shared/ui';
+import { TEST_PAYMENT_KEY, TEST_PAYMENT_URL } from '@/config/payments';
 import type { YookassaSettingsView } from '@/lib/settings/yookassa';
 
 interface ModeState {
@@ -142,6 +143,7 @@ export default function YookassaSettingsForm({
   const [baseline, setBaseline] = useState<YookassaSettingsView>(() => cloneView(initialSettings));
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialUpdatedAt);
   const [isSaving, setIsSaving] = useState(false);
+  const [testPaymentAmount, setTestPaymentAmount] = useState('1500');
 
   useEffect(() => {
     setFormState(createFormState(initialSettings));
@@ -212,6 +214,59 @@ export default function YookassaSettingsForm({
       },
     }));
   }, []);
+
+  const handleRandomTestAmount = useCallback(() => {
+    const randomValue = (Math.random() * 4500 + 500).toFixed(2);
+    setTestPaymentAmount(randomValue);
+  }, []);
+
+  const handleTestPaymentLaunch = useCallback(() => {
+    if (formState.mode !== 'test') {
+      toast.error('Тестовый платёж доступен только в тестовом режиме.');
+      return;
+    }
+
+    if (!TEST_PAYMENT_URL) {
+      toast.error('Добавьте NEXT_PUBLIC_TEST_PAYMENT_URL, чтобы открыть тестовый платёж.');
+      return;
+    }
+
+    const normalized = testPaymentAmount.replace(',', '.').trim();
+    const amount = Number.parseFloat(normalized);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error('Введите корректную сумму для тестового платежа.');
+      return;
+    }
+
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    try {
+      const baseUrl = TEST_PAYMENT_URL.startsWith('http')
+        ? TEST_PAYMENT_URL
+        : TEST_PAYMENT_URL.startsWith('/')
+          ? new URL(TEST_PAYMENT_URL, window.location.origin).toString()
+          : new URL(`/${TEST_PAYMENT_URL}`, window.location.origin).toString();
+
+      const paymentUrl = new URL(baseUrl);
+      paymentUrl.searchParams.set('mode', 'admin-test');
+      paymentUrl.searchParams.set('amount', amount.toFixed(2));
+      paymentUrl.searchParams.set('source', 'admin-panel');
+      paymentUrl.searchParams.set('timestamp', Date.now().toString());
+
+      if (TEST_PAYMENT_KEY) {
+        paymentUrl.searchParams.set('testKey', TEST_PAYMENT_KEY);
+      }
+
+      window.open(paymentUrl.toString(), '_blank', 'noopener,noreferrer');
+      toast.success('Ссылка на тестовый платёж открыта в новой вкладке.');
+    } catch (error) {
+      console.error('[YooKassaForm] Не удалось открыть тестовый платёж', error);
+      toast.error('Не удалось открыть тестовый платёж. Проверьте URL в настройках.');
+    }
+  }, [formState.mode, testPaymentAmount]);
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -331,6 +386,56 @@ export default function YookassaSettingsForm({
               </div>
             </div>
           </div>
+          {formState.mode === 'test' && (
+            <div className="mt-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-6">
+                <div className="flex-1">
+                  <label
+                    htmlFor="test-payment-amount"
+                    className="block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                  >
+                    Сумма тестового платежа
+                  </label>
+                  <input
+                    id="test-payment-amount"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={testPaymentAmount}
+                    onChange={(event) => setTestPaymentAmount(event.target.value)}
+                    className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900"
+                    placeholder="Например, 1500"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Введите произвольную сумму или сгенерируйте случайное значение для проверки платёжной формы YooKassa.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                  <button
+                    type="button"
+                    onClick={handleRandomTestAmount}
+                    className="inline-flex items-center justify-center rounded-md border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50"
+                  >
+                    Случайная сумма
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTestPaymentLaunch}
+                    className="inline-flex items-center justify-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+                  >
+                    Совершить платёж
+                  </button>
+                </div>
+              </div>
+              {!TEST_PAYMENT_URL && (
+                <p className="mt-3 text-xs text-red-600">
+                  Укажите переменную окружения <code className="font-mono">NEXT_PUBLIC_TEST_PAYMENT_URL</code>, чтобы открыть
+                  тестовый платёж в песочнице YooKassa.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid gap-6 p-6 lg:grid-cols-2">
