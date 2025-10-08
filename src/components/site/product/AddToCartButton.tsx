@@ -34,6 +34,7 @@ interface AddToCartButtonProps {
   onDecrease: () => void;
   isAddToCartDisabled: boolean;
   isIncreaseDisabled: boolean;
+  ctaLabel?: string;
 }
 // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
@@ -44,6 +45,7 @@ export default function AddToCartButton({
   onDecrease,
   isAddToCartDisabled,
   isIncreaseDisabled,
+  ctaLabel = 'В корзину',
 }: AddToCartButtonProps) {
   // Логика отображения кнопки или счетчика
   return (
@@ -56,7 +58,7 @@ export default function AddToCartButton({
           className="h-14 w-full"
           style={{ backgroundColor: '#6B80C5' }}
         >
-          В корзину
+          {ctaLabel}
         </Button>
       ) : (
         <div className="flex h-14 w-full items-center justify-between rounded-lg border border-[#272727]">

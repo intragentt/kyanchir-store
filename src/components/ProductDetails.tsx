@@ -20,6 +20,12 @@ import { CheckIcon, XMarkIcon } from '@/components/shared/icons';
 import { useCartStore } from '@/store/useCartStore';
 import { useAppStore } from '@/store/useAppStore';
 import { createSlug } from '@/utils/createSlug';
+import {
+  IS_TEST_PAYMENT_REDIRECT_ENABLED,
+  TEST_PAYMENT_BUTTON_LABEL,
+  TEST_PAYMENT_KEY,
+  TEST_PAYMENT_URL,
+} from '@/config/payments';
 
 // ... (компоненты CountdownTimer и MobileSizeGuideWithAccordion остаются без изменений) ...
 const CountdownTimer = ({
@@ -189,6 +195,7 @@ interface ProductInfoBlockProps {
   selectedSize: string | null;
   handleSelectSize: (size: string) => void;
   setActiveSheet: (sheet: 'sizeSelector' | 'sizeChart' | null) => void;
+  primaryCtaLabel: string;
 }
 
 const ProductInfoBlock = ({
@@ -204,6 +211,7 @@ const ProductInfoBlock = ({
   selectedSize,
   handleSelectSize,
   setActiveSheet,
+  primaryCtaLabel,
 }: ProductInfoBlockProps) => {
   return (
     <>
@@ -223,6 +231,7 @@ const ProductInfoBlock = ({
           onDecrease={handleDecrease}
           isAddToCartDisabled={isAddToCartDisabled}
           isIncreaseDisabled={isIncreaseDisabled}
+          ctaLabel={primaryCtaLabel}
         />
       </div>
 
@@ -325,6 +334,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     setActiveSheet(null);
   };
 
+  const testPaymentEnabled =
+    IS_TEST_PAYMENT_REDIRECT_ENABLED && Boolean(TEST_PAYMENT_URL);
+
   const handleAddToCart = () => {
     if (!selectedSize) {
       setActiveSheet('sizeSelector');
@@ -345,6 +357,47 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
     const quantityToAdd = quantity > 0 ? quantity : 1;
     const safeQuantity = Math.min(quantityToAdd, sizeInfo.stock);
+
+    if (testPaymentEnabled && TEST_PAYMENT_URL) {
+      try {
+        const baseUrl = TEST_PAYMENT_URL.startsWith('http')
+          ? TEST_PAYMENT_URL
+          : TEST_PAYMENT_URL.startsWith('/')
+            ? new URL(TEST_PAYMENT_URL, window.location.origin).toString()
+            : new URL(`/${TEST_PAYMENT_URL}`, window.location.origin).toString();
+
+        const paymentUrl = new URL(baseUrl);
+        paymentUrl.searchParams.set('mode', 'test-yuan');
+        paymentUrl.searchParams.set('productId', product.id);
+        paymentUrl.searchParams.set('productName', product.name);
+        paymentUrl.searchParams.set('variantId', selectedVariant.id);
+        paymentUrl.searchParams.set('color', selectedVariant.color ?? '');
+        paymentUrl.searchParams.set('sizeId', sizeInfo.id);
+        paymentUrl.searchParams.set('size', sizeInfo.size.value);
+        paymentUrl.searchParams.set('quantity', String(safeQuantity));
+
+        const priceValue = Number(
+          sizeInfo.price ?? selectedVariant.price ?? 0,
+        );
+        if (!Number.isNaN(priceValue)) {
+          paymentUrl.searchParams.set('unitPrice', priceValue.toString());
+        }
+
+        if (TEST_PAYMENT_KEY) {
+          paymentUrl.searchParams.set('testKey', TEST_PAYMENT_KEY);
+        }
+
+        window.location.href = paymentUrl.toString();
+        return;
+      } catch (error) {
+        console.error('Не удалось сформировать ссылку тестовой оплаты', error);
+        showNotification(
+          'Не удалось открыть тестовую оплату. Проверьте настройки.',
+          'error',
+          XMarkIcon,
+        );
+      }
+    }
 
     addItemToCart(
       {
@@ -397,6 +450,9 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
   const isAddToCartDisabled = !selectedSize || availableStock <= 0;
   const isIncreaseDisabled = quantity >= availableStock;
+  const primaryCtaLabel = testPaymentEnabled
+    ? TEST_PAYMENT_BUTTON_LABEL
+    : 'В корзину';
 
   if (!product || !selectedVariant) {
     return <h2>Товар не найден.</h2>;
@@ -426,6 +482,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
               selectedSize={selectedSize}
               handleSelectSize={handleSelectSize}
               setActiveSheet={setActiveSheet}
+              primaryCtaLabel={primaryCtaLabel}
             />
           </div>
         </div>
@@ -455,6 +512,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                 selectedSize={selectedSize}
                 handleSelectSize={handleSelectSize}
                 setActiveSheet={setActiveSheet}
+                primaryCtaLabel={primaryCtaLabel}
               />
             </div>
           </div>
@@ -511,6 +569,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             onDecrease={handleDecrease}
             isAddToCartDisabled={false}
             isIncreaseDisabled={isIncreaseDisabled}
+            ctaLabel={primaryCtaLabel}
           />
         </div>
       </div>
