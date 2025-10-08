@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { noStore } from 'next/cache';
+import { unstable_noStore as noStore } from 'next/cache';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
 
