@@ -99,16 +99,28 @@ export default async function AdminSettingsIndexPage() {
           </div>
         </div>
 
-        <div className="flex h-full flex-col justify-between rounded-lg border border-dashed border-gray-300 bg-white p-6 text-gray-500 shadow-sm">
+        <div className="flex h-full flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div>
-            <h2 className="text-xl font-semibold text-gray-700">🔌 Интеграции (скоро)</h2>
-            <p className="mt-2 text-sm">
-              Управление API-ключами и сервисами. Здесь появятся настройки SendGrid, Telegram-ботов и других интеграций.
+            <h2 className="text-xl font-semibold text-gray-900">💳 YooKassa</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Настраивайте режим работы (test/live), реквизиты индивидуального предпринимателя и секретные ключи без редактирования
+              переменных окружения. Данные используются при создании платежей и чека.
             </p>
+            <ul className="mt-4 space-y-2 text-sm text-gray-600">
+              <li>• Режим оплаты: тестовый и боевой</li>
+              <li>• ИНН, ОГРНИП и юридический адрес продавца</li>
+              <li>• Банковские реквизиты и контакты поддержки</li>
+              <li>• Управление передачей чеков и ставкой НДС</li>
+            </ul>
           </div>
           <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
-            <p className="text-xs">В разработке</p>
-            <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">Coming soon</span>
+            <p className="text-xs text-gray-500">Настройки доступны только администраторам</p>
+            <Link
+              href="/admin/yookassa"
+              className="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Открыть страницу
+            </Link>
           </div>
         </div>
       </div>

@@ -167,7 +167,7 @@ export async function POST(request: Request) {
     let paymentSummary: Awaited<ReturnType<typeof createYookassaPayment>> = null;
     let paymentError: string | null = null;
 
-    if (isYookassaConfigured()) {
+    if (await isYookassaConfigured()) {
       try {
         paymentSummary = await createYookassaPayment({
           orderId: createdOrder.id,
