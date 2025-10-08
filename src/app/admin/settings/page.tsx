@@ -123,6 +123,52 @@ export default async function AdminSettingsIndexPage() {
             </Link>
           </div>
         </div>
+
+        <div className="flex h-full flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">🏬 МойСклад</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Управляйте API-ключом без перезапуска сервисов. Ключ хранится в базе и используется синхронизацией товаров и запасов.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-gray-600">
+              <li>• Проверка ключа перед сохранением</li>
+              <li>• Автоматическая очистка кэша в мосте МойСклад</li>
+              <li>• История последнего обновления</li>
+            </ul>
+          </div>
+          <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
+            <p className="text-xs text-gray-500">Настройки доступны администраторам и менеджерам</p>
+            <Link
+              href="/admin/moysklad"
+              className="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Открыть страницу
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex h-full flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">🚚 СДЭК</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Подготовьте учетные данные и параметры отправителя для будущей интеграции доставки и расчёта тарифов СДЭК.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-gray-600">
+              <li>• Раздельные аккаунты для тестовой и боевой сред</li>
+              <li>• Тариф, город и адрес отправителя по умолчанию</li>
+              <li>• Webhook secret для подписания уведомлений</li>
+            </ul>
+          </div>
+          <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
+            <p className="text-xs text-gray-500">Настройки доступны администраторам и менеджерам</p>
+            <Link
+              href="/admin/sdek"
+              className="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Открыть страницу
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
