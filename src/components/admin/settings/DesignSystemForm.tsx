@@ -27,6 +27,10 @@ import {
 } from '@/lib/settings/design-system.shared';
 import * as sharedIcons from '@/components/shared/icons';
 
+const iconPreviewProps: Partial<Record<string, Record<string, unknown>>> = {
+  SortIcon: { direction: 'ascending' },
+};
+
 interface DesignSystemFormProps {
   initialSettings: DesignSystemSettings;
   defaultSettings: DesignSystemSettings;
@@ -111,11 +115,11 @@ export default function DesignSystemForm({
   const [iconMarkup, setIconMarkup] = useState<Record<string, string>>({});
 
   const iconEntries = useMemo(() => {
-    return Object.entries(sharedIcons)
-      .filter((entry): entry is [string, ComponentType<Record<string, any>>] => {
-        const [, component] = entry;
-        return typeof component === 'function';
-      })
+    return Object.entries(sharedIcons as Record<string, unknown>)
+      .filter(
+        (entry): entry is [string, ComponentType<Record<string, unknown>>] =>
+          typeof entry[1] === 'function',
+      )
       .sort((a, b) => a[0].localeCompare(b[0]));
   }, []);
 
@@ -880,37 +884,41 @@ export default function DesignSystemForm({
           Все SVG, используемые на сайте. Можно скопировать код и при необходимости заменить иконку через админку в будущем.
         </p>
         <div className="mt-6 grid gap-4 md:grid-cols-3 xl:grid-cols-4">
-          {iconEntries.map(([name, Icon]) => (
-            <div key={name} className="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-gray-900">{name}</p>
-                <button
-                  type="button"
-                  onClick={() => handleCopyIconMarkup(name)}
-                  className="text-xs font-semibold text-gray-500 transition hover:text-gray-700"
+          {iconEntries.map(([name, Icon]) => {
+            const previewProps = iconPreviewProps[name] ?? {};
+
+            return (
+              <div key={name} className="flex flex-col gap-3 rounded-md border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-gray-900">{name}</p>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyIconMarkup(name)}
+                    className="text-xs font-semibold text-gray-500 transition hover:text-gray-700"
+                  >
+                    Скопировать SVG
+                  </button>
+                </div>
+                <div
+                  ref={(node) => {
+                    if (node) {
+                      iconRefs.current[name] = node;
+                    } else {
+                      delete iconRefs.current[name];
+                    }
+                  }}
+                  className="flex h-16 items-center justify-center rounded-md border border-dashed border-gray-300 bg-white"
                 >
-                  Скопировать SVG
-                </button>
+                  <Icon className="h-10 w-10 text-gray-800" aria-hidden="true" {...previewProps} />
+                </div>
+                <textarea
+                  value={iconMarkup[name] ?? ''}
+                  readOnly
+                  className="h-28 w-full rounded-md border border-gray-300 px-3 py-2 text-xs font-mono text-gray-600 focus:outline-none"
+                />
               </div>
-              <div
-                ref={(node) => {
-                  if (node) {
-                    iconRefs.current[name] = node;
-                  } else {
-                    delete iconRefs.current[name];
-                  }
-                }}
-                className="flex h-16 items-center justify-center rounded-md border border-dashed border-gray-300 bg-white"
-              >
-                <Icon className="h-10 w-10 text-gray-800" aria-hidden="true" />
-              </div>
-              <textarea
-                value={iconMarkup[name] ?? ''}
-                readOnly
-                className="h-28 w-full rounded-md border border-gray-300 px-3 py-2 text-xs font-mono text-gray-600 focus:outline-none"
-              />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
     </form>
