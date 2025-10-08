@@ -1,6 +1,11 @@
 import 'server-only';
 
 import { randomUUID } from 'crypto';
+import {
+  getYookassaRuntimeConfig,
+  resetYookassaRuntimeCache,
+  YookassaRuntimeConfig,
+} from '@/lib/settings/yookassa';
 
 interface MoneyAmount {
   value: string;
@@ -47,74 +52,6 @@ export interface YookassaPaymentSummary {
   isTest: boolean;
 }
 
-interface InternalYookassaConfig {
-  mode: 'test' | 'live';
-  shopId: string;
-  secretKey: string;
-  merchantInn: string;
-  merchantFullName: string;
-  returnUrl: string;
-  receiptEnabled: boolean;
-  taxSystemCode?: number;
-  vatCode?: number;
-}
-
-let cachedConfig: InternalYookassaConfig | null | undefined;
-
-const DEFAULT_RETURN_URL = process.env.YOOKASSA_RETURN_URL ??
-  (process.env.NEXTAUTH_URL
-    ? `${process.env.NEXTAUTH_URL.replace(/\/$/, '')}/checkout/success`
-    : 'https://kyanchir.ru/checkout/success');
-
-const DEFAULT_MERCHANT_INN = process.env.YOOKASSA_MERCHANT_INN ?? '503125980428';
-const DEFAULT_MERCHANT_FULL_NAME =
-  process.env.YOOKASSA_MERCHANT_FULL_NAME ??
-  'ИНДИВИДУАЛЬНЫЙ ПРЕДПРИНИМАТЕЛЬ КОЛЕСНИКОВА ЯНА РУСЛАНОВНА';
-
-const DEFAULT_MODE = (process.env.YOOKASSA_MODE ?? 'test').toLowerCase() === 'live' ? 'live' : 'test';
-
-const resolveConfig = (): InternalYookassaConfig | null => {
-  if (cachedConfig !== undefined) {
-    return cachedConfig;
-  }
-
-  const mode = DEFAULT_MODE;
-  const primaryShopId = process.env.YOOKASSA_SHOP_ID;
-  const primarySecretKey = process.env.YOOKASSA_SECRET_KEY;
-  const testShopId = process.env.YOOKASSA_TEST_SHOP_ID;
-  const testSecretKey = process.env.YOOKASSA_TEST_SECRET_KEY;
-
-  const shopId = mode === 'live' ? primaryShopId : testShopId ?? primaryShopId;
-  const secretKey = mode === 'live' ? primarySecretKey : testSecretKey ?? primarySecretKey;
-
-  if (!shopId || !secretKey) {
-    cachedConfig = null;
-    return null;
-  }
-
-  const receiptEnabled = (process.env.YOOKASSA_RECEIPT_ENABLED ?? 'true').toLowerCase() !== 'false';
-
-  const taxSystemCodeRaw = process.env.YOOKASSA_TAX_SYSTEM_CODE;
-  const vatCodeRaw = process.env.YOOKASSA_RECEIPT_VAT_CODE;
-
-  const taxSystemCode = taxSystemCodeRaw ? Number.parseInt(taxSystemCodeRaw, 10) : undefined;
-  const vatCode = vatCodeRaw ? Number.parseInt(vatCodeRaw, 10) : undefined;
-
-  cachedConfig = {
-    mode,
-    shopId,
-    secretKey,
-    merchantInn: DEFAULT_MERCHANT_INN,
-    merchantFullName: DEFAULT_MERCHANT_FULL_NAME,
-    returnUrl: DEFAULT_RETURN_URL,
-    receiptEnabled,
-    taxSystemCode: Number.isNaN(taxSystemCode) ? undefined : taxSystemCode,
-    vatCode: Number.isNaN(vatCode) ? undefined : vatCode,
-  };
-
-  return cachedConfig;
-};
-
 const formatAmount = (amountInCents: number): string => {
   return (amountInCents / 100).toFixed(2);
 };
@@ -159,7 +96,7 @@ const sanitizePhone = (phone: string): string => {
 
 const buildReceipt = (
   params: CreatePaymentParams,
-  config: InternalYookassaConfig,
+  config: YookassaRuntimeConfig,
 ) => {
   if (!config.receiptEnabled) {
     return undefined;
@@ -195,14 +132,15 @@ const encodeAuthHeader = (shopId: string, secretKey: string): string => {
   return `Basic ${token}`;
 };
 
-export const isYookassaConfigured = (): boolean => {
-  return resolveConfig() !== null;
+export const isYookassaConfigured = async (): Promise<boolean> => {
+  const config = await getYookassaRuntimeConfig();
+  return config !== null;
 };
 
 export async function createYookassaPayment(
   params: CreatePaymentParams,
 ): Promise<YookassaPaymentSummary | null> {
-  const config = resolveConfig();
+  const config = await getYookassaRuntimeConfig();
 
   if (!config) {
     return null;
@@ -260,5 +198,5 @@ export async function createYookassaPayment(
 }
 
 export const resetYookassaConfigCache = () => {
-  cachedConfig = undefined;
+  resetYookassaRuntimeCache();
 };

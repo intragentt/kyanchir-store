@@ -13,6 +13,7 @@ const adminNavLinks = [
   { href: '/admin/orders', label: 'Заказы' },
   { href: '/admin/users', label: 'Пользователи' },
   { href: '/admin/mail', label: 'Почта' },
+  { href: '/admin/yookassa', label: 'ЮKassa' },
   { href: '/admin/settings', label: 'Настройки' },
   { href: '/admin/stats', label: 'Статистика' },
   { href: '/admin/sliders', label: 'Слайдеры' },
