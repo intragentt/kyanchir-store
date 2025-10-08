@@ -2,21 +2,27 @@ import { useEffect } from 'react';
 
 export function useFilterRect(ref: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
+    const element = ref.current;
+
     function handleResize() {
       // Можно расширить для обновления размеров
     }
-    window.addEventListener('resize', handleResize);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+    }
     let observer: ResizeObserver | null = null;
-    if (ref.current && 'ResizeObserver' in window) {
+    if (typeof window !== 'undefined' && element && 'ResizeObserver' in window) {
       observer = new ResizeObserver(() => {
         handleResize();
       });
-      observer.observe(ref.current);
+      observer.observe(element);
     }
     return () => {
-      window.removeEventListener('resize', handleResize);
-      if (observer && ref.current) {
-        observer.unobserve(ref.current);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize);
+      }
+      if (observer && element) {
+        observer.unobserve(element);
       }
     };
   }, [ref]);

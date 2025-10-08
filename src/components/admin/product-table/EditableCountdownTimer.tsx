@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { OptimizedProductForTable } from '@/app/admin/dashboard/page';
 
 // Извлекаем тип одного варианта из оптимизированного типа продукта
@@ -49,7 +49,7 @@ export const EditableCountdownTimer = ({
   const cursorPosRef = useRef<number | null>(null);
 
   // Вспомогательная функция для безопасного получения даты окончания скидки
-  const getDiscountExpiresAt = (): Date | null => {
+  const getDiscountExpiresAt = useCallback((): Date | null => {
     // В оптимизированном типе может не быть discountExpiresAt
     // Возвращаем null если поля нет или оно пустое
     if (!('discountExpiresAt' in variant)) return null;
@@ -62,7 +62,7 @@ export const EditableCountdownTimer = ({
     if (typeof expiresAt === 'number') return new Date(expiresAt);
 
     return null;
-  };
+  }, [variant]);
 
   useEffect(() => {
     const calculateTime = () => {
@@ -81,7 +81,7 @@ export const EditableCountdownTimer = ({
 
     const interval = setInterval(() => setTimeLeft(calculateTime()), 1000);
     return () => clearInterval(interval);
-  }, [variant]);
+  }, [getDiscountExpiresAt]);
 
   useEffect(() => {
     if (isEditing) {

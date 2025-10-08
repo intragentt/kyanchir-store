@@ -1,7 +1,7 @@
 // Местоположение: src/components/MiniBannerSlider.tsx
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -71,18 +71,12 @@ export default function MiniBannerSlider({
     return '2xl';
   }, []);
 
-  if (!banners || banners.length === 0) {
-    return null;
-  }
-
-  const paginationEnabled = swiperSettings?.pagination ?? true;
-  const isLookonlineStyle = swiperSettings.slidesPerView === 'auto';
-
-  const getDebugSpecs = useCallback(() => {
+  const debugSpecs = useMemo(() => {
     let safeZone = 'aspect-[4/3]';
     let dangerZone = 'aspect-[2/1]';
     let recommendedSize = 'N/A';
     let safeZoneSize = 'N/A';
+
     switch (aspectRatioClass) {
       case 'aspect-[4/5]':
         safeZone = 'aspect-[3/4]';
@@ -107,10 +101,17 @@ export default function MiniBannerSlider({
         dangerZone = aspectRatioClass;
         break;
     }
+
     return { safeZone, dangerZone, recommendedSize, safeZoneSize };
   }, [aspectRatioClass]);
 
-  const debugSpecs = isDebugMode ? getDebugSpecs() : null;
+  if (!banners || banners.length === 0) {
+    return null;
+  }
+
+  const paginationEnabled = swiperSettings?.pagination ?? true;
+  const isLookonlineStyle = swiperSettings.slidesPerView === 'auto';
+  const effectiveDebugSpecs = isDebugMode ? debugSpecs : null;
   const paginationClassName = `swiper-pagination-custom-${banners[0]?.id || 'default'}`;
 
   return (
@@ -176,7 +177,7 @@ export default function MiniBannerSlider({
                     </p>
                   </div>
                 )}
-                {isDebugMode && currentWidth > 0 && debugSpecs && (
+                {isDebugMode && currentWidth > 0 && effectiveDebugSpecs && (
                   <div className="absolute top-1 left-1 z-40 rounded bg-black/50 px-2 py-1 text-xs text-white">
                     <div>
                       <b>DEBUG:</b> {getBreakpointName(currentWidth)} (
@@ -191,11 +192,11 @@ export default function MiniBannerSlider({
                     </div>
                     <div>
                       <span className="font-bold">Rec. Size:</span>{' '}
-                      {debugSpecs.recommendedSize}
+                      {effectiveDebugSpecs.recommendedSize}
                     </div>
                     <div>
                       <span className="font-bold">Safe Zone:</span>{' '}
-                      {debugSpecs.safeZoneSize}
+                      {effectiveDebugSpecs.safeZoneSize}
                     </div>
                   </div>
                 )}

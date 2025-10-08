@@ -161,7 +161,7 @@ export default function DesignSystemForm({
 
   const handleSiteNameChange = useCallback((value: string) => {
     setSettings((prev) => ({ ...prev, siteName: value }));
-  }, []);
+  }, [setSettings]);
 
   const handleColorChange = useCallback(
     (key: keyof DesignSystemSettings['colors'], value: string) => {
@@ -171,7 +171,7 @@ export default function DesignSystemForm({
         colors: { ...prev.colors, [key]: formatted.slice(0, 9) },
       }));
     },
-    [],
+    [setSettings],
   );
 
   const handleSpacingChange = useCallback((key: SpacingTokenKey, value: number) => {
@@ -180,7 +180,7 @@ export default function DesignSystemForm({
       ...prev,
       spacing: { ...prev.spacing, [key]: Math.max(0, Math.round(value)) },
     }));
-  }, []);
+  }, [setSettings]);
 
   const handleTypographyChange = useCallback(
     (
@@ -205,7 +205,7 @@ export default function DesignSystemForm({
         },
       }));
     },
-    [],
+    [setSettings],
   );
 
   const handleTypographyLetterSpacing = useCallback(
@@ -222,7 +222,7 @@ export default function DesignSystemForm({
         },
       }));
     },
-    [],
+    [setSettings],
   );
 
   const handleFontAssignment = useCallback(
@@ -235,7 +235,7 @@ export default function DesignSystemForm({
         },
       }));
     },
-    [],
+    [setSettings],
   );
 
   const handleFontMetadataChange = useCallback(
@@ -255,7 +255,7 @@ export default function DesignSystemForm({
         ),
       }));
     },
-    [],
+    [setSettings],
   );
 
   const handleFontPreviewChange = useCallback(
@@ -272,7 +272,7 @@ export default function DesignSystemForm({
         ),
       }));
     },
-    [],
+    [setSettings],
   );
 
   const handleRemoveFont = useCallback((id: string) => {
@@ -295,7 +295,7 @@ export default function DesignSystemForm({
         },
       };
     });
-  }, [defaultSettings.fonts]);
+  }, [defaultSettings.fonts, setSettings]);
 
   const handleAddFont = useCallback(
     (event: React.FormEvent) => {
@@ -346,16 +346,16 @@ export default function DesignSystemForm({
       setNewFontCategory(fontCategoryOptions[0]?.value ?? 'sans-serif');
       setNewFontPreview(defaultPreviewText);
     },
-    [newFontCategory, newFontName, newFontPreview, newFontUrl],
+    [newFontCategory, newFontName, newFontPreview, newFontUrl, setSettings],
   );
 
   const handleResetToDefaults = useCallback(() => {
     setSettings(cloneSettings(defaultSettings));
-  }, [defaultSettings]);
+  }, [defaultSettings, setSettings]);
 
   const handleRevert = useCallback(() => {
     setSettings(cloneSettings(snapshot));
-  }, [snapshot]);
+  }, [setSettings, snapshot]);
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
@@ -390,7 +390,7 @@ export default function DesignSystemForm({
         setIsSaving(false);
       }
     },
-    [settings, setSnapshot],
+    [settings, setSettings, setSnapshot],
   );
 
   const handleCopyIconMarkup = useCallback(async (name: string) => {

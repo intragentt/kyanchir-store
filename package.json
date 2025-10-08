@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/prisma-migrate-deploy-with-retry.mjs && prisma generate && next build",
+    "build": "node scripts/build-with-quality-checks.mjs",
     "start": "next start",
     "lint": "next lint",
+    "test": "tsx --test \"tests/**/*.test.*\"",
     "screenshot": "tsx scripts/capture-screenshot.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",

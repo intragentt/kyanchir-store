@@ -103,10 +103,10 @@ export function ClassificationClient({ initialCategories, initialTags, initialCo
           <section>
             <h2 className="mb-4 text-lg font-semibold text-gray-800">Категории</h2>
             <div className="mb-6 rounded-lg border bg-white p-4 shadow-sm">
-                <div className="mb-2 font-medium">Синхронизация с "МойСклад"</div>
-                <p className="mb-4 text-xs text-gray-500">Проверьте данные из "МойСклад" и примените изменения. Система сравнит категории и покажет план действий.</p>
+                <div className="mb-2 font-medium">Синхронизация с &quot;МойСклад&quot;</div>
+                <p className="mb-4 text-xs text-gray-500">Проверьте данные из &quot;МойСклад&quot; и примените изменения. Система сравнит категории и покажет план действий.</p>
                 <div className="flex flex-col gap-2">
-                    <button onClick={() => handleCheckSync()} disabled={isChecking || isExecuting} className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"> <ArrowPathIcon className="h-5 w-5" /> {isChecking ? 'Анализ...' : 'Проверить актуальность по "МойСклад"'} </button>
+                    <button onClick={() => handleCheckSync()} disabled={isChecking || isExecuting} className="flex w-full items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"> <ArrowPathIcon className="h-5 w-5" /> {isChecking ? 'Анализ...' : 'Проверить актуальность по &quot;МойСклад&quot;'} </button>
                     <Link href="/admin/mappings" className="flex w-full items-center justify-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"> <BookOpenIcon className="h-5 w-5" /> Словарь сайта Kyanchir </Link>
                 </div>
             </div>
