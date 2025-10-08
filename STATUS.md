@@ -5,6 +5,7 @@
 - **Каталог** — публичные страницы по-прежнему `force-dynamic`, перегружают БД, требуется пагинация и кеширование.【F:src/app/(site)/page.tsx†L7-L47】
 - **Синхронизация остатков** — cron-конфигурация вынесена в инфраструктуру; настройки описаны в `docs/operations/cron.md`. Маршрут требует админской сессии, что затрудняет автоматизацию.【F:docs/operations/cron.md†L1-L12】【F:src/app/api/admin/products/update-stock/route.ts†L13-L54】
 - **Типизация** — `tsconfig.json` исправлен, `tsc --noEmit` снова работает.【F:tsconfig.json†L1-L26】
+- **QA-пайплайн** — линт теперь проходит без ошибок: исправлены кавычки в JSX и порядок хуков в слайдере баннеров, добавлены зависящие коллбеки и безопасный `ResizeObserver`, что исключает падения React при пустых данных и утечки памяти в админке.【F:src/components/MiniBannerSlider.tsx†L1-L199】【F:src/components/admin/settings/DesignSystemForm.tsx†L153-L212】【F:src/components/hooks/useFilterRect.ts†L1-L25】
 
 ## 2. Безопасность и секреты
 - Свежий аудит: `docs/SECURITY_AUDIT.md` фиксирует исправленные проблемы и список отсутствующих ключей (в т.ч. `BOT_API_SECRET`, `YOOKASSA_*`).【F:docs/SECURITY_AUDIT.md†L4-L33】

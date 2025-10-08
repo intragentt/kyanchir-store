@@ -204,7 +204,7 @@ export default function PriceManager({
             htmlFor="bonusPoints"
             className="block text-sm font-medium text-gray-700"
           >
-            Бонусные баллы "К-койны"
+            Бонусные баллы &quot;К-койны&quot;
           </label>
           <input
             type="number"

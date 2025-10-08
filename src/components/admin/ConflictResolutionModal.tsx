@@ -59,8 +59,8 @@ function ConflictItem({ conflict, resolution, onResolve }: ConflictItemProps) {
             Исправить Артикул
           </div>
           <p className="mt-1 text-xs text-indigo-600">
-            Артикул будет изменен, чтобы соответствовать категории "
-            {conflict.currentCategory.name}".
+            Артикул будет изменен, чтобы соответствовать категории &quot;
+            {conflict.currentCategory.name}&quot;.
           </p>
           <code className="mt-1 text-xs text-gray-500">
             {conflict.currentArticle} &rarr; {conflict.expectedArticle}
@@ -85,7 +85,7 @@ function ConflictItem({ conflict, resolution, onResolve }: ConflictItemProps) {
           </div>
           <p className="mt-1 text-xs text-green-600">
             {canRevert
-              ? `Товар будет перемещен обратно в категорию "${conflict.expectedCategoryFromArticle?.name}".`
+              ? `Товар будет перемещен обратно в категорию &quot;${conflict.expectedCategoryFromArticle?.name}&quot;.`
               : 'Невозможно определить категорию по артикулу.'}
           </p>
         </button>

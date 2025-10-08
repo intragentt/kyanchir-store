@@ -179,7 +179,7 @@ export default function DryRunModal({
                       </Dialog.Title>
                       <div className="mt-2">
                         <p className="text-sm text-gray-500">
-                          Система проанализировала данные из "МойСклад" и
+                          Система проанализировала данные из &quot;МойСклад&quot; и
                           сформировала план. Изменения не будут применены до
                           вашего подтверждения.
                         </p>
