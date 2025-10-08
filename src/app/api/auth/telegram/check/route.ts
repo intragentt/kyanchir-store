@@ -1,7 +1,6 @@
 // Местоположение: src/app/api/auth/telegram/check/route.ts
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
 
 export async function POST(request: Request) {
   try {
@@ -10,22 +9,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ status: 'error', message: 'Token required' }, { status: 400 });
     }
 
-    // Ищем "билет" в "кассе".
     const loginToken = await prisma.loginToken.findUnique({
       where: { token },
     });
-    
-    // Если у "билета" есть userId, значит он "активирован".
-    if (loginToken?.userId) {
-      return NextResponse.json({ status: 'activated', userId: loginToken.userId });
+
+    if (!loginToken) {
+      return NextResponse.json({ status: 'expired' });
     }
 
-    // Проверяем, не истек ли срок годности "билета".
-    if (loginToken && new Date() > new Date(loginToken.expires)) {
-        return NextResponse.json({ status: 'expired' });
+    const now = new Date();
+    if (now > loginToken.expires) {
+      try {
+        await prisma.loginToken.delete({ where: { token } });
+      } catch (cleanupError) {
+        console.error('Failed to delete expired login token:', cleanupError);
+      }
+      return NextResponse.json({ status: 'expired' });
     }
 
-    // Если ничего не произошло, значит "билет" все еще "ожидает активации".
+    if (loginToken.userId) {
+      return NextResponse.json({ status: 'activated' });
+    }
+
     return NextResponse.json({ status: 'pending' });
   } catch (error) {
     console.error('Error checking login token:', error);

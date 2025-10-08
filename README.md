@@ -112,6 +112,7 @@ YOOKASSA_RECEIPT_ENABLED=true       # выключите, если чеки фо
 - **Страница корзины** — `/cart` позволяет менять количество и удалять позиции, пересчитывая итоговую сумму на клиенте.【F:src/app/(site)/cart/page.tsx†L18-L120】
 - **Чек-аут** — `/checkout` собирает контактные данные, отправляет POST `/api/orders`, очищает корзину и показывает ссылку на оплату, если платеж сформирован.【F:src/app/(site)/checkout/page.tsx†L1-L260】
 - **Создание заказа** — API валидирует входные данные, проверяет остатки, создаёт заказ, уменьшает сток в транзакции Prisma и инициирует платёж в ЮKassa при наличии конфигурации.【F:src/app/api/orders/route.ts†L1-L220】【F:src/lib/payments/yookassa.ts†L1-L210】
+- **Вход через Telegram** — кнопка на `/login` создаёт одноразовый токен и открывает бота `@kyanchir_store_bot`, бот закрепляет токен за пользователем после подтверждения контакта, API `/api/auth/telegram/*` проверяет и вращает токен, после чего NextAuth завершает сессию через провайдера `telegram-credentials`.【F:src/app/(site)/(auth)/login/page.tsx†L1-L340】【F:src/app/api/auth/telegram/start/route.ts†L1-L40】【F:src/app/api/auth/telegram/check/route.ts†L1-L40】【F:src/app/api/auth/telegram/finalize/route.ts†L1-L60】【F:src/lib/telegram.ts†L1-L420】
 
 ## ⚠️ Известные ограничения
 
