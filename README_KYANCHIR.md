@@ -31,6 +31,7 @@
 - **Интеграции**: библиотека `src/lib/moysklad-api.ts` синхронизирует остатки, `src/lib/telegram.ts` и `src/lib/mail.ts` отвечают за коммуникации. Секреты загружаются из env, поэтому при локальном запуске обязательны ключи.【F:src/lib/moysklad-api.ts†L1-L160】【F:src/lib/telegram.ts†L1-L200】
 - **Платежи (ЮKassa)**: модуль `src/lib/payments/yookassa.ts` собирает данные для чека, нормализует телефон, добавляет ИНН/ФИО ИП в `supplier`, выбирает тестовый или боевой магазин по `YOOKASSA_MODE` и создаёт платёж через REST API.【F:src/lib/payments/yookassa.ts†L1-L210】
 - **Дизайн-система**: `src/lib/settings/design-system.ts` хранит настройки цвета, типографики, отступов и библиотеку шрифтов; админская форма (`DesignSystemForm`) управляет этими данными и синхронизирует значения с Tailwind через CSS-переменные.【F:src/lib/settings/design-system.ts†L1-L200】【F:src/components/admin/settings/DesignSystemForm.tsx†L1-L120】
+- **Администрирование пользователей**: модуль `src/lib/admin/users.ts` агрегирует списки, бонусы и краткие ID, а ручки `/api/admin/users/[id]` позволяют обновлять роли и удалять аккаунты; UI (`UsersTable`, `UserActions`) вызывает эти эндпоинты из админки.【F:src/lib/admin/users.ts†L1-L350】【F:src/app/api/admin/users/[userId]/role/route.ts†L1-L74】【F:src/components/admin/users/UserActions.tsx†L1-L211】
 
 ### 2.3 Утилиты и инфраструктура
 - `src/lib/prisma.ts` реализует singleton Prisma Client; любой доступ к БД должен идти через него, чтобы избежать множественных соединений в dev.【F:src/lib/prisma.ts†L1-L60】

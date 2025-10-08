@@ -7,6 +7,13 @@ import Image from 'next/image';
 import UserActions from './UserActions';
 import type { AdminUserRecord } from '@/lib/admin/users';
 
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Администратор',
+  MANAGEMENT: 'Менеджер',
+  SUPPORT: 'Поддержка',
+  USER: 'Пользователь',
+};
+
 interface UserTableRowProps {
   /**
    * 👤 Данные пользователя
@@ -76,6 +83,8 @@ const UserTableRow = memo(function UserTableRow({
     return (firstInitial + lastInitial || fallback).toUpperCase();
   }, [user.firstName, user.lastName, user.email]);
 
+  const roleLabel = ROLE_LABELS[user.role] ?? user.role;
+
   return (
     <tr className="hover:bg-gray-50">
       <td className="whitespace-nowrap px-4 py-4">
@@ -95,7 +104,9 @@ const UserTableRow = memo(function UserTableRow({
           )}
           <div>
             <p className="font-semibold text-gray-900">{user.fullName}</p>
-            <p className="text-sm text-gray-500">ID: {user.id}</p>
+            <p className="text-sm text-gray-500" title={user.id}>
+              ID: {user.displayId}
+            </p>
           </div>
         </div>
       </td>
@@ -117,7 +128,7 @@ const UserTableRow = memo(function UserTableRow({
           )}
           <span className="mt-1 inline-flex items-center gap-1 text-xs text-gray-500">
             <span className="inline-block h-2 w-2 rounded-full bg-gray-400" aria-hidden />
-            Роль: {user.role}
+            Роль: {roleLabel}
           </span>
         </div>
       </td>
@@ -134,6 +145,12 @@ const UserTableRow = memo(function UserTableRow({
         <div className="flex flex-col">
           <span className="font-semibold text-gray-900">{user.ordersCount}</span>
           <span className="text-xs text-gray-500">{formatCurrency(user.totalSpent)}</span>
+        </div>
+      </td>
+      <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
+        <div className="flex flex-col">
+          <span className="font-semibold text-gray-900">{user.bonusPoints}</span>
+          <span className="text-xs text-gray-500">баллов</span>
         </div>
       </td>
       <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
