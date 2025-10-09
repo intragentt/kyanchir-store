@@ -4,6 +4,10 @@ import {
   DEFAULT_DESIGN_SYSTEM_SETTINGS,
   DESIGN_SYSTEM_KEY,
 } from '../src/lib/settings/design-system';
+import {
+  DEFAULT_SITE_MODE_SETTINGS,
+  SITE_MODE_SETTINGS_KEY,
+} from '../src/lib/settings/site-mode';
 
 const prisma = new PrismaClient();
 
@@ -113,6 +117,13 @@ async function main() {
     where: { key: DESIGN_SYSTEM_KEY },
     update: { value: JSON.stringify(DEFAULT_DESIGN_SYSTEM_SETTINGS) },
     create: { key: DESIGN_SYSTEM_KEY, value: JSON.stringify(DEFAULT_DESIGN_SYSTEM_SETTINGS) },
+  });
+
+  console.log('   - Инициализация режимов сайта (тест/техработы)...');
+  await prisma.systemSetting.upsert({
+    where: { key: SITE_MODE_SETTINGS_KEY },
+    update: { value: JSON.stringify(DEFAULT_SITE_MODE_SETTINGS) },
+    create: { key: SITE_MODE_SETTINGS_KEY, value: JSON.stringify(DEFAULT_SITE_MODE_SETTINGS) },
   });
 
   console.log('✅ СИДИНГ ФУНДАМЕНТА УСПЕШНО ЗАВЕРШЕН');

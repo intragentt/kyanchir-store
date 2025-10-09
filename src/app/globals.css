@@ -40,6 +40,14 @@
     box-sizing: border-box;
   }
 
+  body.site-mode-test-banner-active {
+    padding-top: calc(env(safe-area-inset-top) + 40px);
+  }
+
+  body.site-mode-maintenance-active {
+    overflow: hidden;
+  }
+
   .content-hidden {
     opacity: 0;
     pointer-events: none;
@@ -121,6 +129,19 @@
 }
 .animate-fade-pulse {
   animation: fade-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes site-mode-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.site-mode-marquee {
+  animation: site-mode-marquee 18s linear infinite;
 }
 
 /* --- ШАГ 4: СБРОС СТИЛЕЙ И СТИЛИ ДЛЯ ВЕНДОРОВ --- */
