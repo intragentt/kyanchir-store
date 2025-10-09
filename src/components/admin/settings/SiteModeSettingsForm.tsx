@@ -30,11 +30,17 @@ function normalizePayload(state: FormState) {
   const marqueeSpeed = Number(state.testModeMarqueeSpeed);
   const backdropOpacity = Number(state.maintenanceBackdropOpacity);
   const rawBackdropColor = state.maintenanceBackdropColor.trim();
+  const rawTextColor = state.maintenanceTextColor.trim();
   const backdropColor = rawBackdropColor
     ? rawBackdropColor.startsWith('#')
       ? rawBackdropColor
       : `#${rawBackdropColor}`
     : '#020617';
+  const textColor = rawTextColor
+    ? rawTextColor.startsWith('#')
+      ? rawTextColor
+      : `#${rawTextColor}`
+    : '#f8fafc';
 
   return {
     testModeEnabled: state.testModeEnabled,
@@ -50,6 +56,7 @@ function normalizePayload(state: FormState) {
     maintenanceCtaHref: state.maintenanceCtaHref.trim(),
     maintenanceBackdropColor: backdropColor,
     maintenanceBackdropOpacity: Number.isFinite(backdropOpacity) ? backdropOpacity : 80,
+    maintenanceTextColor: textColor,
   };
 }
 
@@ -98,6 +105,7 @@ export default function SiteModeSettingsForm({ initialSettings }: SiteModeSettin
           maintenanceCtaHref: data.data.maintenanceCtaHref,
           maintenanceBackdropColor: data.data.maintenanceBackdropColor,
           maintenanceBackdropOpacity: data.data.maintenanceBackdropOpacity,
+          maintenanceTextColor: data.data.maintenanceTextColor,
         };
 
         setFormState(nextState);
@@ -299,6 +307,25 @@ export default function SiteModeSettingsForm({ initialSettings }: SiteModeSettin
             </label>
 
             <label className="block text-sm font-medium text-gray-700">
+              Цвет текста заглушки
+              <div className="mt-2 flex items-center gap-3">
+                <input
+                  type="color"
+                  value={formState.maintenanceTextColor || '#f8fafc'}
+                  onChange={(event) => handleFieldChange('maintenanceTextColor', event.target.value)}
+                  className="h-10 w-16 cursor-pointer rounded border border-gray-300"
+                />
+                <input
+                  type="text"
+                  value={formState.maintenanceTextColor}
+                  onChange={(event) => handleFieldChange('maintenanceTextColor', event.target.value)}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none"
+                  placeholder="#f8fafc"
+                />
+              </div>
+            </label>
+
+            <label className="block text-sm font-medium text-gray-700 sm:col-span-2">
               Прозрачность фона
               <div className="mt-2 flex items-center gap-3">
                 <input

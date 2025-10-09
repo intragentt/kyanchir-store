@@ -70,6 +70,7 @@ export default async function RootLayout({
     maintenanceCtaHref: siteModeSnapshot.settings.maintenanceCtaHref,
     maintenanceBackdropColor: siteModeSnapshot.settings.maintenanceBackdropColor,
     maintenanceBackdropOpacity: siteModeSnapshot.settings.maintenanceBackdropOpacity,
+    maintenanceTextColor: siteModeSnapshot.settings.maintenanceTextColor,
   };
 
   return (
@@ -80,7 +81,7 @@ export default async function RootLayout({
       <head>
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
         <meta name="theme-color" content={settings.colors.background} />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

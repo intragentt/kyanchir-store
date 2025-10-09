@@ -35,6 +35,7 @@ function serializeSettings(settings: SiteModeSettings) {
     maintenanceCtaHref: settings.maintenanceCtaHref ?? '',
     maintenanceBackdropColor: settings.maintenanceBackdropColor ?? '#020617',
     maintenanceBackdropOpacity: Number(settings.maintenanceBackdropOpacity ?? 80),
+    maintenanceTextColor: settings.maintenanceTextColor ?? '#f8fafc',
   };
 }
 

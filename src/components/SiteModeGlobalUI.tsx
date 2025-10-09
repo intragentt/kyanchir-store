@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useSiteModeSettings } from '@/components/providers/SiteModeProvider';
@@ -157,10 +157,37 @@ export default function SiteModeGlobalUI() {
     return Math.max(4, Math.min(60, settings.testModeMarqueeSpeed));
   }, [settings.testModeMarqueeSpeed]);
 
+  const marqueeStyles = useMemo(
+    () =>
+      ({
+        '--marquee-duration': `${marqueeDuration}s`,
+      }) as CSSProperties,
+    [marqueeDuration],
+  );
+
+  const marqueeMessage = settings.testModeMessage?.trim() || 'Kyanchir Store работает в тестовом режиме';
+
   const maintenanceBackdrop = useMemo(
     () => toRgba(settings.maintenanceBackdropColor, settings.maintenanceBackdropOpacity),
     [settings.maintenanceBackdropColor, settings.maintenanceBackdropOpacity],
   );
+  const maintenanceTextColor = useMemo(() => {
+    const raw = settings.maintenanceTextColor?.trim() ?? '';
+
+    if (!raw) {
+      return '#f8fafc';
+    }
+
+    if (/^#([a-f\d]{3}|[a-f\d]{6})$/i.test(raw)) {
+      return raw;
+    }
+
+    if (/^([a-f\d]{3}|[a-f\d]{6})$/i.test(raw)) {
+      return `#${raw}`;
+    }
+
+    return '#f8fafc';
+  }, [settings.maintenanceTextColor]);
 
   useEffect(() => {
     const body = document.body;
@@ -231,32 +258,30 @@ export default function SiteModeGlobalUI() {
     <>
       {isTestBannerVisible && (
         <div className="site-mode-banner pointer-events-none fixed inset-x-0 top-0 z-[1200] flex h-10 items-center overflow-hidden bg-amber-500 text-sm font-semibold text-white shadow-md">
-          <div
-            className="site-mode-marquee flex min-w-full items-center justify-center gap-12 whitespace-nowrap"
-            style={{ animationDuration: `${marqueeDuration}s` }}
-          >
-            <span>{settings.testModeMessage}</span>
-            <span aria-hidden="true">{settings.testModeMessage}</span>
-            <span aria-hidden="true">{settings.testModeMessage}</span>
+          <div className="site-mode-marquee" style={marqueeStyles} aria-live="polite">
+            <span className="site-mode-marquee__item">{marqueeMessage}</span>
+            <span aria-hidden="true" className="site-mode-marquee__item">
+              {marqueeMessage}
+            </span>
           </div>
         </div>
       )}
 
       {isMaintenanceVisible && (
         <div
-          className="fixed inset-0 z-[1300] flex items-center justify-center p-4 text-center text-white backdrop-blur-sm"
-          style={{ backgroundColor: maintenanceBackdrop }}
+          className="fixed inset-0 z-[1300] flex items-center justify-center p-4 text-center backdrop-blur-sm"
+          style={{ backgroundColor: maintenanceBackdrop, color: maintenanceTextColor }}
         >
           <div className="max-w-lg space-y-4">
             <h2 className="text-2xl font-bold">🚧 Идут технические работы</h2>
-            <p className="text-base text-slate-100">{settings.maintenanceMessage}</p>
+            <p className="text-base">{settings.maintenanceMessage}</p>
             {countdown && (
               <p className="text-sm uppercase tracking-widest text-amber-300">
                 До окончания: <span className="font-mono text-lg">{countdown}</span>
               </p>
             )}
             {!countdown && maintenanceDeadline && (
-              <p className="text-sm text-slate-200">
+              <p className="text-sm">
                 Работы завершатся до {new Date(maintenanceDeadline).toLocaleString('ru-RU')}
               </p>
             )}

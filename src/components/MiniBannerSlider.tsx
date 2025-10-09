@@ -17,6 +17,7 @@ export interface MiniBanner {
   title: string;
   description: string;
   bgColor?: string;
+  textColor?: string;
 }
 
 interface MiniBannerSliderProps {
@@ -152,12 +153,11 @@ export default function MiniBannerSlider({
           >
             <Link
               href={banner.linkHref}
-              aria-label={banner.altText}
               className="block h-full w-full"
               tabIndex={0}
             >
               <div
-                className={`relative h-full w-full overflow-hidden ${aspectRatioClass} ${banner.bgColor || 'bg-gray-200'} flex items-center justify-center text-center text-white`}
+                className={`relative h-full w-full overflow-hidden ${aspectRatioClass} ${banner.bgColor || 'bg-gray-200'} ${banner.textColor || 'text-white'} flex items-center justify-center text-center`}
               >
                 {banner.imageUrl ? (
                   <Image

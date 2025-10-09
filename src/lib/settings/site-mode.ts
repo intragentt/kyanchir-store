@@ -20,6 +20,7 @@ export interface SiteModeSettings {
   maintenanceCtaHref: string;
   maintenanceBackdropColor: string;
   maintenanceBackdropOpacity: number;
+  maintenanceTextColor: string;
 }
 
 export interface SiteModeSnapshot {
@@ -41,6 +42,7 @@ export const DEFAULT_SITE_MODE_SETTINGS: SiteModeSettings = {
   maintenanceCtaHref: '',
   maintenanceBackdropColor: '#020617',
   maintenanceBackdropOpacity: 80,
+  maintenanceTextColor: '#f8fafc',
 };
 
 const siteModePartialSchema = z
@@ -61,6 +63,10 @@ const siteModePartialSchema = z
       .regex(/^#?([a-f\d]{3}|[a-f\d]{6})$/i, 'Укажите цвет в формате HEX')
       .optional(),
     maintenanceBackdropOpacity: z.number().min(0).max(100).optional(),
+    maintenanceTextColor: z
+      .string()
+      .regex(/^#?([a-f\d]{3}|[a-f\d]{6})$/i, 'Укажите цвет в формате HEX')
+      .optional(),
   })
   .passthrough();
 
@@ -138,6 +144,12 @@ const mergeWithDefaults = (payload?: SiteModePartial | null): SiteModeSettings =
           : `#${payload.maintenanceBackdropColor}`
         : base.maintenanceBackdropColor,
     maintenanceBackdropOpacity: payload.maintenanceBackdropOpacity ?? base.maintenanceBackdropOpacity,
+    maintenanceTextColor:
+      payload.maintenanceTextColor && payload.maintenanceTextColor.trim().length > 0
+        ? payload.maintenanceTextColor.startsWith('#')
+          ? payload.maintenanceTextColor
+          : `#${payload.maintenanceTextColor}`
+        : base.maintenanceTextColor,
   } satisfies SiteModeSettings;
 };
 

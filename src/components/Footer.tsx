@@ -9,7 +9,7 @@ export default function Footer() {
       <p className="mt-2 text-sm">
         <Link
           href="/requisites"
-          className="text-zinc-300 underline-offset-4 transition hover:text-white hover:underline"
+          className="text-indigo-600 underline-offset-4 transition hover:text-indigo-700 hover:underline"
         >
           Реквизиты и требования YooKassa
         </Link>

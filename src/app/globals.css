@@ -143,7 +143,17 @@
 }
 
 .site-mode-marquee {
-  animation: site-mode-marquee 18s linear infinite;
+  display: flex;
+  width: max-content;
+  min-width: 200%;
+  align-items: center;
+  gap: 3rem;
+  animation: site-mode-marquee var(--marquee-duration, 18s) linear infinite;
+}
+
+.site-mode-marquee__item {
+  flex: none;
+  white-space: nowrap;
 }
 
 /* --- ШАГ 4: СБРОС СТИЛЕЙ И СТИЛИ ДЛЯ ВЕНДОРОВ --- */
