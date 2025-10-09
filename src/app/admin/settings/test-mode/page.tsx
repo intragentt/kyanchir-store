@@ -24,11 +24,17 @@ export default async function SiteModeSettingsPage() {
   const initialSettings = {
     testModeEnabled: snapshot.settings.testModeEnabled,
     testModeMessage: snapshot.settings.testModeMessage,
+    testModeMarqueeSpeed: snapshot.settings.testModeMarqueeSpeed,
     hideTestBannerForAdmins: snapshot.settings.hideTestBannerForAdmins,
     maintenanceModeEnabled: snapshot.settings.maintenanceModeEnabled,
     maintenanceMessage: snapshot.settings.maintenanceMessage,
     maintenanceEndsAt: snapshot.settings.maintenanceEndsAt?.toISOString() ?? null,
     hideMaintenanceForAdmins: snapshot.settings.hideMaintenanceForAdmins,
+    maintenanceCtaEnabled: snapshot.settings.maintenanceCtaEnabled,
+    maintenanceCtaLabel: snapshot.settings.maintenanceCtaLabel,
+    maintenanceCtaHref: snapshot.settings.maintenanceCtaHref,
+    maintenanceBackdropColor: snapshot.settings.maintenanceBackdropColor,
+    maintenanceBackdropOpacity: snapshot.settings.maintenanceBackdropOpacity,
   };
 
   return (

@@ -24,11 +24,17 @@ function serializeSettings(settings: SiteModeSettings) {
   return {
     testModeEnabled: Boolean(settings.testModeEnabled),
     testModeMessage: settings.testModeMessage ?? '',
+    testModeMarqueeSpeed: Number(settings.testModeMarqueeSpeed ?? 18),
     hideTestBannerForAdmins: Boolean(settings.hideTestBannerForAdmins),
     maintenanceModeEnabled: Boolean(settings.maintenanceModeEnabled),
     maintenanceMessage: settings.maintenanceMessage ?? '',
     maintenanceEndsAt: settings.maintenanceEndsAt?.toISOString() ?? null,
     hideMaintenanceForAdmins: Boolean(settings.hideMaintenanceForAdmins),
+    maintenanceCtaEnabled: Boolean(settings.maintenanceCtaEnabled),
+    maintenanceCtaLabel: settings.maintenanceCtaLabel ?? '',
+    maintenanceCtaHref: settings.maintenanceCtaHref ?? '',
+    maintenanceBackdropColor: settings.maintenanceBackdropColor ?? '#020617',
+    maintenanceBackdropOpacity: Number(settings.maintenanceBackdropOpacity ?? 80),
   };
 }
 

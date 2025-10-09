@@ -59,11 +59,17 @@ export default async function RootLayout({
   const siteModeClientSettings = {
     testModeEnabled: siteModeSnapshot.settings.testModeEnabled,
     testModeMessage: siteModeSnapshot.settings.testModeMessage,
+    testModeMarqueeSpeed: siteModeSnapshot.settings.testModeMarqueeSpeed,
     hideTestBannerForAdmins: siteModeSnapshot.settings.hideTestBannerForAdmins,
     maintenanceModeEnabled: siteModeSnapshot.settings.maintenanceModeEnabled,
     maintenanceMessage: siteModeSnapshot.settings.maintenanceMessage,
     maintenanceEndsAt: siteModeSnapshot.settings.maintenanceEndsAt?.toISOString() ?? null,
     hideMaintenanceForAdmins: siteModeSnapshot.settings.hideMaintenanceForAdmins,
+    maintenanceCtaEnabled: siteModeSnapshot.settings.maintenanceCtaEnabled,
+    maintenanceCtaLabel: siteModeSnapshot.settings.maintenanceCtaLabel,
+    maintenanceCtaHref: siteModeSnapshot.settings.maintenanceCtaHref,
+    maintenanceBackdropColor: siteModeSnapshot.settings.maintenanceBackdropColor,
+    maintenanceBackdropOpacity: siteModeSnapshot.settings.maintenanceBackdropOpacity,
   };
 
   return (

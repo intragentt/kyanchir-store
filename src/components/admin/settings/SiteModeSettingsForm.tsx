@@ -27,14 +27,29 @@ function toDateTimeLocal(value: string | null): string {
 }
 
 function normalizePayload(state: FormState) {
+  const marqueeSpeed = Number(state.testModeMarqueeSpeed);
+  const backdropOpacity = Number(state.maintenanceBackdropOpacity);
+  const rawBackdropColor = state.maintenanceBackdropColor.trim();
+  const backdropColor = rawBackdropColor
+    ? rawBackdropColor.startsWith('#')
+      ? rawBackdropColor
+      : `#${rawBackdropColor}`
+    : '#020617';
+
   return {
     testModeEnabled: state.testModeEnabled,
     testModeMessage: state.testModeMessage.trim(),
+    testModeMarqueeSpeed: Number.isFinite(marqueeSpeed) ? marqueeSpeed : 18,
     hideTestBannerForAdmins: state.hideTestBannerForAdmins,
     maintenanceModeEnabled: state.maintenanceModeEnabled,
     maintenanceMessage: state.maintenanceMessage.trim(),
     maintenanceEndsAt: state.maintenanceEndsAt ? new Date(state.maintenanceEndsAt).toISOString() : null,
     hideMaintenanceForAdmins: state.hideMaintenanceForAdmins,
+    maintenanceCtaEnabled: state.maintenanceCtaEnabled,
+    maintenanceCtaLabel: state.maintenanceCtaLabel.trim(),
+    maintenanceCtaHref: state.maintenanceCtaHref.trim(),
+    maintenanceBackdropColor: backdropColor,
+    maintenanceBackdropOpacity: Number.isFinite(backdropOpacity) ? backdropOpacity : 80,
   };
 }
 
@@ -72,11 +87,17 @@ export default function SiteModeSettingsForm({ initialSettings }: SiteModeSettin
         const nextState: FormState = {
           testModeEnabled: data.data.testModeEnabled,
           testModeMessage: data.data.testModeMessage,
+          testModeMarqueeSpeed: data.data.testModeMarqueeSpeed,
           hideTestBannerForAdmins: data.data.hideTestBannerForAdmins,
           maintenanceModeEnabled: data.data.maintenanceModeEnabled,
           maintenanceMessage: data.data.maintenanceMessage,
           maintenanceEndsAt: data.data.maintenanceEndsAt,
           hideMaintenanceForAdmins: data.data.hideMaintenanceForAdmins,
+          maintenanceCtaEnabled: data.data.maintenanceCtaEnabled,
+          maintenanceCtaLabel: data.data.maintenanceCtaLabel,
+          maintenanceCtaHref: data.data.maintenanceCtaHref,
+          maintenanceBackdropColor: data.data.maintenanceBackdropColor,
+          maintenanceBackdropOpacity: data.data.maintenanceBackdropOpacity,
         };
 
         setFormState(nextState);
@@ -154,6 +175,25 @@ export default function SiteModeSettingsForm({ initialSettings }: SiteModeSettin
               rows={2}
             />
           </label>
+
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+            <label className="block text-sm font-medium text-gray-700">
+              Скорость движения
+              <input
+                type="range"
+                min={4}
+                max={60}
+                step={1}
+                value={formState.testModeMarqueeSpeed}
+                onChange={(event) => handleFieldChange('testModeMarqueeSpeed', Number(event.target.value))}
+                className="mt-2 w-full"
+              />
+            </label>
+            <div className="text-sm text-gray-600">
+              <span className="font-semibold text-gray-900">{formState.testModeMarqueeSpeed}&nbsp;сек</span>
+              <p className="text-xs text-gray-500">Длительность полного цикла (меньше = быстрее)</p>
+            </div>
+          </div>
 
           <label className="flex items-center gap-3 text-sm text-gray-700">
             <input
@@ -236,6 +276,86 @@ export default function SiteModeSettingsForm({ initialSettings }: SiteModeSettin
               />
               Пропускать заглушку для администраторов
             </label>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Цвет фона заглушки
+              <div className="mt-2 flex items-center gap-3">
+                <input
+                  type="color"
+                  value={formState.maintenanceBackdropColor || '#020617'}
+                  onChange={(event) => handleFieldChange('maintenanceBackdropColor', event.target.value)}
+                  className="h-10 w-16 cursor-pointer rounded border border-gray-300"
+                />
+                <input
+                  type="text"
+                  value={formState.maintenanceBackdropColor}
+                  onChange={(event) => handleFieldChange('maintenanceBackdropColor', event.target.value)}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none"
+                  placeholder="#020617"
+                />
+              </div>
+            </label>
+
+            <label className="block text-sm font-medium text-gray-700">
+              Прозрачность фона
+              <div className="mt-2 flex items-center gap-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={formState.maintenanceBackdropOpacity}
+                  onChange={(event) => handleFieldChange('maintenanceBackdropOpacity', Number(event.target.value))}
+                  className="flex-1"
+                />
+                <span className="w-12 text-right text-sm font-semibold text-gray-900">
+                  {formState.maintenanceBackdropOpacity}%
+                </span>
+              </div>
+            </label>
+          </div>
+
+          <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <label className="flex items-center gap-3 text-sm font-medium text-gray-700">
+              <input
+                type="checkbox"
+                checked={formState.maintenanceCtaEnabled}
+                onChange={(event) => handleFieldChange('maintenanceCtaEnabled', event.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+              />
+              Показать кнопку поддержки
+            </label>
+
+            <p className="text-xs text-gray-500">
+              Кнопка появляется внизу заглушки и открывается в новой вкладке. Укажите текст и ссылку, например на Telegram.
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Подпись на кнопке
+                <input
+                  type="text"
+                  value={formState.maintenanceCtaLabel}
+                  onChange={(event) => handleFieldChange('maintenanceCtaLabel', event.target.value)}
+                  disabled={!formState.maintenanceCtaEnabled}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none disabled:bg-gray-100"
+                  placeholder="Написать в Telegram"
+                />
+              </label>
+
+              <label className="block text-sm font-medium text-gray-700">
+                Ссылка
+                <input
+                  type="url"
+                  value={formState.maintenanceCtaHref}
+                  onChange={(event) => handleFieldChange('maintenanceCtaHref', event.target.value)}
+                  disabled={!formState.maintenanceCtaEnabled}
+                  className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none disabled:bg-gray-100"
+                  placeholder="https://t.me/username"
+                />
+              </label>
+            </div>
           </div>
         </div>
       </section>

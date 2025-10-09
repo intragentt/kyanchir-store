@@ -42,6 +42,34 @@ function isAdminRole(roleName?: string | null): boolean {
   return roleName === 'ADMIN' || roleName === 'MANAGEMENT';
 }
 
+function toRgba(color: string, opacityPercent: number): string {
+  const sanitizedColor = color?.trim() ?? '';
+  const match = /^#?([a-f\d]{3}|[a-f\d]{6})$/i.exec(sanitizedColor);
+
+  let r = 2;
+  let g = 6;
+  let b = 23;
+
+  if (match) {
+    const hex = match[1].length === 3
+      ? match[1]
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : match[1];
+
+    r = Number.parseInt(hex.slice(0, 2), 16);
+    g = Number.parseInt(hex.slice(2, 4), 16);
+    b = Number.parseInt(hex.slice(4, 6), 16);
+  }
+
+  const clampedOpacity = Number.isFinite(opacityPercent)
+    ? Math.min(100, Math.max(0, opacityPercent)) / 100
+    : 0.8;
+
+  return `rgba(${r}, ${g}, ${b}, ${clampedOpacity.toFixed(3)})`;
+}
+
 export default function SiteModeGlobalUI() {
   const pathname = usePathname();
   const settings = useSiteModeSettings();
@@ -49,7 +77,27 @@ export default function SiteModeGlobalUI() {
 
   const isAdminRoute = pathname?.startsWith('/admin');
 
+  const [isAdminHost, setIsAdminHost] = useState<boolean>(() => {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    const host = window.location.hostname.toLowerCase();
+    return host === 'admin.kyanchir.ru' || host.startsWith('admin.');
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const host = window.location.hostname.toLowerCase();
+    setIsAdminHost(host === 'admin.kyanchir.ru' || host.startsWith('admin.'));
+  }, []);
+
   const isAdminUser = isAdminRole(session?.user?.role?.name ?? null);
+
+  const isAdminEnvironment = isAdminRoute || isAdminHost;
 
   const maintenanceDeadline = useMemo(() => {
     if (!settings.maintenanceEndsAt) {
@@ -77,7 +125,7 @@ export default function SiteModeGlobalUI() {
   }, [maintenanceDeadline]);
 
   const isTestBannerVisible =
-    !isAdminRoute &&
+    !isAdminEnvironment &&
     settings.testModeEnabled &&
     (!settings.hideTestBannerForAdmins || !isAdminUser);
 
@@ -97,9 +145,22 @@ export default function SiteModeGlobalUI() {
   }, [maintenanceDeadline, settings.maintenanceModeEnabled]);
 
   const isMaintenanceVisible =
-    !isAdminRoute &&
+    !isAdminEnvironment &&
     isMaintenanceActive &&
     (!settings.hideMaintenanceForAdmins || !isAdminUser);
+
+  const marqueeDuration = useMemo(() => {
+    if (!Number.isFinite(settings.testModeMarqueeSpeed)) {
+      return 18;
+    }
+
+    return Math.max(4, Math.min(60, settings.testModeMarqueeSpeed));
+  }, [settings.testModeMarqueeSpeed]);
+
+  const maintenanceBackdrop = useMemo(
+    () => toRgba(settings.maintenanceBackdropColor, settings.maintenanceBackdropOpacity),
+    [settings.maintenanceBackdropColor, settings.maintenanceBackdropOpacity],
+  );
 
   useEffect(() => {
     const body = document.body;
@@ -170,7 +231,10 @@ export default function SiteModeGlobalUI() {
     <>
       {isTestBannerVisible && (
         <div className="site-mode-banner pointer-events-none fixed inset-x-0 top-0 z-[1200] flex h-10 items-center overflow-hidden bg-amber-500 text-sm font-semibold text-white shadow-md">
-          <div className="site-mode-marquee flex min-w-full items-center justify-center gap-12 whitespace-nowrap">
+          <div
+            className="site-mode-marquee flex min-w-full items-center justify-center gap-12 whitespace-nowrap"
+            style={{ animationDuration: `${marqueeDuration}s` }}
+          >
             <span>{settings.testModeMessage}</span>
             <span aria-hidden="true">{settings.testModeMessage}</span>
             <span aria-hidden="true">{settings.testModeMessage}</span>
@@ -179,7 +243,10 @@ export default function SiteModeGlobalUI() {
       )}
 
       {isMaintenanceVisible && (
-        <div className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-950/80 p-4 text-center text-white backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-[1300] flex items-center justify-center p-4 text-center text-white backdrop-blur-sm"
+          style={{ backgroundColor: maintenanceBackdrop }}
+        >
           <div className="max-w-lg space-y-4">
             <h2 className="text-2xl font-bold">🚧 Идут технические работы</h2>
             <p className="text-base text-slate-100">{settings.maintenanceMessage}</p>
@@ -192,6 +259,18 @@ export default function SiteModeGlobalUI() {
               <p className="text-sm text-slate-200">
                 Работы завершатся до {new Date(maintenanceDeadline).toLocaleString('ru-RU')}
               </p>
+            )}
+            {settings.maintenanceCtaEnabled && settings.maintenanceCtaHref && (
+              <div className="pt-2">
+                <a
+                  href={settings.maintenanceCtaHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-full bg-amber-500 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-amber-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-300"
+                >
+                  {settings.maintenanceCtaLabel || 'Связаться с нами'}
+                </a>
+              </div>
             )}
           </div>
         </div>
