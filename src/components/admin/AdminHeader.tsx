@@ -15,6 +15,7 @@ const adminNavLinks = [
   { href: '/admin/mail', label: 'Почта' },
   { href: '/admin/yookassa', label: 'ЮKassa' },
   { href: '/admin/settings', label: 'Настройки' },
+  { href: '/admin/promo-codes/new', label: 'Промокоды' },
   { href: '/admin/stats', label: 'Статистика' },
   { href: '/admin/sliders', label: 'Слайдеры' },
 ];

@@ -12,6 +12,10 @@ import {
   collectFontCssLinks,
   type DesignSystemSettings,
 } from '@/lib/settings/design-system.shared';
+import { getSiteModeSettings } from '@/lib/settings/site-mode';
+import { SiteModeProvider } from '@/components/providers/SiteModeProvider';
+import SiteModeGlobalUI from '@/components/SiteModeGlobalUI';
+import VercelAnalyticsClient from '@/components/providers/VercelAnalyticsClient';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { settings } = await getDesignSystemSettings();
@@ -46,10 +50,21 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const { settings } = await getDesignSystemSettings();
+  const siteModeSnapshot = await getSiteModeSettings();
 
   const fontSources = collectFontCssLinks(settings.fontLibrary);
 
   const designSystemStyle = buildDesignSystemStyle(settings);
+
+  const siteModeClientSettings = {
+    testModeEnabled: siteModeSnapshot.settings.testModeEnabled,
+    testModeMessage: siteModeSnapshot.settings.testModeMessage,
+    hideTestBannerForAdmins: siteModeSnapshot.settings.hideTestBannerForAdmins,
+    maintenanceModeEnabled: siteModeSnapshot.settings.maintenanceModeEnabled,
+    maintenanceMessage: siteModeSnapshot.settings.maintenanceMessage,
+    maintenanceEndsAt: siteModeSnapshot.settings.maintenanceEndsAt?.toISOString() ?? null,
+    hideMaintenanceForAdmins: siteModeSnapshot.settings.hideMaintenanceForAdmins,
+  };
 
   return (
     <html
@@ -86,11 +101,15 @@ export default async function RootLayout({
           Для работы приложения требуется включить JavaScript.
         </noscript>
 
-        <AuthProvider>
-          {/* ИЗМЕНЕНИЕ: AppCore здесь больше нет. Мы просто рендерим дочерние элементы.
-              Теперь /admin/layout.tsx и /(site)/layout.tsx могут работать независимо. */}
-          {children}
-        </AuthProvider>
+        <SiteModeProvider value={siteModeClientSettings}>
+          <AuthProvider>
+            {/* ИЗМЕНЕНИЕ: AppCore здесь больше нет. Мы просто рендерим дочерние элементы.
+                Теперь /admin/layout.tsx и /(site)/layout.tsx могут работать независимо. */}
+            {children}
+            <SiteModeGlobalUI />
+          </AuthProvider>
+        </SiteModeProvider>
+        <VercelAnalyticsClient />
       </body>
     </html>
   );
