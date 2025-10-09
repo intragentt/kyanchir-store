@@ -7,13 +7,26 @@ export const dynamic = 'force-dynamic';
 
 export default async function CategoriesPage() {
   // Загружаем все три типа данных параллельно для эффективности
-  const [categories, tags, codeRules] = await Promise.all([
+  const [categories, tags, codeRules, mainFilterPreset] = await Promise.all([
     prisma.category.findMany({
       orderBy: { name: 'asc' },
     }),
     prisma.tag.findMany({ orderBy: { name: 'asc' } }),
     prisma.codeRule.findMany({
       orderBy: { assignedCode: 'asc' },
+    }),
+    prisma.filterPreset.upsert({
+      where: { name: 'main-store-filter' },
+      update: {},
+      create: { name: 'main-store-filter' },
+      include: {
+        items: {
+          orderBy: { order: 'asc' },
+          include: {
+            category: true,
+          },
+        },
+      },
     }),
   ]);
 
@@ -34,6 +47,16 @@ export default async function CategoriesPage() {
         initialCategories={categories}
         initialTags={tags}
         initialCodeRules={codeRules} // <-- Передаем новый пропс
+        mainFilterPreset={{
+          id: mainFilterPreset.id,
+          items: mainFilterPreset.items
+            .filter((item) => item.category)
+            .map((item) => ({
+              categoryId: item.categoryId!,
+              order: item.order,
+              categoryName: item.category!.name,
+            })),
+        }}
       />
     </main>
   );

@@ -3,6 +3,7 @@ import 'server-only';
 import { unstable_noStore as noStore } from 'next/cache';
 import { z } from 'zod';
 import prisma from '@/lib/prisma';
+import { resolveHexColor } from '@/lib/colors';
 
 export const SITE_MODE_SETTINGS_KEY = 'site-mode-settings';
 
@@ -10,6 +11,8 @@ export interface SiteModeSettings {
   testModeEnabled: boolean;
   testModeMessage: string;
   testModeMarqueeSpeed: number;
+  testModeBackgroundColor: string;
+  testModeTextColor: string;
   hideTestBannerForAdmins: boolean;
   maintenanceModeEnabled: boolean;
   maintenanceMessage: string;
@@ -32,6 +35,8 @@ export const DEFAULT_SITE_MODE_SETTINGS: SiteModeSettings = {
   testModeEnabled: false,
   testModeMessage: 'Сайт работает в тестовом режиме. Возможны временные сбои.',
   testModeMarqueeSpeed: 18,
+  testModeBackgroundColor: '#f59e0b',
+  testModeTextColor: '#111827',
   hideTestBannerForAdmins: false,
   maintenanceModeEnabled: false,
   maintenanceMessage: 'Идут технические работы. Пожалуйста, зайдите позже.',
@@ -50,6 +55,14 @@ const siteModePartialSchema = z
     testModeEnabled: z.boolean().optional(),
     testModeMessage: z.string().trim().max(200).optional(),
     testModeMarqueeSpeed: z.number().min(4).max(60).optional(),
+    testModeBackgroundColor: z
+      .string()
+      .regex(/^#?([a-f\d]{3}|[a-f\d]{6})$/i, 'Укажите цвет в формате HEX')
+      .optional(),
+    testModeTextColor: z
+      .string()
+      .regex(/^#?([a-f\d]{3}|[a-f\d]{6})$/i, 'Укажите цвет в формате HEX')
+      .optional(),
     hideTestBannerForAdmins: z.boolean().optional(),
     maintenanceModeEnabled: z.boolean().optional(),
     maintenanceMessage: z.string().trim().max(200).optional(),
@@ -115,6 +128,14 @@ const mergeWithDefaults = (payload?: SiteModePartial | null): SiteModeSettings =
         ? payload.testModeMessage.trim()
         : base.testModeMessage,
     testModeMarqueeSpeed: payload.testModeMarqueeSpeed ?? base.testModeMarqueeSpeed,
+    testModeBackgroundColor:
+      payload.testModeBackgroundColor && payload.testModeBackgroundColor.trim().length > 0
+        ? resolveHexColor(payload.testModeBackgroundColor, base.testModeBackgroundColor)
+        : base.testModeBackgroundColor,
+    testModeTextColor:
+      payload.testModeTextColor && payload.testModeTextColor.trim().length > 0
+        ? resolveHexColor(payload.testModeTextColor, base.testModeTextColor)
+        : base.testModeTextColor,
     hideTestBannerForAdmins: payload.hideTestBannerForAdmins ?? base.hideTestBannerForAdmins,
     maintenanceModeEnabled: payload.maintenanceModeEnabled ?? base.maintenanceModeEnabled,
     maintenanceMessage:

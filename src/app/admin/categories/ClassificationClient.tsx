@@ -1,7 +1,7 @@
 // Местоположение: src/app/admin/categories/ClassificationClient.tsx
 'use client';
 
-import { useState, useTransition, useRef, useEffect, useCallback } from 'react';
+import { useState, useTransition, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { Category, Tag, CodeRule } from '@prisma/client';
@@ -31,11 +31,12 @@ type Item = { id: string; name: string; color: string | null; code?: string };
 const DragHandleIcon = (props: React.SVGProps<SVGSVGElement>) => ( <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="6" r="1.5" fill="currentColor" /><circle cx="10" cy="12" r="1.5" fill="currentColor" /><circle cx="10" cy="18" r="1.5" fill="currentColor" /><circle cx="14" cy="6" r="1.5" fill="currentColor" /><circle cx="14" cy="12" r="1.5" fill="currentColor" /><circle cx="14" cy="18" r="1.5" fill="currentColor" /></svg> );
 const ColorPicker = ({ color, onSave }: { color: string | null; onSave: (color: string) => void; }) => ( <div className="relative h-5 w-5 rounded-full" style={{ backgroundColor: color || '#E5E7EB' }}><input type="color" value={color || '#E5E7EB'} onChange={(e) => onSave(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" /></div> );
 const AddItemForm = ({ onSave, onCancel, isPending, parentId = null, needsCode = false, }: { onSave: (name: string, code: string, parentId: string | null) => void; onCancel: () => void; isPending: boolean; parentId?: string | null; needsCode?: boolean; }) => { const [name, setName] = useState(''); const [code, setCode] = useState(''); const inputRef = useRef<HTMLInputElement>(null); useEffect(() => { inputRef.current?.focus(); }, []); const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (name.trim() && (!needsCode || code.trim())) { onSave(name.trim(), code.trim(), parentId); } }; return ( <form onSubmit={handleSubmit} className="flex items-center gap-2 py-2"> <input ref={inputRef} value={name} onChange={(e) => setName(e.target.value)} placeholder="Название..." className="w-full rounded-md border px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500" disabled={isPending}/> {needsCode && (<input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="Код (BE, KP)" className="w-1/2 rounded-md border px-2 py-1 text-sm focus:ring-1 focus:ring-indigo-500" disabled={isPending} />)} <button type="submit" disabled={isPending} className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-600 text-sm text-white hover:bg-indigo-500">✓</button> <button type="button" onClick={onCancel} className="flex h-7 w-7 items-center justify-center rounded-md bg-gray-200 text-sm text-gray-700 hover:bg-gray-300">×</button> </form> ); };
-const ItemRow = ({ item, onUpdate, onDelete, isPending, isSystem = false, isCategory = false, children, level = 0, }: { item: Item & { parentId?: string | null; order?: number }; onUpdate: (id: string, data: Partial<Item>) => void; onDelete: (id: string) => void; isPending: boolean; isSystem?: boolean; isCategory?: boolean; children?: React.ReactNode; level?: number; }) => { const [isEditing, setIsEditing] = useState(false); const [name, setName] = useState(item.name); const [code, setCode] = useState(item.code || ''); const levelClasses = ['font-semibold', 'font-normal', 'font-normal text-gray-600']; const handleSave = () => { if ((name.trim() && name.trim() !== item.name) || (code.trim() && code.trim() !== item.code)) { onUpdate(item.id, { name: name.trim(), code: code.trim() }); } setIsEditing(false); }; return ( <div className="group flex items-center justify-between border-b py-1.5" onDoubleClick={() => !isSystem && setIsEditing(true)}> <div className="flex flex-grow items-center gap-2"> <ColorPicker color={item.color} onSave={(color) => onUpdate(item.id, { color })} /> {isEditing ? ( <div className="flex w-full items-center gap-2"> <input value={name} onChange={(e) => setName(e.target.value)} onBlur={handleSave} onKeyDown={(e) => e.key === 'Enter' && handleSave()} className="w-full rounded-md border px-2 py-1 text-sm" autoFocus disabled={isPending} /> {isCategory && (<input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} onBlur={handleSave} onKeyDown={(e) => e.key === 'Enter' && handleSave()} placeholder="Код" className="w-1/3 rounded-md border px-2 py-1 text-sm" disabled={isPending} />)} </div> ) : ( <div className="flex items-baseline gap-2"><span className={`text-sm ${levelClasses[level]}`}>{item.name}</span>{isCategory && (<span className="text-xs text-gray-400">{item.code}</span>)}</div> )} </div> <div className="flex items-center gap-x-3 text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100">{children}{!isSystem && (<button onClick={() => onDelete(item.id)} disabled={isPending} className="text-red-500 hover:text-red-700">Удалить</button>)}</div> </div> ); };
+const ItemRow = ({ item, onUpdate, onDelete, isPending, isSystem = false, isCategory = false, children, level = 0, mainFilterConfig, }: { item: Item & { parentId?: string | null; order?: number }; onUpdate: (id: string, data: Partial<Item>) => void; onDelete: (id: string) => void; isPending: boolean; isSystem?: boolean; isCategory?: boolean; children?: React.ReactNode; level?: number; mainFilterConfig?: { checked: boolean; disabled?: boolean; onToggle: () => void }; }) => { const [isEditing, setIsEditing] = useState(false); const [name, setName] = useState(item.name); const [code, setCode] = useState(item.code || ''); const levelClasses = ['font-semibold', 'font-normal', 'font-normal text-gray-600']; const handleSave = () => { if ((name.trim() && name.trim() !== item.name) || (code.trim() && code.trim() !== item.code)) { onUpdate(item.id, { name: name.trim(), code: code.trim() }); } setIsEditing(false); }; const handleToggleMainFilter = () => { if (mainFilterConfig && !mainFilterConfig.disabled) { mainFilterConfig.onToggle(); } }; return ( <div className="group flex items-center justify-between border-b py-1.5" onDoubleClick={() => !isSystem && setIsEditing(true)}> <div className="flex flex-grow items-center gap-2"> <ColorPicker color={item.color} onSave={(color) => onUpdate(item.id, { color })} /> {isCategory && mainFilterConfig ? ( <label className="flex cursor-pointer select-none items-center gap-1 text-xs font-medium text-gray-500" onClick={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}> <input type="checkbox" className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked={mainFilterConfig.checked} onChange={(event) => { event.stopPropagation(); handleToggleMainFilter(); }} onClick={(event) => event.stopPropagation()} disabled={isPending || mainFilterConfig.disabled} /> На главной </label> ) : null} {isEditing ? ( <div className="flex w-full items-center gap-2"> <input value={name} onChange={(e) => setName(e.target.value)} onBlur={handleSave} onKeyDown={(e) => e.key === 'Enter' && handleSave()} className="w-full rounded-md border px-2 py-1 text-sm" autoFocus disabled={isPending} /> {isCategory && (<input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} onBlur={handleSave} onKeyDown={(e) => e.key === 'Enter' && handleSave()} placeholder="Код" className="w-1/3 rounded-md border px-2 py-1 text-sm" disabled={isPending} />)} </div> ) : ( <div className="flex items-baseline gap-2"><span className={`text-sm ${levelClasses[level]}`}>{item.name}</span>{isCategory && (<span className="text-xs text-gray-400">{item.code}</span>)}</div> )} </div> <div className="flex items-center gap-x-3 text-sm font-semibold opacity-0 transition-opacity group-hover:opacity-100">{children}{!isSystem && (<button onClick={() => onDelete(item.id)} disabled={isPending} className="text-red-500 hover:text-red-700">Удалить</button>)}</div> </div> ); };
 
-export function ClassificationClient({ initialCategories, initialTags, initialCodeRules }: { initialCategories: Category[]; initialTags: Tag[]; initialCodeRules: CodeRule[] }) {
+export function ClassificationClient({ initialCategories, initialTags, initialCodeRules, mainFilterPreset, }: { initialCategories: Category[]; initialTags: Tag[]; initialCodeRules: CodeRule[]; mainFilterPreset: { id: string; items: { categoryId: string; order: number; categoryName: string }[] }; }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [isUpdatingHomeFilter, startHomeFilterTransition] = useTransition();
   const [categories, setCategories] = useState<CategoryWithChildren[]>([]);
   const [tags, setTags] = useState(initialTags);
   const [codeRules, setCodeRules] = useState(initialCodeRules);
@@ -48,7 +49,77 @@ export function ClassificationClient({ initialCategories, initialTags, initialCo
   const [planJustUpdated, setPlanJustUpdated] = useState(false);
   const buildTree = useCallback((cats: Category[], parentId: string | null = null): CategoryWithChildren[] => { return cats.filter((c) => c.parentId === parentId).sort((a, b) => a.order - b.order).map((category) => ({ ...category, children: buildTree(cats, category.id) })); }, []);
   
-  useEffect(() => { setCategories(buildTree(initialCategories)); setTags(initialTags.sort((a, b) => a.order - b.order)); setCodeRules(initialCodeRules); }, [initialCategories, initialTags, initialCodeRules, buildTree]);
+  const mainFilterPresetId = mainFilterPreset.id;
+  const [homeFilterOrder, setHomeFilterOrder] = useState<string[]>(() =>
+    mainFilterPreset.items
+      .slice()
+      .sort((a, b) => a.order - b.order)
+      .map((item) => item.categoryId),
+  );
+  const homeFilterSet = useMemo(() => new Set(homeFilterOrder), [homeFilterOrder]);
+
+  useEffect(() => {
+    setCategories(buildTree(initialCategories));
+    setTags(initialTags.sort((a, b) => a.order - b.order));
+    setCodeRules(initialCodeRules);
+    setHomeFilterOrder(
+      mainFilterPreset.items
+        .slice()
+        .sort((a, b) => a.order - b.order)
+        .map((item) => item.categoryId),
+    );
+  }, [initialCategories, initialTags, initialCodeRules, buildTree, mainFilterPreset]);
+
+  const sendHomeFilterUpdate = useCallback(
+    (nextOrder: string[], fallback: string[]) => {
+      startHomeFilterTransition(async () => {
+        try {
+          const response = await fetch('/api/admin/filters/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              presetId: mainFilterPresetId,
+              items: nextOrder.map((categoryId, index) => ({
+                categoryId,
+                order: index,
+              })),
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data?.error || 'Не удалось обновить фильтр категорий');
+          }
+
+          toast.success('Категории на главной странице обновлены', {
+            id: 'home-filter-update',
+          });
+        } catch (error) {
+          setHomeFilterOrder(fallback);
+          toast.error(error instanceof Error ? error.message : 'Не удалось обновить фильтр категорий', {
+            id: 'home-filter-update',
+          });
+        }
+      });
+    },
+    [mainFilterPresetId, startHomeFilterTransition],
+  );
+
+  const handleToggleHomeFilter = useCallback(
+    (categoryId: string) => {
+      setHomeFilterOrder((prev) => {
+        const fallback = [...prev];
+        const isActive = prev.includes(categoryId);
+        const nextOrder = isActive ? prev.filter((id) => id !== categoryId) : [...prev, categoryId];
+
+        sendHomeFilterUpdate(nextOrder, fallback);
+
+        return nextOrder;
+      });
+    },
+    [sendHomeFilterUpdate],
+  );
 
   const handleCheckSync = async (isUpdate = false) => { setIsChecking(true); setPlanJustUpdated(false); if (!isUpdate) { toast.loading('Анализ данных из "МойСклад"...', { id: 'dry-run' }); } try { const response = await fetch('/api/admin/sync/dry-run', { method: 'POST' }); const data = await response.json(); if (!response.ok) throw new Error(data.error || 'Ошибка'); setSyncPlan(data.plan); if (!isModalOpen) setIsModalOpen(true); if (isUpdate) { setPlanJustUpdated(true); } else { toast.success('План синхронизации готов!', { id: 'dry-run' }); } } catch (error) { toast.error(error instanceof Error ? error.message : 'Ошибка', { id: 'dry-run' }); } finally { setIsChecking(false); } };
   const handleAddNewRuleFromModal = async (name: string, code: string) => { const result = await createRuleWithSynonym(code, name); if (result.success) { toast.success(`Правило "${name}" → ${code} добавлено!`); await handleCheckSync(true); router.refresh(); } else { toast.error(result.error || 'Ошибка.'); } return { success: !!result.success }; };
@@ -77,7 +148,7 @@ export function ClassificationClient({ initialCategories, initialTags, initialCo
                     <div className="flex items-center gap-1">
                       <div {...provided.dragHandleProps} className="cursor-grab text-gray-300 hover:text-gray-500"><DragHandleIcon /></div>
                       <div className="flex-grow">
-                        <ItemRow item={cat} onUpdate={(id, data) => { setCategories((prev) => updateCategoryState(prev, id, data)); setIsDirty(true); }} onDelete={handleDeleteCategory} isPending={isPending} isCategory={true} level={level}>
+                        <ItemRow item={cat} onUpdate={(id, data) => { setCategories((prev) => updateCategoryState(prev, id, data)); setIsDirty(true); }} onDelete={handleDeleteCategory} isPending={isPending} isCategory={true} level={level} mainFilterConfig={{ checked: homeFilterSet.has(cat.id), disabled: isUpdatingHomeFilter, onToggle: () => handleToggleHomeFilter(cat.id), }}>
                           {level < 2 && (<button onClick={() => setAddingToParent(cat.id)} className="text-sm font-semibold text-gray-500 hover:text-gray-800">+</button>)}
                         </ItemRow>
                       </div>
@@ -115,6 +186,9 @@ export function ClassificationClient({ initialCategories, initialTags, initialCo
               {addingToParent === 'root' ? ( <AddItemForm parentId={null} onSave={handleCreateCategory} onCancel={() => setAddingToParent(null)} isPending={isPending} needsCode={true} /> ) : ( <button onClick={() => setAddingToParent('root')} className="w-full rounded-md border border-dashed bg-gray-50 py-2 text-sm text-gray-600 hover:bg-gray-100">+ Создать новую категорию верхнего уровня</button> )}
             </div>
             <div className="text-md mb-2 font-semibold">Существующие категории</div>
+            <p className="mb-2 text-xs text-gray-500">
+              Отметьте галочкой «На главной», чтобы категория отображалась в фильтре витрины.
+            </p>
             <div className="rounded-lg border bg-white p-4 shadow-sm">
               <CategoryList items={categories} />
             </div>

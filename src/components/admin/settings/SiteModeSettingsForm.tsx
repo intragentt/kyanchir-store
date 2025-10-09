@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { LoadingButton } from '@/components/shared/ui/LoadingButton';
 import type { SiteModeClientSettings } from '@/components/providers/SiteModeProvider';
+import { resolveHexColor } from '@/lib/colors';
 
 interface SiteModeSettingsFormProps {
   initialSettings: SiteModeClientSettings;
@@ -31,6 +32,8 @@ function normalizePayload(state: FormState) {
   const backdropOpacity = Number(state.maintenanceBackdropOpacity);
   const rawBackdropColor = state.maintenanceBackdropColor.trim();
   const rawTextColor = state.maintenanceTextColor.trim();
+  const rawMarqueeBackground = state.testModeBackgroundColor.trim();
+  const rawMarqueeText = state.testModeTextColor.trim();
   const backdropColor = rawBackdropColor
     ? rawBackdropColor.startsWith('#')
       ? rawBackdropColor
@@ -41,11 +44,15 @@ function normalizePayload(state: FormState) {
       ? rawTextColor
       : `#${rawTextColor}`
     : '#f8fafc';
+  const marqueeBackgroundColor = resolveHexColor(rawMarqueeBackground, '#f59e0b');
+  const marqueeTextColor = resolveHexColor(rawMarqueeText, '#111827');
 
   return {
     testModeEnabled: state.testModeEnabled,
     testModeMessage: state.testModeMessage.trim(),
     testModeMarqueeSpeed: Number.isFinite(marqueeSpeed) ? marqueeSpeed : 18,
+    testModeBackgroundColor: marqueeBackgroundColor,
+    testModeTextColor: marqueeTextColor,
     hideTestBannerForAdmins: state.hideTestBannerForAdmins,
     maintenanceModeEnabled: state.maintenanceModeEnabled,
     maintenanceMessage: state.maintenanceMessage.trim(),
@@ -67,6 +74,16 @@ export default function SiteModeSettingsForm({ initialSettings }: SiteModeSettin
   const maintenanceDeadlineLocal = useMemo(
     () => toDateTimeLocal(formState.maintenanceEndsAt),
     [formState.maintenanceEndsAt],
+  );
+
+  const marqueeBackgroundPreview = useMemo(
+    () => resolveHexColor(formState.testModeBackgroundColor, '#f59e0b'),
+    [formState.testModeBackgroundColor],
+  );
+
+  const marqueeTextPreview = useMemo(
+    () => resolveHexColor(formState.testModeTextColor, '#111827'),
+    [formState.testModeTextColor],
   );
 
   const handleFieldChange = useCallback(<Key extends keyof FormState>(key: Key, value: FormState[Key]) => {
@@ -95,6 +112,8 @@ export default function SiteModeSettingsForm({ initialSettings }: SiteModeSettin
           testModeEnabled: data.data.testModeEnabled,
           testModeMessage: data.data.testModeMessage,
           testModeMarqueeSpeed: data.data.testModeMarqueeSpeed,
+          testModeBackgroundColor: data.data.testModeBackgroundColor,
+          testModeTextColor: data.data.testModeTextColor,
           hideTestBannerForAdmins: data.data.hideTestBannerForAdmins,
           maintenanceModeEnabled: data.data.maintenanceModeEnabled,
           maintenanceMessage: data.data.maintenanceMessage,
@@ -212,6 +231,46 @@ export default function SiteModeSettingsForm({ initialSettings }: SiteModeSettin
             />
             Не показывать уведомление администраторам
           </label>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Цвет фона бегущей строки
+              <div className="mt-2 flex items-center gap-3">
+                <input
+                  type="color"
+                  value={marqueeBackgroundPreview}
+                  onChange={(event) => handleFieldChange('testModeBackgroundColor', event.target.value)}
+                  className="h-10 w-12 cursor-pointer rounded border border-gray-200"
+                />
+                <input
+                  type="text"
+                  value={formState.testModeBackgroundColor}
+                  onChange={(event) => handleFieldChange('testModeBackgroundColor', event.target.value)}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none"
+                  placeholder="#f59e0b"
+                />
+              </div>
+            </label>
+
+            <label className="block text-sm font-medium text-gray-700">
+              Цвет текста бегущей строки
+              <div className="mt-2 flex items-center gap-3">
+                <input
+                  type="color"
+                  value={marqueeTextPreview}
+                  onChange={(event) => handleFieldChange('testModeTextColor', event.target.value)}
+                  className="h-10 w-12 cursor-pointer rounded border border-gray-200"
+                />
+                <input
+                  type="text"
+                  value={formState.testModeTextColor}
+                  onChange={(event) => handleFieldChange('testModeTextColor', event.target.value)}
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-gray-900 focus:outline-none"
+                  placeholder="#111827"
+                />
+              </div>
+            </label>
+          </div>
         </div>
       </section>
 

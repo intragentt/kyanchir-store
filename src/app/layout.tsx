@@ -60,6 +60,8 @@ export default async function RootLayout({
     testModeEnabled: siteModeSnapshot.settings.testModeEnabled,
     testModeMessage: siteModeSnapshot.settings.testModeMessage,
     testModeMarqueeSpeed: siteModeSnapshot.settings.testModeMarqueeSpeed,
+    testModeBackgroundColor: siteModeSnapshot.settings.testModeBackgroundColor,
+    testModeTextColor: siteModeSnapshot.settings.testModeTextColor,
     hideTestBannerForAdmins: siteModeSnapshot.settings.hideTestBannerForAdmins,
     maintenanceModeEnabled: siteModeSnapshot.settings.maintenanceModeEnabled,
     maintenanceMessage: siteModeSnapshot.settings.maintenanceMessage,
