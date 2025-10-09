@@ -38,6 +38,7 @@ export default function FloatingMenuOverlay({
       {' '}
       {/* Используем фрагмент, чтобы вернуть два корневых элемента */}
       <div
+        id="floating-menu-overlay"
         className={`fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white transition-opacity duration-300 ease-in-out ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}

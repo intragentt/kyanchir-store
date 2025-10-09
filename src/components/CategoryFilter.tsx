@@ -85,7 +85,12 @@ export default function CategoryFilter({
                 key={category.id}
                 data-category-id={category.id}
                 onClick={() => handleCategoryClick(category.id)}
-                className={`font-body flex-none px-3 text-base font-semibold whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none md:text-lg ${activeCategory === category.id ? 'text-brand-lilac' : 'hover:text-text-primary text-gray-500'}`}
+                className={`font-body flex-none px-3 text-base font-semibold whitespace-nowrap transition-colors duration-200 ease-in-out focus:outline-none md:text-lg ${
+                  activeCategory === category.id
+                    ? 'text-text-primary'
+                    : 'hover:text-text-primary text-gray-600'
+                }`}
+                aria-pressed={activeCategory === category.id}
               >
                 <span className="flex h-full flex-col items-center justify-center">
                   <span>{category.name}</span>
@@ -93,7 +98,7 @@ export default function CategoryFilter({
                     <span
                       className="mt-1 block"
                       style={{
-                        background: '#272727',
+                        background: 'var(--ds-color-primary, #6B80C5)',
                         height: '1.5px',
                         width: '100%',
                       }}

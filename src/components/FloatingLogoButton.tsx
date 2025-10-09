@@ -52,8 +52,13 @@ export default function FloatingLogoButton({
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
   const currentFooterHeight = isFooterVisible ? footerHeight : 0;
 
+  const menuButtonLabel = isMenuOpen
+    ? 'Скрыть плавающее меню'
+    : 'Открыть плавающее меню';
+
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
         opacity: opacity,
@@ -61,11 +66,15 @@ export default function FloatingLogoButton({
         transition: 'opacity 300ms ease-in-out, bottom 300ms ease-in-out',
       }}
       className={`fixed right-6 ${isMenuOpen ? 'z-[110]' : 'z-50'} flex h-24 w-24 items-center justify-center rounded-full border-2 border-[#E6E7EE] bg-white/70 backdrop-blur-sm`}
+      aria-label={menuButtonLabel}
+      aria-expanded={isMenuOpen}
+      aria-controls="floating-menu-overlay"
+      title={menuButtonLabel}
     >
       {isMenuOpen ? (
-        <ShortLogo className="h-8 w-auto text-[#6B80C5]" />
+        <ShortLogo aria-hidden className="h-8 w-auto text-[#6B80C5]" />
       ) : (
-        <ShortLogo className="h-8 w-auto text-[#E6E7EE]" />
+        <ShortLogo aria-hidden className="h-8 w-auto text-[#E6E7EE]" />
       )}
     </button>
   );
