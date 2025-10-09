@@ -9,6 +9,9 @@ const RETRY_DELAY_MS = Number.parseInt(
   process.env.PRISMA_MIGRATE_RETRY_DELAY_MS ?? '5000',
   10,
 );
+const SKIP_ON_LOCK = ['1', 'true', 'yes'].includes(
+  (process.env.SKIP_DB_MIGRATIONS_ON_LOCK ?? '').toLowerCase(),
+);
 const KNOWN_LOCK_MESSAGES = [
   'P1002',
   'Timed out trying to acquire a postgres advisory lock',
@@ -99,8 +102,18 @@ async function main() {
       return;
     } catch (error) {
       const combinedOutput = `${error.stdout ?? ''}${error.stderr ?? ''}`;
-      const shouldRetry =
-        attempt < MAX_ATTEMPTS && includesKnownLockMessage(combinedOutput);
+      const isLockError = includesKnownLockMessage(combinedOutput);
+      const shouldRetry = attempt < MAX_ATTEMPTS && isLockError;
+
+      if (isLockError && SKIP_ON_LOCK) {
+        console.warn(
+          `[prisma-migrate] Advisory lock detected on attempt ${attempt}. Skipping migrations because SKIP_DB_MIGRATIONS_ON_LOCK is enabled.`,
+        );
+        console.warn(
+          '[prisma-migrate] Ensure migrations are deployed separately before relying on this build.',
+        );
+        return;
+      }
 
       if (!shouldRetry) {
         console.error('[prisma-migrate] Failed to run prisma migrate deploy.');

@@ -59,7 +59,7 @@ Next.js 14‑приложение для электронной коммерци
 | Команда | Назначение |
 | --- | --- |
 | `npm run dev` | Next.js в режиме разработки. |
-| `npm run build` | Production-пайплайн: unit-тесты → `prisma migrate deploy` → `prisma generate` → `next build` с записью отчёта в `data/build-reports.json` (локально можно выставить `SKIP_DB_MIGRATIONS=1`, если нет доступа к БД).【F:package.json†L5-L28】【F:scripts/build-with-quality-checks.mjs†L1-L170】 |
+| `npm run build` | Production-пайплайн: unit-тесты → `prisma migrate deploy` → `prisma generate` → `next build` с записью отчёта в `data/build-reports.json` (локально можно выставить `SKIP_DB_MIGRATIONS=1`, если нет доступа к БД; для CI доступен аварийный режим `SKIP_DB_MIGRATIONS_ON_LOCK=1`, который пропускает шаг деплоя при advisory lock — миграции в этом случае нужно выкатывать отдельно).【F:package.json†L5-L28】【F:scripts/build-with-quality-checks.mjs†L1-L170】【F:scripts/prisma-migrate-deploy-with-retry.mjs†L1-L200】 |
 | `npm run start` | Локальный запуск собранного приложения. |
 | `npm run lint` | ESLint + проверка форматирования. |
 | `npm run test` | node:test (минимальный набор unit/компонентных тестов). |
