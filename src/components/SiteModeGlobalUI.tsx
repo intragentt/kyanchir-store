@@ -257,7 +257,7 @@ export default function SiteModeGlobalUI() {
   return (
     <>
       {isTestBannerVisible && (
-        <div className="site-mode-banner pointer-events-none fixed inset-x-0 top-0 z-[1200] flex h-10 items-center overflow-hidden bg-amber-500 text-sm font-semibold text-white shadow-md">
+        <div className="site-mode-banner pointer-events-none fixed inset-x-0 top-0 z-[1200] flex h-10 items-center overflow-hidden bg-amber-500 text-sm font-semibold text-gray-900 shadow-md">
           <div className="site-mode-marquee" style={marqueeStyles} aria-live="polite">
             <span className="site-mode-marquee__item">{marqueeMessage}</span>
             <span aria-hidden="true" className="site-mode-marquee__item">
