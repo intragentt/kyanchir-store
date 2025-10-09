@@ -35,6 +35,7 @@ export default async function SiteModeSettingsPage() {
     maintenanceCtaHref: snapshot.settings.maintenanceCtaHref,
     maintenanceBackdropColor: snapshot.settings.maintenanceBackdropColor,
     maintenanceBackdropOpacity: snapshot.settings.maintenanceBackdropOpacity,
+    maintenanceTextColor: snapshot.settings.maintenanceTextColor,
   };
 
   return (

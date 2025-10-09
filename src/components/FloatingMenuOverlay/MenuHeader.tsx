@@ -27,9 +27,11 @@ const MenuHeader = ({ onClose }: MenuHeaderProps) => {
           <>
             <Link href="https://kyanchir.ru" onClick={onClose}>
               <Logo className="logo-brand-color h-5 w-auto" />
+              <span className="sr-only">Kyanchir — перейти на главную</span>
             </Link>
             <div className="flex items-center">
               <button
+                type="button"
                 aria-label="Активировать поиск"
                 className="p-2"
                 onClick={handleSearchClick}
@@ -37,6 +39,7 @@ const MenuHeader = ({ onClose }: MenuHeaderProps) => {
                 <SearchIcon className="h-6 w-6 text-gray-800" />
               </button>
               <button
+                type="button"
                 aria-label="Закрыть меню"
                 className="py-2 pl-2"
                 onClick={onClose}
@@ -48,6 +51,7 @@ const MenuHeader = ({ onClose }: MenuHeaderProps) => {
         ) : (
           <div className="flex w-full items-center space-x-2">
             <button
+              type="button"
               aria-label="Закрыть поиск"
               className="p-2"
               onClick={() => setIsSearchModeActive(false)}

@@ -16,6 +16,7 @@ export interface SiteModeClientSettings {
   maintenanceCtaHref: string;
   maintenanceBackdropColor: string;
   maintenanceBackdropOpacity: number;
+  maintenanceTextColor: string;
 }
 
 const DEFAULT_VALUE: SiteModeClientSettings = {
@@ -32,6 +33,7 @@ const DEFAULT_VALUE: SiteModeClientSettings = {
   maintenanceCtaHref: '',
   maintenanceBackdropColor: '#020617',
   maintenanceBackdropOpacity: 80,
+  maintenanceTextColor: '#f8fafc',
 };
 
 const SiteModeContext = createContext<SiteModeClientSettings>(DEFAULT_VALUE);

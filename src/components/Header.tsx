@@ -47,8 +47,9 @@ export default function Header({
             </Link>
             <div className="flex items-center">
               <button
+                type="button"
                 onClick={() => onSearchToggle(true)}
-                aria-label="Поиск"
+                aria-label="Открыть поиск"
                 className="p-2"
               >
                 <SearchIcon className="h-6 w-6" />
@@ -66,7 +67,11 @@ export default function Header({
                 )}
               </Link>
               <button
+                type="button"
                 onClick={() => setFloatingMenuOpen(true)}
+                aria-label="Открыть меню"
+                aria-expanded={isMenuOpen}
+                aria-haspopup="menu"
                 className="relative z-50 py-2 pl-2"
               >
                 <BurgerIcon className="h-7 w-7" />
@@ -76,6 +81,7 @@ export default function Header({
         ) : (
           <div className="flex w-full items-center space-x-2">
             <button
+              type="button"
               onClick={() => {
                 onSearchToggle(false);
                 setSearchQuery('');
@@ -111,7 +117,11 @@ export default function Header({
               )}
             </Link>
             <button
+              type="button"
               onClick={() => setFloatingMenuOpen(true)}
+              aria-label="Открыть меню"
+              aria-expanded={isMenuOpen}
+              aria-haspopup="menu"
               className="relative z-50 py-2 pl-2 text-gray-700"
             >
               <BurgerIcon className="h-7 w-7" />

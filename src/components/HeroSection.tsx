@@ -12,6 +12,7 @@ const DUMMY_MAIN_BANNERS: MiniBanner[] = [
     title: 'ВЕСЕННЯЯ НЕЖНОСТЬ УЖЕ ЗДЕСЬ!',
     description: 'Откройте новые образы для легких и воздушных дней.',
     bgColor: 'bg-indigo-300',
+    textColor: 'text-slate-900',
   },
   {
     id: 'main2',
@@ -21,6 +22,7 @@ const DUMMY_MAIN_BANNERS: MiniBanner[] = [
     title: 'СКИДКИ ДО 50%!',
     description: 'Успейте приобрести любимые комплекты.',
     bgColor: 'bg-purple-300',
+    textColor: 'text-slate-900',
   },
   {
     id: 'main3',
@@ -30,6 +32,7 @@ const DUMMY_MAIN_BANNERS: MiniBanner[] = [
     title: 'НОВЫЕ БРЕНДЫ',
     description: 'Погрузитесь в мир стиля и комфорта.',
     bgColor: 'bg-green-300',
+    textColor: 'text-slate-900',
   },
   {
     id: 'main4',
@@ -39,6 +42,7 @@ const DUMMY_MAIN_BANNERS: MiniBanner[] = [
     title: 'ФИНАЛЬНАЯ РАСПРОДАЖА',
     description: 'Последний шанс забрать лучшее.',
     bgColor: 'bg-red-300',
+    textColor: 'text-slate-900',
   },
 ];
 

@@ -136,7 +136,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 </p>
               )}
               {hasDiscount && oldPrice && (
-                <p className="font-body text-base font-semibold text-gray-400">
+                <p className="font-body text-base font-semibold text-gray-600">
                   <span className="line-through">{oldPrice.value}</span>
                   <span> {oldPrice.currency}</span>
                 </p>
