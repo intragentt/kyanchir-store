@@ -1,6 +1,7 @@
 // Местоположение: src/components/layout/StickyCategoryFilter.tsx
 'use client';
 
+import { useEffect, useRef } from 'react';
 import CategoryFilter from '@/components/CategoryFilter';
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем "должностную инструкцию" (Props) ---
@@ -32,6 +33,21 @@ export default function StickyCategoryFilter({
   onScroll,
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 }: StickyCategoryFilterProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) {
+      return;
+    }
+
+    if (isVisible) {
+      node.removeAttribute('inert');
+    } else {
+      node.setAttribute('inert', '');
+    }
+  }, [isVisible]);
+
   const wrapperClasses = [
     'fixed w-full z-[151]',
     'will-change-transform',
@@ -43,9 +59,10 @@ export default function StickyCategoryFilter({
 
   return (
     <div
+      ref={containerRef}
       className={wrapperClasses}
       style={{ top: `${topPosition}px` }}
-      aria-hidden={!isVisible}
+      aria-hidden={isVisible ? undefined : true}
     >
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем все "инструменты" дальше, в сам фильтр --- */}
       <CategoryFilter

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react'; // <-- Добавлен useState
+import React, { useEffect, useRef, useState } from 'react'; // <-- Добавлены клиентские хуки
 import { useAppStore } from '@/store/useAppStore';
 
 import MenuHeader from './MenuHeader';
@@ -27,6 +27,21 @@ export default function FloatingMenuOverlay({
   const user = useAppStore((state) => state.user);
   const isAuthenticated = !!user;
 
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const node = overlayRef.current;
+    if (!node) {
+      return;
+    }
+
+    if (isOpen) {
+      node.removeAttribute('inert');
+    } else {
+      node.setAttribute('inert', '');
+    }
+  }, [isOpen]);
+
   // --- НАЧАЛО ИЗМЕНЕНИЙ: Управление состоянием модального окна ---
   const [isModalOpen, setIsModalOpen] = useState(false);
   const openVerificationModal = () => setIsModalOpen(true);
@@ -38,10 +53,14 @@ export default function FloatingMenuOverlay({
       {' '}
       {/* Используем фрагмент, чтобы вернуть два корневых элемента */}
       <div
+        ref={overlayRef}
         id="floating-menu-overlay"
         className={`fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white transition-opacity duration-300 ease-in-out ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
+        aria-hidden={isOpen ? undefined : true}
+        role="dialog"
+        aria-modal="true"
       >
         <MenuHeader onClose={onClose} />
 
