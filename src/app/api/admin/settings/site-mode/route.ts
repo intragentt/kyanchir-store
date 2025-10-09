@@ -25,6 +25,8 @@ function serializeSettings(settings: SiteModeSettings) {
     testModeEnabled: Boolean(settings.testModeEnabled),
     testModeMessage: settings.testModeMessage ?? '',
     testModeMarqueeSpeed: Number(settings.testModeMarqueeSpeed ?? 18),
+    testModeBackgroundColor: settings.testModeBackgroundColor ?? '#f59e0b',
+    testModeTextColor: settings.testModeTextColor ?? '#111827',
     hideTestBannerForAdmins: Boolean(settings.hideTestBannerForAdmins),
     maintenanceModeEnabled: Boolean(settings.maintenanceModeEnabled),
     maintenanceMessage: settings.maintenanceMessage ?? '',

@@ -75,7 +75,7 @@ export default async function HomePage() {
   }
 
   const categoriesForFilter = [
-    { id: 'all', name: 'все товары' },
+    { id: 'all', name: 'Все товары' },
     ...categoriesFromPreset,
   ];
 

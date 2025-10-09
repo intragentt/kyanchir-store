@@ -25,6 +25,8 @@ export default async function SiteModeSettingsPage() {
     testModeEnabled: snapshot.settings.testModeEnabled,
     testModeMessage: snapshot.settings.testModeMessage,
     testModeMarqueeSpeed: snapshot.settings.testModeMarqueeSpeed,
+    testModeBackgroundColor: snapshot.settings.testModeBackgroundColor,
+    testModeTextColor: snapshot.settings.testModeTextColor,
     hideTestBannerForAdmins: snapshot.settings.hideTestBannerForAdmins,
     maintenanceModeEnabled: snapshot.settings.maintenanceModeEnabled,
     maintenanceMessage: snapshot.settings.maintenanceMessage,

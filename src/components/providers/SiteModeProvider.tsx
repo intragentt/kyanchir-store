@@ -6,6 +6,8 @@ export interface SiteModeClientSettings {
   testModeEnabled: boolean;
   testModeMessage: string;
   testModeMarqueeSpeed: number;
+  testModeBackgroundColor: string;
+  testModeTextColor: string;
   hideTestBannerForAdmins: boolean;
   maintenanceModeEnabled: boolean;
   maintenanceMessage: string;
@@ -23,6 +25,8 @@ const DEFAULT_VALUE: SiteModeClientSettings = {
   testModeEnabled: false,
   testModeMessage: 'Сайт работает в тестовом режиме. Возможны временные сбои.',
   testModeMarqueeSpeed: 18,
+  testModeBackgroundColor: '#f59e0b',
+  testModeTextColor: '#111827',
   hideTestBannerForAdmins: false,
   maintenanceModeEnabled: false,
   maintenanceMessage: 'Идут технические работы. Пожалуйста, зайдите позже.',

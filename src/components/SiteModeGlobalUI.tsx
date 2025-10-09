@@ -4,6 +4,7 @@ import { type CSSProperties, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useSiteModeSettings } from '@/components/providers/SiteModeProvider';
+import { resolveHexColor } from '@/lib/colors';
 
 function formatCountdown(targetIso: string | null): string | null {
   if (!targetIso) {
@@ -167,6 +168,16 @@ export default function SiteModeGlobalUI() {
 
   const marqueeMessage = settings.testModeMessage?.trim() || 'Kyanchir Store работает в тестовом режиме';
 
+  const marqueeBackground = useMemo(
+    () => resolveHexColor(settings.testModeBackgroundColor, '#f59e0b'),
+    [settings.testModeBackgroundColor],
+  );
+
+  const marqueeTextColor = useMemo(
+    () => resolveHexColor(settings.testModeTextColor, '#111827'),
+    [settings.testModeTextColor],
+  );
+
   const maintenanceBackdrop = useMemo(
     () => toRgba(settings.maintenanceBackdropColor, settings.maintenanceBackdropOpacity),
     [settings.maintenanceBackdropColor, settings.maintenanceBackdropOpacity],
@@ -257,7 +268,10 @@ export default function SiteModeGlobalUI() {
   return (
     <>
       {isTestBannerVisible && (
-        <div className="site-mode-banner pointer-events-none fixed inset-x-0 top-0 z-[1200] flex h-10 items-center overflow-hidden bg-amber-500 text-sm font-semibold text-gray-900 shadow-md">
+        <div
+          className="site-mode-banner pointer-events-none fixed inset-x-0 top-0 z-[1200] flex h-10 items-center overflow-hidden text-sm font-semibold shadow-md"
+          style={{ backgroundColor: marqueeBackground, color: marqueeTextColor }}
+        >
           <div className="site-mode-marquee" style={marqueeStyles} aria-live="polite">
             <span className="site-mode-marquee__item">{marqueeMessage}</span>
             <span aria-hidden="true" className="site-mode-marquee__item">
