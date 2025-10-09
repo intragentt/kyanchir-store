@@ -108,6 +108,7 @@ export default function ProductPageHeader() {
       ref={headerRef}
       className="fixed inset-x-0 top-0 z-[100] bg-white shadow-sm lg:hidden"
       style={{
+        top: 'var(--site-mode-banner-offset, 0px)',
         transform: `translateY(${translateY}px)`,
         transition: 'transform 220ms cubic-bezier(.2,.8,.2,1)',
       }}

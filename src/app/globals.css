@@ -20,6 +20,7 @@
     --heart-red: var(--ds-color-danger, #D32F2F);
     --feedback-error-color: var(--ds-color-danger, #E06F6F);
     --mobile-footer-height: 0px;
+    --site-mode-banner-offset: env(safe-area-inset-top, 0px);
   }
 
   html {
@@ -37,7 +38,16 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     padding-bottom: env(safe-area-inset-bottom);
+    padding-top: var(--site-mode-banner-offset, env(safe-area-inset-top, 0px));
     box-sizing: border-box;
+  }
+
+  body.site-mode-test-banner-active {
+    --site-mode-banner-offset: calc(env(safe-area-inset-top, 0px) + 40px);
+  }
+
+  body.site-mode-maintenance-active {
+    overflow: hidden;
   }
 
   .content-hidden {
@@ -121,6 +131,19 @@
 }
 .animate-fade-pulse {
   animation: fade-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes site-mode-marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.site-mode-marquee {
+  animation: site-mode-marquee 18s linear infinite;
 }
 
 /* --- ШАГ 4: СБРОС СТИЛЕЙ И СТИЛИ ДЛЯ ВЕНДОРОВ --- */

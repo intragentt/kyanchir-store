@@ -101,6 +101,29 @@ export default async function AdminSettingsIndexPage() {
 
         <div className="flex h-full flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div>
+            <h2 className="text-xl font-semibold text-gray-900">🧪 Тестовый режим</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Управляйте бегущей строкой «сайт в тесте» и заглушкой «Идут технические работы» без деплоя.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-gray-600">
+              <li>• Быстро включайте или выключайте уведомления</li>
+              <li>• Настраивайте таймер обратного отсчёта</li>
+              <li>• Прячьте баннеры от администраторов</li>
+            </ul>
+          </div>
+          <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
+            <p className="text-xs text-gray-500">Только для администраторов и менеджеров</p>
+            <Link
+              href="/admin/settings/test-mode"
+              className="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Открыть настройки
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex h-full flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div>
             <h2 className="text-xl font-semibold text-gray-900">💳 YooKassa</h2>
             <p className="mt-2 text-sm text-gray-600">
               Настраивайте режим работы (test/live), реквизиты индивидуального предпринимателя и секретные ключи без редактирования
@@ -166,6 +189,29 @@ export default async function AdminSettingsIndexPage() {
               className="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
             >
               Открыть страницу
+            </Link>
+          </div>
+        </div>
+
+        <div className="flex h-full flex-col justify-between rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">🎟 Промокоды</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Создавайте одноразовые и многоразовые промокоды со скидками и бонусными баллами для пользователей.
+            </p>
+            <ul className="mt-4 space-y-2 text-sm text-gray-600">
+              <li>• Устанавливайте ограничение по количеству использований</li>
+              <li>• Настраивайте срок действия промокода</li>
+              <li>• Выбирайте тип вознаграждения: скидка или бонусные баллы</li>
+            </ul>
+          </div>
+          <div className="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
+            <p className="text-xs text-gray-500">Создание доступно администраторам</p>
+            <Link
+              href="/admin/promo-codes/new"
+              className="inline-flex items-center rounded-md bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+            >
+              Создать промокод
             </Link>
           </div>
         </div>

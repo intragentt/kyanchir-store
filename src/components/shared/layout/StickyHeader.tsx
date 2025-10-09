@@ -31,7 +31,10 @@ export default function StickyHeader({
     .join(' ');
 
   return (
-    <header className={headerClasses}>
+    <header
+      className={headerClasses}
+      style={{ top: 'var(--site-mode-banner-offset, 0px)' }}
+    >
       <div className="container mx-auto flex h-full items-center justify-between px-4 py-4 sm:px-6 lg:px-8 xl:px-12">
         {!isSearchActive && (
           <Link href="/" aria-label="На главную" className="-mt-1">
