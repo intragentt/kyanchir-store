@@ -94,7 +94,10 @@ export default function StickyProductPageHeader({
 
   return (
     // --- 2. ИЗМЕНЕНИЕ: Полностью копируем структуру из оригинальной шапки ---
-    <header className={headerClasses}>
+    <header
+      className={headerClasses}
+      style={{ top: 'var(--site-mode-banner-offset, 0px)' }}
+    >
       <div className="flex h-16 w-full items-center gap-x-3 px-4">
         <button
           onClick={handleBackClick}

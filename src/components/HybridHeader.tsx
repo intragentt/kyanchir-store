@@ -52,6 +52,7 @@ export default function HybridHeader() {
       ref={headerRef}
       className="fixed left-0 right-0 top-0 z-[100] will-change-transform"
       style={{
+        top: 'var(--site-mode-banner-offset, 0px)',
         transform: `translateY(${translateY}px)`,
         transition: isSnapping
           ? 'transform 220ms cubic-bezier(.2,.8,.2,1)'

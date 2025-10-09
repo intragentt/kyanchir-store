@@ -117,15 +117,48 @@ export default function SiteModeGlobalUI() {
 
   useEffect(() => {
     const body = document.body;
+    const scrollLockKey = 'siteModeScrollLock';
+
+    const lockScroll = () => {
+      const scrollY = window.scrollY;
+      body.dataset[scrollLockKey] = String(scrollY);
+      body.style.position = 'fixed';
+      body.style.top = `-${scrollY}px`;
+      body.style.width = '100%';
+      body.style.overflowY = 'hidden';
+    };
+
+    const unlockScroll = () => {
+      const storedScrollY = body.dataset[scrollLockKey];
+
+      if (storedScrollY === undefined) {
+        return;
+      }
+
+      body.style.position = '';
+      body.style.top = '';
+      body.style.width = '';
+      body.style.overflowY = '';
+
+      const parsed = Number.parseInt(storedScrollY, 10);
+      if (Number.isFinite(parsed)) {
+        window.scrollTo(0, parsed);
+      }
+
+      delete body.dataset[scrollLockKey];
+    };
 
     if (isMaintenanceVisible) {
       body.classList.add('site-mode-maintenance-active');
+      lockScroll();
     } else {
       body.classList.remove('site-mode-maintenance-active');
+      unlockScroll();
     }
 
     return () => {
       body.classList.remove('site-mode-maintenance-active');
+      unlockScroll();
     };
   }, [isMaintenanceVisible]);
 

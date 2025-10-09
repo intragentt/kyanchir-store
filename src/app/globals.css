@@ -20,6 +20,7 @@
     --heart-red: var(--ds-color-danger, #D32F2F);
     --feedback-error-color: var(--ds-color-danger, #E06F6F);
     --mobile-footer-height: 0px;
+    --site-mode-banner-offset: env(safe-area-inset-top, 0px);
   }
 
   html {
@@ -37,11 +38,12 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
     padding-bottom: env(safe-area-inset-bottom);
+    padding-top: var(--site-mode-banner-offset, env(safe-area-inset-top, 0px));
     box-sizing: border-box;
   }
 
   body.site-mode-test-banner-active {
-    padding-top: calc(env(safe-area-inset-top) + 40px);
+    --site-mode-banner-offset: calc(env(safe-area-inset-top, 0px) + 40px);
   }
 
   body.site-mode-maintenance-active {
