@@ -29,14 +29,18 @@ export default function CategoryFilter({
 }: CategoryFilterProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isFirstRender = useRef(true);
+  const isInteractingRef = useRef(false);
+  const releaseInteractionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Механизм "Слушаться": просто и надежно.
   useEffect(() => {
-    if (
-      containerRef.current &&
-      containerRef.current.scrollLeft !== scrollLeft
-    ) {
-      containerRef.current.scrollLeft = scrollLeft;
+    const container = containerRef.current;
+    if (!container || isInteractingRef.current) {
+      return;
+    }
+
+    if (container.scrollLeft !== scrollLeft) {
+      container.scrollLeft = scrollLeft;
     }
   }, [scrollLeft]);
 
@@ -63,9 +67,61 @@ export default function CategoryFilter({
     localStorage.setItem('activeCategory', categoryId);
   };
 
+  const scheduleInteractionRelease = () => {
+    if (releaseInteractionTimeoutRef.current) {
+      clearTimeout(releaseInteractionTimeoutRef.current);
+    }
+    releaseInteractionTimeoutRef.current = setTimeout(() => {
+      isInteractingRef.current = false;
+      releaseInteractionTimeoutRef.current = null;
+    }, 160);
+  };
+
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    isInteractingRef.current = true;
+    scheduleInteractionRelease();
     onScroll(event.currentTarget.scrollLeft);
   };
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handlePointerDown = () => {
+      if (releaseInteractionTimeoutRef.current) {
+        clearTimeout(releaseInteractionTimeoutRef.current);
+        releaseInteractionTimeoutRef.current = null;
+      }
+      isInteractingRef.current = true;
+    };
+
+    const handlePointerUp = () => {
+      scheduleInteractionRelease();
+    };
+
+    container.addEventListener('pointerdown', handlePointerDown, {
+      passive: true,
+    });
+    container.addEventListener('pointerup', handlePointerUp, {
+      passive: true,
+    });
+    container.addEventListener('pointercancel', handlePointerUp, {
+      passive: true,
+    });
+    container.addEventListener('pointerleave', handlePointerUp, {
+      passive: true,
+    });
+
+    return () => {
+      container.removeEventListener('pointerdown', handlePointerDown);
+      container.removeEventListener('pointerup', handlePointerUp);
+      container.removeEventListener('pointercancel', handlePointerUp);
+      container.removeEventListener('pointerleave', handlePointerUp);
+      if (releaseInteractionTimeoutRef.current) {
+        clearTimeout(releaseInteractionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div

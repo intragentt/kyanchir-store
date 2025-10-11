@@ -107,32 +107,37 @@ export default function SmartStickyCategoryFilter({
   const filterRef = useRef<HTMLDivElement>(null);
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
-  const { shouldRender, isTransitionEnabled, placeholderHeight, stickyStyles } =
-    useSmartSticky(filterRef, workZoneRef, { headerHeight: stickyOffset });
+  const {
+    shouldRender,
+    isTransitionEnabled,
+    isVisible,
+    placeholderHeight,
+    stickyStyles,
+  } = useSmartSticky(filterRef, workZoneRef, { headerHeight: stickyOffset });
 
   const [isMounted, setIsMounted] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     if (shouldRender) {
       setIsMounted(true);
-      const timer = setTimeout(() => setIsAnimating(true), 10);
-      return () => clearTimeout(timer);
-    } else {
-      setIsAnimating(false);
-      if (!isTransitionEnabled) {
-        setIsMounted(false);
-      } else {
-        const timer = setTimeout(() => setIsMounted(false), 300);
-        return () => clearTimeout(timer);
-      }
+      return;
     }
-  }, [shouldRender, isTransitionEnabled]);
+
+    if (!isTransitionEnabled || !isVisible) {
+      setIsMounted(false);
+      return;
+    }
+
+    const timer = setTimeout(() => setIsMounted(false), 220);
+    return () => clearTimeout(timer);
+  }, [shouldRender, isTransitionEnabled, isVisible]);
 
   const stickyWrapperClasses = [
     'fixed w-full z-40 bg-white',
-    isTransitionEnabled ? 'transition-all duration-300 ease-in-out' : '',
-    isAnimating ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-full',
+    isTransitionEnabled
+      ? 'transition-transform transition-opacity duration-200 ease-out'
+      : '',
+    isVisible ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0',
   ]
     .filter(Boolean)
     .join(' ');
@@ -141,7 +146,9 @@ export default function SmartStickyCategoryFilter({
     <>
       <div
         ref={filterRef}
-        style={{ height: shouldRender ? placeholderHeight : 'auto' }}
+        style={{
+          height: shouldRender || isMounted ? placeholderHeight : 'auto',
+        }}
         className={`w-full bg-white ${className}`}
       >
         <CategoryFilter

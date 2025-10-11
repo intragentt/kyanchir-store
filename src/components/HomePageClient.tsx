@@ -32,6 +32,9 @@ export default function HomePageClient({
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const scrollListenerRef = useRef<EventListener | null>(null);
+  const loaderStartTimeRef = useRef<number | null>(null);
+  const loaderMinDelayRef = useRef<NodeJS.Timeout | null>(null);
+  const loaderMaxDelayRef = useRef<NodeJS.Timeout | null>(null);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -67,14 +70,78 @@ export default function HomePageClient({
       );
     }
     setFilteredProducts(productsToFilter);
-    setIsCatalogLoading(false);
-  }, [searchTerm, activeCategory, allProducts]);
+
+    if (isCatalogLoading) {
+      const MIN_LOADER_DURATION = 1000;
+
+      if (loaderMinDelayRef.current) {
+        clearTimeout(loaderMinDelayRef.current);
+        loaderMinDelayRef.current = null;
+      }
+
+      const startedAt = loaderStartTimeRef.current;
+      if (startedAt === null) {
+        setIsCatalogLoading(false);
+        loaderStartTimeRef.current = null;
+        if (loaderMaxDelayRef.current) {
+          clearTimeout(loaderMaxDelayRef.current);
+          loaderMaxDelayRef.current = null;
+        }
+      } else {
+        const elapsed = Date.now() - startedAt;
+
+        if (elapsed >= MIN_LOADER_DURATION) {
+          setIsCatalogLoading(false);
+          loaderStartTimeRef.current = null;
+          loaderMinDelayRef.current = null;
+          if (loaderMaxDelayRef.current) {
+            clearTimeout(loaderMaxDelayRef.current);
+            loaderMaxDelayRef.current = null;
+          }
+        } else {
+          loaderMinDelayRef.current = setTimeout(() => {
+            setIsCatalogLoading(false);
+            loaderStartTimeRef.current = null;
+            loaderMinDelayRef.current = null;
+            if (loaderMaxDelayRef.current) {
+              clearTimeout(loaderMaxDelayRef.current);
+              loaderMaxDelayRef.current = null;
+            }
+          }, MIN_LOADER_DURATION - elapsed);
+        }
+      }
+    }
+  }, [
+    searchTerm,
+    activeCategory,
+    allProducts,
+    isCatalogLoading,
+  ]);
 
   const handleSelectCategory = useCallback(
     (categoryId: string) => {
       if (activeCategory === categoryId || scrollingToFilter.current) return;
 
+      if (loaderMinDelayRef.current) {
+        clearTimeout(loaderMinDelayRef.current);
+        loaderMinDelayRef.current = null;
+      }
+      if (loaderMaxDelayRef.current) {
+        clearTimeout(loaderMaxDelayRef.current);
+        loaderMaxDelayRef.current = null;
+      }
+
+      loaderStartTimeRef.current = Date.now();
       setIsCatalogLoading(true);
+      loaderMaxDelayRef.current = setTimeout(() => {
+        setIsCatalogLoading(false);
+        loaderStartTimeRef.current = null;
+        if (loaderMinDelayRef.current) {
+          clearTimeout(loaderMinDelayRef.current);
+          loaderMinDelayRef.current = null;
+        }
+        loaderMaxDelayRef.current = null;
+      }, 3000);
       setActiveCategory(categoryId);
 
       const container = filterContainerRef.current;
@@ -121,6 +188,15 @@ export default function HomePageClient({
         window.removeEventListener('scroll', scrollListenerRef.current);
         scrollListenerRef.current = null;
       }
+      if (loaderMinDelayRef.current) {
+        clearTimeout(loaderMinDelayRef.current);
+        loaderMinDelayRef.current = null;
+      }
+      if (loaderMaxDelayRef.current) {
+        clearTimeout(loaderMaxDelayRef.current);
+        loaderMaxDelayRef.current = null;
+      }
+      loaderStartTimeRef.current = null;
     };
   }, []);
 
