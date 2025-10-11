@@ -31,6 +31,7 @@ export default function HomePageClient({
   const productGridRef = useRef<HTMLDivElement>(null);
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
+  const scrollListenerRef = useRef<EventListener | null>(null);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -72,31 +73,54 @@ export default function HomePageClient({
   const handleSelectCategory = useCallback(
     (categoryId: string) => {
       if (activeCategory === categoryId || scrollingToFilter.current) return;
-      setIsCatalogLoading(true);
-      if (filterContainerRef.current) {
-        const destination = filterContainerRef.current.offsetTop;
-        scrollingToFilter.current = true;
-        window.scrollTo({ top: destination, behavior: 'smooth' });
 
-        const scrollEndListener = () => {
-          if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-          scrollTimeout.current = setTimeout(() => {
-            window.removeEventListener('scroll', scrollEndListener);
-            scrollingToFilter.current = false;
-            setActiveCategory(categoryId);
-          }, 100);
-        };
-        window.addEventListener('scroll', scrollEndListener);
-      } else {
-        setActiveCategory(categoryId);
+      setIsCatalogLoading(true);
+      setActiveCategory(categoryId);
+
+      const container = filterContainerRef.current;
+      if (!container) {
+        return;
       }
+
+      const destination = container.offsetTop;
+      scrollingToFilter.current = true;
+
+      function removeScrollHandling() {
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+          scrollTimeout.current = null;
+        }
+        if (scrollListenerRef.current) {
+          window.removeEventListener('scroll', scrollListenerRef.current);
+          scrollListenerRef.current = null;
+        }
+        scrollingToFilter.current = false;
+      }
+
+      const handleScrollEvent: EventListener = () => {
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+        }
+        scrollTimeout.current = setTimeout(removeScrollHandling, 100);
+      };
+
+      scrollListenerRef.current = handleScrollEvent;
+      window.addEventListener('scroll', handleScrollEvent);
+      window.scrollTo({ top: destination, behavior: 'smooth' });
+      scrollTimeout.current = setTimeout(removeScrollHandling, 600);
     },
     [activeCategory],
   );
 
   useEffect(() => {
     return () => {
-      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+      if (scrollListenerRef.current) {
+        window.removeEventListener('scroll', scrollListenerRef.current);
+        scrollListenerRef.current = null;
+      }
     };
   }, []);
 
@@ -105,7 +129,7 @@ export default function HomePageClient({
       <div ref={filterContainerRef}>
         <SmartStickyCategoryFilter
           onSelectCategory={handleSelectCategory}
-          initialCategory={activeCategory}
+          activeCategory={activeCategory}
           className="mb-4"
           workZoneRef={productGridRef}
           categories={categories}

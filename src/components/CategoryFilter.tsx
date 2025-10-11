@@ -98,7 +98,7 @@ export default function CategoryFilter({
                     <span
                       className="mt-1 block"
                       style={{
-                        background: 'var(--ds-color-primary, #6B80C5)',
+                        backgroundColor: 'currentColor',
                         height: '1.5px',
                         width: '100%',
                       }}
