@@ -18,7 +18,8 @@ const SCROLL_STOP_DELAY = 160;
 
 // "Контракты" хука: что он принимает и что возвращает.
 export interface SmartStickyOptions {
-  headerHeight: number; // Высота шапки над клоном.
+  headerOffset: number; // Текущий отступ от верхней границы окна до низа шапки/баннеров.
+  headerVisible: boolean; // Разрешено ли отображение клона (шапка уже на экране).
 }
 
 export interface SmartStickyResult {
@@ -34,7 +35,7 @@ export function useSmartSticky(
   workZoneRef: RefObject<HTMLElement | null>, // Ссылка на "рабочую зону".
   options: SmartStickyOptions,
 ): SmartStickyResult {
-  const { headerHeight } = options;
+  const { headerOffset, headerVisible } = options;
 
   // --- СБОР ДАННЫХ В РЕАЛЬНОМ ВРЕМЕНИ ---
   const targetRect = useElementRect(targetRef); // Размеры и позиция "оригинала".
@@ -54,12 +55,33 @@ export function useSmartSticky(
   useEffect(() => {
     if (!targetRect || !workZoneRect) return; // Ждем, пока все данные будут готовы.
 
+    if (!headerVisible) {
+      if (scrollStopTimeoutRef.current) {
+        clearTimeout(scrollStopTimeoutRef.current);
+        scrollStopTimeoutRef.current = null;
+      }
+
+      if (isVisible) {
+        setIsVisible(false);
+      }
+
+      if (shouldRender) {
+        setShouldRender(false);
+      }
+
+      if (isTransitionEnabled) {
+        setIsTransitionEnabled(false);
+      }
+
+      return;
+    }
+
     const previousScrollY = previousScrollYRef.current ?? scrollY;
     previousScrollYRef.current = scrollY;
 
-    const isOriginalVisible = targetRect.top >= headerHeight;
+    const isOriginalVisible = targetRect.top >= headerOffset;
     const workZoneBottom = workZoneRect.top + scrollY + workZoneRect.height;
-    const isInsideWorkZone = scrollY < workZoneBottom - headerHeight;
+    const isInsideWorkZone = scrollY < workZoneBottom - headerOffset;
 
     if (isOriginalVisible || !isInsideWorkZone) {
       if (scrollStopTimeoutRef.current) {
@@ -112,7 +134,8 @@ export function useSmartSticky(
     targetRect,
     workZoneRect,
     scrollY,
-    headerHeight,
+    headerOffset,
+    headerVisible,
     isVisible,
     isTransitionEnabled,
     shouldRender,
@@ -136,7 +159,7 @@ export function useSmartSticky(
       position: 'fixed',
       left: `${targetRect?.left ?? 0}px`,
       width: `${targetRect?.width ?? 0}px`,
-      top: `${headerHeight}px`,
+      top: `${headerOffset}px`,
     },
   };
 }

@@ -23,6 +23,7 @@ interface SmartStickyCategoryFilterProps {
   className?: string;
   workZoneRef: React.RefObject<HTMLElement | null>;
   categories: Category[];
+  disableStickyClone?: boolean;
 }
 
 export default function SmartStickyCategoryFilter({
@@ -31,9 +32,14 @@ export default function SmartStickyCategoryFilter({
   className = '',
   workZoneRef,
   categories,
+  disableStickyClone = false,
 }: SmartStickyCategoryFilterProps) {
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [stickyOffset, setStickyOffset] = useState(() => 64);
+  const [headerMetrics, setHeaderMetrics] = useState(() => ({
+    offset: 64,
+    visible: true,
+    height: 64,
+  }));
 
   const handleScroll = useCallback((scrollOffset: number) => {
     setScrollLeft(scrollOffset);
@@ -55,7 +61,19 @@ export default function SmartStickyCategoryFilter({
     }
 
     let resizeObserver: ResizeObserver | null = null;
-    let observedHeader: Element | null = null;
+    let observedHeader: HTMLElement | null = null;
+    let headerMutationObserver: MutationObserver | null = null;
+    let rafId: number | null = null;
+
+    const scheduleUpdate = () => {
+      if (rafId !== null) {
+        return;
+      }
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        computeOffset();
+      });
+    };
 
     const computeOffset = () => {
       const headerElement = document.querySelector<HTMLElement>(
@@ -71,43 +89,89 @@ export default function SmartStickyCategoryFilter({
         resizeObserver = new ResizeObserver(() => computeOffset());
         resizeObserver.observe(headerElement);
         observedHeader = headerElement;
-      }
 
-      const headerHeight = headerElement?.getBoundingClientRect().height;
-      const safeHeaderHeight =
-        Number.isFinite(headerHeight) && headerHeight
-          ? (headerHeight as number)
-          : DEFAULT_HEADER_HEIGHT;
+        if (!headerMutationObserver) {
+          headerMutationObserver = new MutationObserver(() => scheduleUpdate());
+        }
+        headerMutationObserver.disconnect();
+        headerMutationObserver.observe(headerElement, {
+          attributes: true,
+          attributeFilter: ['style', 'class'],
+        });
+      }
 
       const rootStyles = getComputedStyle(document.documentElement);
       const bannerOffset = parsePxValue(
         rootStyles.getPropertyValue('--site-mode-banner-offset'),
         0,
       );
-
-      const nextOffset = Math.max(0, safeHeaderHeight + bannerOffset);
-
-      setStickyOffset((current) =>
-        Math.abs(current - nextOffset) > 0.5 ? nextOffset : current,
+      const fallbackHeight = parsePxValue(
+        rootStyles.getPropertyValue('--header-height'),
+        DEFAULT_HEADER_HEIGHT,
       );
+
+      let safeHeaderHeight = fallbackHeight;
+      let visualBottom = bannerOffset + fallbackHeight;
+
+      if (headerElement) {
+        const rect = headerElement.getBoundingClientRect();
+        const headerHeight = rect?.height;
+        if (Number.isFinite(headerHeight) && headerHeight) {
+          safeHeaderHeight = headerHeight as number;
+        }
+
+        const bottom = rect?.bottom;
+        if (Number.isFinite(bottom)) {
+          visualBottom = Math.max(bannerOffset, bottom as number);
+        } else {
+          visualBottom = bannerOffset + safeHeaderHeight;
+        }
+      }
+
+      const isHeaderVisible = visualBottom - bannerOffset > 0.5;
+
+      setHeaderMetrics((current) => {
+        const offsetDiff = Math.abs(current.offset - visualBottom);
+        const heightDiff = Math.abs(current.height - safeHeaderHeight);
+        if (
+          offsetDiff <= 0.5 &&
+          heightDiff <= 0.5 &&
+          current.visible === isHeaderVisible
+        ) {
+          return current;
+        }
+
+        return {
+          offset: visualBottom,
+          height: safeHeaderHeight,
+          visible: isHeaderVisible,
+        };
+      });
     };
 
-    const handleResize = () => computeOffset();
+    const handleResize = () => scheduleUpdate();
     window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleResize, { passive: true });
 
-    const mutationObserver = new MutationObserver(() => computeOffset());
+    const mutationObserver = new MutationObserver(() => scheduleUpdate());
     mutationObserver.observe(document.body, {
       attributes: true,
       attributeFilter: ['class'],
+      childList: true,
+      subtree: true,
     });
 
-    const rafId = window.requestAnimationFrame(computeOffset);
+    scheduleUpdate();
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleResize);
       mutationObserver.disconnect();
       resizeObserver?.disconnect();
-      window.cancelAnimationFrame(rafId);
+      headerMutationObserver?.disconnect();
+      if (rafId !== null) {
+        window.cancelAnimationFrame(rafId);
+      }
     };
   }, []);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -119,7 +183,10 @@ export default function SmartStickyCategoryFilter({
     isVisible,
     placeholderHeight,
     stickyStyles,
-  } = useSmartSticky(filterRef, workZoneRef, { headerHeight: stickyOffset });
+  } = useSmartSticky(filterRef, workZoneRef, {
+    headerOffset: headerMetrics.offset,
+    headerVisible: headerMetrics.visible && !disableStickyClone,
+  });
 
   const [isMounted, setIsMounted] = useState(false);
 
