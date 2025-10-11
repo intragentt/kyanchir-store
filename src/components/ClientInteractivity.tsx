@@ -19,21 +19,29 @@ export default function ClientInteractivity() {
   const scrollYRef = useRef(0);
 
   useEffect(() => {
+    const body = document.body;
+    const root = document.documentElement;
     if (isMenuOpen) {
       scrollYRef.current = window.scrollY;
-      document.body.style.position = 'fixed';
-      document.body.style.width = '100%';
-      document.body.style.top = `-${scrollYRef.current}px`;
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+      body.style.overflow = 'hidden';
+      root.style.overflow = 'hidden';
+
+      if (scrollbarWidth > 0) {
+        body.style.paddingRight = `${scrollbarWidth}px`;
+      }
     } else {
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.top = '';
+      body.style.overflow = '';
+      body.style.paddingRight = '';
+      root.style.overflow = '';
       window.scrollTo(0, scrollYRef.current);
     }
+
     return () => {
-      document.body.style.position = '';
-      document.body.style.width = '';
-      document.body.style.top = '';
+      body.style.overflow = '';
+      body.style.paddingRight = '';
+      root.style.overflow = '';
     };
   }, [isMenuOpen]);
 
