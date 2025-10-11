@@ -9,8 +9,6 @@ import { ProductWithInfo } from '@/lib/types';
 
 const DEFAULT_HEADER_HEIGHT = 64;
 const SCROLL_ALIGNMENT_TOLERANCE = 2;
-const MAX_SCROLL_CORRECTION_ATTEMPTS = 4;
-const SCROLL_ALIGNMENT_RECHECK_DELAY = 80;
 const SCROLL_IDLE_DELAY = 140;
 const SCROLL_FALLBACK_DELAY = 900;
 
@@ -50,7 +48,8 @@ export default function HomePageClient({
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const scrollListenerRef = useRef<EventListener | null>(null);
-  const scrollCorrectionAttemptsRef = useRef(0);
+  const targetClearanceRef = useRef(0);
+  const alignmentModeRef = useRef<'top' | 'header'>('top');
   const loaderStartTimeRef = useRef<number | null>(null);
   const loaderMinDelayRef = useRef<NodeJS.Timeout | null>(null);
   const loaderMaxDelayRef = useRef<NodeJS.Timeout | null>(null);
@@ -223,20 +222,25 @@ export default function HomePageClient({
         return;
       }
 
-      const { offset, visible, bannerOffset } = measureHeader();
-      setDisableStickyClone(!visible);
+      const { visible, bannerOffset, height } = measureHeader();
+
+      const shouldAlignToHeader = containerRect.top < 0 && !visible;
+
+      alignmentModeRef.current = shouldAlignToHeader ? 'header' : 'top';
+      setDisableStickyClone(!shouldAlignToHeader);
+
+      const headerClearance = shouldAlignToHeader
+        ? Math.max(0, bannerOffset + height)
+        : 0;
+      targetClearanceRef.current = headerClearance;
 
       const currentScroll = window.scrollY;
       const containerRect = container.getBoundingClientRect();
       const absoluteTop = currentScroll + containerRect.top;
 
-      const headerClearance = Math.max(0, offset);
-      const baselineClearance = Math.max(0, bannerOffset);
-      const effectiveClearance = Math.max(headerClearance, baselineClearance);
-      const destination = Math.max(0, absoluteTop - effectiveClearance);
+      const destination = Math.max(0, absoluteTop - targetClearanceRef.current);
 
       scrollingToFilter.current = true;
-      scrollCorrectionAttemptsRef.current = 0;
 
       const cleanupAfterScroll = () => {
         if (scrollTimeout.current) {
@@ -248,7 +252,6 @@ export default function HomePageClient({
           scrollListenerRef.current = null;
         }
         scrollingToFilter.current = false;
-        scrollCorrectionAttemptsRef.current = 0;
         setDisableStickyClone(false);
       };
 
@@ -260,21 +263,23 @@ export default function HomePageClient({
           return;
         }
 
-        const { offset: currentOffset, bannerOffset: currentBannerOffset } =
-          measureHeader();
-        const desiredTop = Math.max(currentOffset, currentBannerOffset);
+        const currentHeaderMetrics = measureHeader();
+        if (alignmentModeRef.current === 'header') {
+          targetClearanceRef.current = Math.max(
+            0,
+            currentHeaderMetrics.bannerOffset + currentHeaderMetrics.height,
+          );
+        } else {
+          targetClearanceRef.current = 0;
+        }
+
+        const desiredTop = targetClearanceRef.current;
         const containerRect = currentContainer.getBoundingClientRect();
         const adjustment = desiredTop - containerRect.top;
-        const shouldAdjust =
-          Math.abs(adjustment) > SCROLL_ALIGNMENT_TOLERANCE &&
-          scrollCorrectionAttemptsRef.current < MAX_SCROLL_CORRECTION_ATTEMPTS;
 
-        if (shouldAdjust) {
-          scrollCorrectionAttemptsRef.current += 1;
+        if (Math.abs(adjustment) > SCROLL_ALIGNMENT_TOLERANCE) {
           const nextScrollTop = Math.max(0, window.scrollY + adjustment);
           window.scrollTo({ top: nextScrollTop, behavior: 'auto' });
-          scheduleFinalize(SCROLL_ALIGNMENT_RECHECK_DELAY);
-          return;
         }
 
         cleanupAfterScroll();
@@ -313,7 +318,6 @@ export default function HomePageClient({
         window.removeEventListener('scroll', scrollListenerRef.current);
         scrollListenerRef.current = null;
       }
-      scrollCorrectionAttemptsRef.current = 0;
       if (loaderMinDelayRef.current) {
         clearTimeout(loaderMinDelayRef.current);
         loaderMinDelayRef.current = null;
