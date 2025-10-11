@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import CategoryFilter from '@/components/CategoryFilter';
 
 // --- НАЧАЛО ИЗМЕНЕНИЙ: Обновляем "должностную инструкцию" (Props) ---
@@ -49,20 +50,25 @@ export default function StickyCategoryFilter({
   }, [isVisible]);
 
   const wrapperClasses = [
-    'fixed w-full z-[151]',
-    'will-change-transform',
+    'fixed left-0 right-0 w-full z-[151]',
     'transition-transform duration-300 ease-in-out',
     isVisible ? 'transform-none' : '-translate-y-full',
   ]
     .filter(Boolean)
     .join(' ');
 
+  const safeAreaTop = 'env(safe-area-inset-top, 0px)';
+  const wrapperStyle: CSSProperties & { '--safe-area-top'?: string } = {
+    '--safe-area-top': safeAreaTop,
+    top: `calc(${topPosition}px + var(--safe-area-top))`,
+    paddingTop: 'var(--safe-area-top)',
+  };
+
   return (
     <div
       ref={containerRef}
       className={wrapperClasses}
-      style={{ top: `${topPosition}px` }}
-      aria-hidden={isVisible ? undefined : true}
+      style={wrapperStyle}
     >
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Передаем все "инструменты" дальше, в сам фильтр --- */}
       <CategoryFilter
