@@ -48,6 +48,8 @@ export default function HomePageClient({
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const scrollListenerRef = useRef<EventListener | null>(null);
+  const targetClearanceRef = useRef(0);
+  const alignmentModeRef = useRef<'top' | 'header'>('top');
   const loaderStartTimeRef = useRef<number | null>(null);
   const loaderMinDelayRef = useRef<NodeJS.Timeout | null>(null);
   const loaderMaxDelayRef = useRef<NodeJS.Timeout | null>(null);
@@ -220,17 +222,23 @@ export default function HomePageClient({
         return;
       }
 
-      const { offset, visible, bannerOffset } = measureHeader();
-      setDisableStickyClone(visible);
+      const { visible, bannerOffset, height } = measureHeader();
+
+      const shouldAlignToHeader = containerRect.top < 0 && !visible;
+
+      alignmentModeRef.current = shouldAlignToHeader ? 'header' : 'top';
+      setDisableStickyClone(!shouldAlignToHeader);
+
+      const headerClearance = shouldAlignToHeader
+        ? Math.max(0, bannerOffset + height)
+        : 0;
+      targetClearanceRef.current = headerClearance;
 
       const currentScroll = window.scrollY;
       const containerRect = container.getBoundingClientRect();
       const absoluteTop = currentScroll + containerRect.top;
 
-      const headerClearance = Math.max(0, offset);
-      const baselineClearance = Math.max(0, bannerOffset);
-      const effectiveClearance = Math.max(headerClearance, baselineClearance);
-      const destination = Math.max(0, absoluteTop - effectiveClearance);
+      const destination = Math.max(0, absoluteTop - targetClearanceRef.current);
 
       scrollingToFilter.current = true;
 
@@ -255,9 +263,17 @@ export default function HomePageClient({
           return;
         }
 
-        const { offset: currentOffset, bannerOffset: currentBannerOffset } =
-          measureHeader();
-        const desiredTop = Math.max(currentOffset, currentBannerOffset);
+        const currentHeaderMetrics = measureHeader();
+        if (alignmentModeRef.current === 'header') {
+          targetClearanceRef.current = Math.max(
+            0,
+            currentHeaderMetrics.bannerOffset + currentHeaderMetrics.height,
+          );
+        } else {
+          targetClearanceRef.current = 0;
+        }
+
+        const desiredTop = targetClearanceRef.current;
         const containerRect = currentContainer.getBoundingClientRect();
         const adjustment = desiredTop - containerRect.top;
 
