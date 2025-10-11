@@ -31,6 +31,10 @@ export default function HomePageClient({
   const productGridRef = useRef<HTMLDivElement>(null);
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
+  const scrollListenerRef = useRef<EventListener | null>(null);
+  const loaderStartTimeRef = useRef<number | null>(null);
+  const loaderMinDelayRef = useRef<NodeJS.Timeout | null>(null);
+  const loaderMaxDelayRef = useRef<NodeJS.Timeout | null>(null);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -66,37 +70,133 @@ export default function HomePageClient({
       );
     }
     setFilteredProducts(productsToFilter);
-    setIsCatalogLoading(false);
-  }, [searchTerm, activeCategory, allProducts]);
+
+    if (isCatalogLoading) {
+      const MIN_LOADER_DURATION = 1000;
+
+      if (loaderMinDelayRef.current) {
+        clearTimeout(loaderMinDelayRef.current);
+        loaderMinDelayRef.current = null;
+      }
+
+      const startedAt = loaderStartTimeRef.current;
+      if (startedAt === null) {
+        setIsCatalogLoading(false);
+        loaderStartTimeRef.current = null;
+        if (loaderMaxDelayRef.current) {
+          clearTimeout(loaderMaxDelayRef.current);
+          loaderMaxDelayRef.current = null;
+        }
+      } else {
+        const elapsed = Date.now() - startedAt;
+
+        if (elapsed >= MIN_LOADER_DURATION) {
+          setIsCatalogLoading(false);
+          loaderStartTimeRef.current = null;
+          loaderMinDelayRef.current = null;
+          if (loaderMaxDelayRef.current) {
+            clearTimeout(loaderMaxDelayRef.current);
+            loaderMaxDelayRef.current = null;
+          }
+        } else {
+          loaderMinDelayRef.current = setTimeout(() => {
+            setIsCatalogLoading(false);
+            loaderStartTimeRef.current = null;
+            loaderMinDelayRef.current = null;
+            if (loaderMaxDelayRef.current) {
+              clearTimeout(loaderMaxDelayRef.current);
+              loaderMaxDelayRef.current = null;
+            }
+          }, MIN_LOADER_DURATION - elapsed);
+        }
+      }
+    }
+  }, [
+    searchTerm,
+    activeCategory,
+    allProducts,
+    isCatalogLoading,
+  ]);
 
   const handleSelectCategory = useCallback(
     (categoryId: string) => {
       if (activeCategory === categoryId || scrollingToFilter.current) return;
-      setIsCatalogLoading(true);
-      if (filterContainerRef.current) {
-        const destination = filterContainerRef.current.offsetTop;
-        scrollingToFilter.current = true;
-        window.scrollTo({ top: destination, behavior: 'smooth' });
 
-        const scrollEndListener = () => {
-          if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-          scrollTimeout.current = setTimeout(() => {
-            window.removeEventListener('scroll', scrollEndListener);
-            scrollingToFilter.current = false;
-            setActiveCategory(categoryId);
-          }, 100);
-        };
-        window.addEventListener('scroll', scrollEndListener);
-      } else {
-        setActiveCategory(categoryId);
+      if (loaderMinDelayRef.current) {
+        clearTimeout(loaderMinDelayRef.current);
+        loaderMinDelayRef.current = null;
       }
+      if (loaderMaxDelayRef.current) {
+        clearTimeout(loaderMaxDelayRef.current);
+        loaderMaxDelayRef.current = null;
+      }
+
+      loaderStartTimeRef.current = Date.now();
+      setIsCatalogLoading(true);
+      loaderMaxDelayRef.current = setTimeout(() => {
+        setIsCatalogLoading(false);
+        loaderStartTimeRef.current = null;
+        if (loaderMinDelayRef.current) {
+          clearTimeout(loaderMinDelayRef.current);
+          loaderMinDelayRef.current = null;
+        }
+        loaderMaxDelayRef.current = null;
+      }, 3000);
+      setActiveCategory(categoryId);
+
+      const container = filterContainerRef.current;
+      if (!container) {
+        return;
+      }
+
+      const destination = container.offsetTop;
+      scrollingToFilter.current = true;
+
+      function removeScrollHandling() {
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+          scrollTimeout.current = null;
+        }
+        if (scrollListenerRef.current) {
+          window.removeEventListener('scroll', scrollListenerRef.current);
+          scrollListenerRef.current = null;
+        }
+        scrollingToFilter.current = false;
+      }
+
+      const handleScrollEvent: EventListener = () => {
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+        }
+        scrollTimeout.current = setTimeout(removeScrollHandling, 100);
+      };
+
+      scrollListenerRef.current = handleScrollEvent;
+      window.addEventListener('scroll', handleScrollEvent);
+      window.scrollTo({ top: destination, behavior: 'smooth' });
+      scrollTimeout.current = setTimeout(removeScrollHandling, 600);
     },
     [activeCategory],
   );
 
   useEffect(() => {
     return () => {
-      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+      if (scrollListenerRef.current) {
+        window.removeEventListener('scroll', scrollListenerRef.current);
+        scrollListenerRef.current = null;
+      }
+      if (loaderMinDelayRef.current) {
+        clearTimeout(loaderMinDelayRef.current);
+        loaderMinDelayRef.current = null;
+      }
+      if (loaderMaxDelayRef.current) {
+        clearTimeout(loaderMaxDelayRef.current);
+        loaderMaxDelayRef.current = null;
+      }
+      loaderStartTimeRef.current = null;
     };
   }, []);
 
@@ -105,7 +205,7 @@ export default function HomePageClient({
       <div ref={filterContainerRef}>
         <SmartStickyCategoryFilter
           onSelectCategory={handleSelectCategory}
-          initialCategory={activeCategory}
+          activeCategory={activeCategory}
           className="mb-4"
           workZoneRef={productGridRef}
           categories={categories}
