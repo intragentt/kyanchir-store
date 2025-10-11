@@ -26,6 +26,13 @@ interface SmartStickyCategoryFilterProps {
   disableStickyClone?: boolean;
 }
 
+interface HeaderMetrics {
+  offset: number;
+  visible: boolean;
+  height: number;
+  viewportOffsetTop: number;
+}
+
 export default function SmartStickyCategoryFilter({
   onSelectCategory,
   activeCategory = 'all',
@@ -35,10 +42,11 @@ export default function SmartStickyCategoryFilter({
   disableStickyClone = false,
 }: SmartStickyCategoryFilterProps) {
   const [scrollLeft, setScrollLeft] = useState(0);
-  const [headerMetrics, setHeaderMetrics] = useState(() => ({
+  const [headerMetrics, setHeaderMetrics] = useState<HeaderMetrics>(() => ({
     offset: 64,
     visible: true,
     height: 64,
+    viewportOffsetTop: 0,
   }));
 
   const handleScroll = useCallback((scrollOffset: number) => {
@@ -128,14 +136,17 @@ export default function SmartStickyCategoryFilter({
         }
       }
 
+      const viewportOffsetTop = window.visualViewport?.offsetTop ?? 0;
       const isHeaderVisible = visualBottom - bannerOffset > 0.5;
 
       setHeaderMetrics((current) => {
         const offsetDiff = Math.abs(current.offset - visualBottom);
         const heightDiff = Math.abs(current.height - safeHeaderHeight);
+        const viewportDiff = Math.abs(current.viewportOffsetTop - viewportOffsetTop);
         if (
           offsetDiff <= 0.5 &&
           heightDiff <= 0.5 &&
+          viewportDiff <= 0.5 &&
           current.visible === isHeaderVisible
         ) {
           return current;
@@ -145,6 +156,7 @@ export default function SmartStickyCategoryFilter({
           offset: visualBottom,
           height: safeHeaderHeight,
           visible: isHeaderVisible,
+          viewportOffsetTop,
         };
       });
     };
@@ -152,6 +164,12 @@ export default function SmartStickyCategoryFilter({
     const handleResize = () => scheduleUpdate();
     window.addEventListener('resize', handleResize);
     window.addEventListener('scroll', handleResize, { passive: true });
+
+    const visualViewport = window.visualViewport;
+    if (visualViewport) {
+      visualViewport.addEventListener('resize', handleResize);
+      visualViewport.addEventListener('scroll', handleResize);
+    }
 
     const mutationObserver = new MutationObserver(() => scheduleUpdate());
     mutationObserver.observe(document.body, {
@@ -166,6 +184,10 @@ export default function SmartStickyCategoryFilter({
     return () => {
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('scroll', handleResize);
+      if (visualViewport) {
+        visualViewport.removeEventListener('resize', handleResize);
+        visualViewport.removeEventListener('scroll', handleResize);
+      }
       mutationObserver.disconnect();
       resizeObserver?.disconnect();
       headerMutationObserver?.disconnect();
@@ -185,7 +207,8 @@ export default function SmartStickyCategoryFilter({
     stickyStyles,
   } = useSmartSticky(filterRef, workZoneRef, {
     headerOffset: headerMetrics.offset,
-    headerVisible: headerMetrics.visible && !disableStickyClone,
+    viewportOffsetTop: headerMetrics.viewportOffsetTop,
+    renderAllowed: !disableStickyClone,
   });
 
   const [isMounted, setIsMounted] = useState(false);
