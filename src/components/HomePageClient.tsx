@@ -8,6 +8,11 @@ import SmartStickyCategoryFilter from '@/components/SmartStickyCategoryFilter';
 import { ProductWithInfo } from '@/lib/types';
 
 const DEFAULT_HEADER_HEIGHT = 64;
+const SCROLL_ALIGNMENT_TOLERANCE = 2;
+const MAX_SCROLL_CORRECTION_ATTEMPTS = 4;
+const SCROLL_ALIGNMENT_RECHECK_DELAY = 80;
+const SCROLL_IDLE_DELAY = 140;
+const SCROLL_FALLBACK_DELAY = 900;
 
 const parsePxValue = (
   value: string | null | undefined,
@@ -45,6 +50,7 @@ export default function HomePageClient({
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const scrollListenerRef = useRef<EventListener | null>(null);
+  const scrollCorrectionAttemptsRef = useRef(0);
   const loaderStartTimeRef = useRef<number | null>(null);
   const loaderMinDelayRef = useRef<NodeJS.Timeout | null>(null);
   const loaderMaxDelayRef = useRef<NodeJS.Timeout | null>(null);
@@ -230,8 +236,9 @@ export default function HomePageClient({
       const destination = Math.max(0, absoluteTop - effectiveClearance);
 
       scrollingToFilter.current = true;
+      scrollCorrectionAttemptsRef.current = 0;
 
-      function removeScrollHandling() {
+      const cleanupAfterScroll = () => {
         if (scrollTimeout.current) {
           clearTimeout(scrollTimeout.current);
           scrollTimeout.current = null;
@@ -241,20 +248,55 @@ export default function HomePageClient({
           scrollListenerRef.current = null;
         }
         scrollingToFilter.current = false;
+        scrollCorrectionAttemptsRef.current = 0;
         setDisableStickyClone(false);
+      };
+
+      function finalizeScroll() {
+        const currentContainer = filterContainerRef.current;
+
+        if (!currentContainer) {
+          cleanupAfterScroll();
+          return;
+        }
+
+        const { offset: currentOffset, bannerOffset: currentBannerOffset } =
+          measureHeader();
+        const desiredTop = Math.max(currentOffset, currentBannerOffset);
+        const containerRect = currentContainer.getBoundingClientRect();
+        const adjustment = desiredTop - containerRect.top;
+        const shouldAdjust =
+          Math.abs(adjustment) > SCROLL_ALIGNMENT_TOLERANCE &&
+          scrollCorrectionAttemptsRef.current < MAX_SCROLL_CORRECTION_ATTEMPTS;
+
+        if (shouldAdjust) {
+          scrollCorrectionAttemptsRef.current += 1;
+          const nextScrollTop = Math.max(0, window.scrollY + adjustment);
+          window.scrollTo({ top: nextScrollTop, behavior: 'auto' });
+          scheduleFinalize(SCROLL_ALIGNMENT_RECHECK_DELAY);
+          return;
+        }
+
+        cleanupAfterScroll();
       }
 
-      const handleScrollEvent: EventListener = () => {
+      function scheduleFinalize(delay: number) {
         if (scrollTimeout.current) {
           clearTimeout(scrollTimeout.current);
         }
-        scrollTimeout.current = setTimeout(removeScrollHandling, 100);
+        scrollTimeout.current = setTimeout(() => {
+          finalizeScroll();
+        }, delay);
+      }
+
+      const handleScrollEvent: EventListener = () => {
+        scheduleFinalize(SCROLL_IDLE_DELAY);
       };
 
       scrollListenerRef.current = handleScrollEvent;
-      window.addEventListener('scroll', handleScrollEvent);
+      window.addEventListener('scroll', handleScrollEvent, { passive: true });
       window.scrollTo({ top: destination, behavior: 'smooth' });
-      scrollTimeout.current = setTimeout(removeScrollHandling, 600);
+      scheduleFinalize(SCROLL_FALLBACK_DELAY);
     },
     [
       activeCategory,
@@ -271,6 +313,7 @@ export default function HomePageClient({
         window.removeEventListener('scroll', scrollListenerRef.current);
         scrollListenerRef.current = null;
       }
+      scrollCorrectionAttemptsRef.current = 0;
       if (loaderMinDelayRef.current) {
         clearTimeout(loaderMinDelayRef.current);
         loaderMinDelayRef.current = null;
