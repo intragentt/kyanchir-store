@@ -206,7 +206,7 @@ export default function SmartStickyCategoryFilter({
   }, [shouldRender, isTransitionEnabled, isVisible]);
 
   const stickyWrapperClasses = [
-    'fixed w-full z-40 bg-white',
+    'fixed z-40',
     isTransitionEnabled
       ? 'transition-transform transition-opacity duration-200 ease-out'
       : '',
@@ -216,6 +216,9 @@ export default function SmartStickyCategoryFilter({
     .join(' ');
 
   const shouldHideOriginal = shouldRender;
+  const combinedClassName = ['w-full bg-white', className]
+    .filter(Boolean)
+    .join(' ');
 
   const originalWrapperStyle: CSSProperties = {
     height: shouldRender || isMounted ? placeholderHeight : 'auto',
@@ -229,7 +232,7 @@ export default function SmartStickyCategoryFilter({
       <div
         ref={filterRef}
         style={originalWrapperStyle}
-        className={`w-full bg-white ${className}`}
+        className={combinedClassName}
         aria-hidden={shouldHideOriginal || undefined}
       >
         <CategoryFilter
@@ -244,10 +247,10 @@ export default function SmartStickyCategoryFilter({
       {isMounted && (
         <div
           style={stickyStyles}
-          className={`${stickyWrapperClasses} py-3`}
+          className={stickyWrapperClasses}
           aria-hidden={!shouldHideOriginal || undefined}
         >
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
+          <div className={combinedClassName}>
             <CategoryFilter
               onSelectCategory={onSelectCategory}
               activeCategory={activeCategory}

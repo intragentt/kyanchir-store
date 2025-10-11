@@ -55,7 +55,9 @@ export function useSmartSticky(
   useEffect(() => {
     if (!targetRect || !workZoneRect) return; // Ждем, пока все данные будут готовы.
 
-    if (!headerVisible) {
+    const gateOpen = headerVisible || shouldRender || isVisible;
+
+    if (!gateOpen) {
       if (scrollStopTimeoutRef.current) {
         clearTimeout(scrollStopTimeoutRef.current);
         scrollStopTimeoutRef.current = null;
@@ -73,6 +75,7 @@ export function useSmartSticky(
         setIsTransitionEnabled(false);
       }
 
+      previousScrollYRef.current = null;
       return;
     }
 
@@ -159,7 +162,7 @@ export function useSmartSticky(
       position: 'fixed',
       left: `${targetRect?.left ?? 0}px`,
       width: `${targetRect?.width ?? 0}px`,
-      top: `${headerOffset}px`,
+      top: `${Math.max(headerOffset, 0)}px`,
     },
   };
 }

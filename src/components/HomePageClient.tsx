@@ -134,7 +134,12 @@ export default function HomePageClient({
 
   const measureHeader = useCallback(() => {
     if (typeof window === 'undefined') {
-      return { offset: 0, visible: false };
+      return {
+        offset: 0,
+        visible: false,
+        height: DEFAULT_HEADER_HEIGHT,
+        bannerOffset: 0,
+      };
     }
 
     const rootStyles = getComputedStyle(document.documentElement);
@@ -156,6 +161,8 @@ export default function HomePageClient({
       return {
         offset: fallbackOffset,
         visible: fallbackOffset - bannerOffset > 0.5,
+        height: fallbackHeight,
+        bannerOffset,
       };
     }
 
@@ -164,7 +171,9 @@ export default function HomePageClient({
     const bottom = rect?.bottom;
 
     const safeHeight =
-      Number.isFinite(height) && height ? (height as number) : fallbackHeight;
+      typeof height === 'number' && Number.isFinite(height)
+        ? height
+        : fallbackHeight;
     const safeBottom = Number.isFinite(bottom)
       ? Math.max(bannerOffset, bottom as number)
       : bannerOffset + safeHeight;
@@ -172,6 +181,8 @@ export default function HomePageClient({
     return {
       offset: safeBottom,
       visible: safeBottom - bannerOffset > 0.5,
+      height: safeHeight,
+      bannerOffset,
     };
   }, []);
 
@@ -206,10 +217,26 @@ export default function HomePageClient({
         return;
       }
 
-      const { offset, visible } = measureHeader();
-      setDisableStickyClone((current) => (visible ? false : true));
+      const { offset, visible, height, bannerOffset } = measureHeader();
+      setDisableStickyClone(!visible);
 
-      const destination = Math.max(0, container.offsetTop - offset);
+      const currentScroll = window.scrollY;
+      const containerRect = container.getBoundingClientRect();
+      const absoluteTop = currentScroll + containerRect.top;
+      const safeOffset = Math.max(0, offset);
+      const baseOffset = Math.max(0, bannerOffset);
+
+      let destination = Math.max(0, absoluteTop - safeOffset);
+
+      if (destination > currentScroll && visible) {
+        const safeHeight = Number.isFinite(height)
+          ? height
+          : DEFAULT_HEADER_HEIGHT;
+        const fallbackBaseline = Math.max(0, safeOffset - safeHeight);
+        const effectiveBaseline = Math.max(baseOffset, fallbackBaseline);
+        destination = Math.max(0, absoluteTop - effectiveBaseline);
+      }
+
       scrollingToFilter.current = true;
 
       function removeScrollHandling() {
