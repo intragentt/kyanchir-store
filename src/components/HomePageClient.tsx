@@ -26,6 +26,7 @@ export default function HomePageClient({
     useState<ProductWithInfo[]>(initialProducts);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isCatalogLoading, setIsCatalogLoading] = useState(false);
   const filterContainerRef = useRef<HTMLDivElement>(null);
   const productGridRef = useRef<HTMLDivElement>(null);
   const scrollingToFilter = useRef(false);
@@ -65,11 +66,13 @@ export default function HomePageClient({
       );
     }
     setFilteredProducts(productsToFilter);
+    setIsCatalogLoading(false);
   }, [searchTerm, activeCategory, allProducts]);
 
   const handleSelectCategory = useCallback(
     (categoryId: string) => {
       if (activeCategory === categoryId || scrollingToFilter.current) return;
+      setIsCatalogLoading(true);
       if (filterContainerRef.current) {
         const destination = filterContainerRef.current.offsetTop;
         scrollingToFilter.current = true;
@@ -109,7 +112,7 @@ export default function HomePageClient({
         />
       </div>
       <div ref={productGridRef} className="relative min-h-[200vh]">
-        <CatalogContent products={filteredProducts} isLoading={false} />
+        <CatalogContent products={filteredProducts} isLoading={isCatalogLoading} />
       </div>
     </>
   );
