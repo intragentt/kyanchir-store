@@ -41,7 +41,7 @@ export interface AdminUserRecord {
   /**
    * 🔢 Человеко-понятный идентификатор для отображения в таблице
    */
-  displayId: number;
+  displayId: string;
   firstName: string | null;
   lastName: string | null;
   fullName: string;
@@ -59,8 +59,6 @@ export interface AdminUserRecord {
    */
   bonusPoints: number;
 }
-
-type AdminUserRecordBase = Omit<AdminUserRecord, 'displayId'>;
 
 /**
  * 📈 Общая статистика по выборке пользователей
@@ -89,6 +87,28 @@ const DEFAULT_PAGE = 1;
 const DEFAULT_PER_PAGE = 20;
 const MAX_PER_PAGE = 100;
 const MAX_SAMPLE_FOR_NAME_SEARCH = 300;
+
+const DISPLAY_ID_SECTION_LENGTH = 4;
+
+function buildDisplayId(userId: string): string {
+  const normalized = userId?.trim() ?? '';
+
+  if (!normalized) {
+    return 'UNKNOWN';
+  }
+
+  const alphanumeric = normalized.replace(/[^a-zA-Z0-9]/g, '');
+  const source = alphanumeric || normalized;
+
+  if (source.length <= DISPLAY_ID_SECTION_LENGTH * 2) {
+    return source.toUpperCase();
+  }
+
+  const prefix = source.slice(0, DISPLAY_ID_SECTION_LENGTH);
+  const suffix = source.slice(-DISPLAY_ID_SECTION_LENGTH);
+
+  return `${prefix}-${suffix}`.toUpperCase();
+}
 
 function normalizeRole(role: string | undefined | null): string | undefined {
   if (!role || role === 'all') return undefined;
@@ -194,9 +214,9 @@ function buildWhereClause(query: AdminUsersQuery): Prisma.UserWhereInput {
 }
 
 function filterByNameIfNeeded(
-  records: AdminUserRecordBase[],
+  records: AdminUserRecord[],
   searchTerm: string | undefined,
-): AdminUserRecordBase[] {
+): AdminUserRecord[] {
   if (!searchTerm) {
     return records;
   }
@@ -218,7 +238,7 @@ function mapToAdminRecord(user: Prisma.UserGetPayload<{
     _count: { select: { orders: true } };
     sessions: { select: { expires: true }; orderBy: { expires: 'desc' }; take: 1 };
   };
-}>): AdminUserRecordBase {
+}>): AdminUserRecord {
   const firstName = safeDecrypt(user.name_encrypted);
   const lastName = safeDecrypt(user.surname_encrypted);
   const email = safeDecrypt(user.email_encrypted);
@@ -231,6 +251,7 @@ function mapToAdminRecord(user: Prisma.UserGetPayload<{
 
   return {
     id: user.id,
+    displayId: buildDisplayId(user.id),
     firstName,
     lastName,
     fullName: [firstName, lastName].filter(Boolean).join(' ').trim() || 'Без имени',
@@ -333,20 +354,15 @@ export async function fetchAdminUsers(
   const start = (page - 1) * perPage;
   const paginated = (isNameSearch || requiresManualSort
     ? manuallySorted.slice(start, start + perPage)
-    : manuallySorted) satisfies AdminUserRecordBase[];
+    : manuallySorted) satisfies AdminUserRecord[];
 
   console.log('✅ admin/users: пользователи загружены', {
     count: paginated.length,
     total,
   });
 
-  const withDisplayIds = paginated.map((record, index) => ({
-    ...record,
-    displayId: start + index + 1,
-  }));
-
   return {
-    users: withDisplayIds,
+    users: paginated,
     page,
     perPage,
     total,

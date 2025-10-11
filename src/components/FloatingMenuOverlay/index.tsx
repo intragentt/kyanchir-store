@@ -55,9 +55,10 @@ export default function FloatingMenuOverlay({
       <div
         ref={overlayRef}
         id="floating-menu-overlay"
-        className={`fixed inset-0 z-[100] flex flex-col overflow-y-auto bg-white transition-opacity duration-300 ease-in-out ${
+        className={`fixed bottom-0 left-0 right-0 z-[100] flex flex-col overflow-y-auto bg-white transition-opacity duration-300 ease-in-out ${
           isOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
+        style={{ top: 'var(--site-mode-banner-offset, 0px)' }}
         aria-hidden={isOpen ? undefined : true}
         role="dialog"
         aria-modal="true"
