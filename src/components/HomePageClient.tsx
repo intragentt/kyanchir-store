@@ -221,7 +221,7 @@ export default function HomePageClient({
       }
 
       const { offset, visible, bannerOffset } = measureHeader();
-      setDisableStickyClone(!visible);
+      setDisableStickyClone(visible);
 
       const currentScroll = window.scrollY;
       const containerRect = container.getBoundingClientRect();
