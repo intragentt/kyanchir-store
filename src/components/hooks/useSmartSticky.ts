@@ -29,6 +29,12 @@ export function useSmartSticky(
 ): SmartStickyResult {
   const { headerOffset, viewportOffsetTop, renderAllowed } = options;
 
+  const stickyViewportTop = Math.max(
+    headerOffset + viewportOffsetTop,
+    viewportOffsetTop,
+    0,
+  );
+
   // --- СБОР ДАННЫХ В РЕАЛЬНОМ ВРЕМЕНИ ---
   const targetRect = useElementRect(targetRef); // Размеры и позиция "оригинала".
   const workZoneRect = useElementRect(workZoneRef); // Размеры и позиция "рабочей зоны".
@@ -56,15 +62,17 @@ export function useSmartSticky(
     const STICK_EPSILON = 0.5;
     const RELEASE_BUFFER = 8;
 
-    const stickThreshold = headerOffset + viewportOffsetTop + STICK_EPSILON;
-    const releaseThreshold = headerOffset + viewportOffsetTop + RELEASE_BUFFER;
-
+    const targetDocumentTop = targetRect.top + scrollY;
+    const stickyDocumentTop = scrollY + stickyViewportTop;
     const workZoneBottom = workZoneRect.top + scrollY + workZoneRect.height;
-    const stickyDocumentTop = scrollY + Math.max(headerOffset + viewportOffsetTop, viewportOffsetTop, 0);
+
+    const stickThreshold = stickyDocumentTop + STICK_EPSILON;
+    const releaseThreshold = stickyDocumentTop + RELEASE_BUFFER;
+
     const isInsideWorkZone = stickyDocumentTop < workZoneBottom - STICK_EPSILON;
 
-    const hasReachedStickPoint = targetRect.top <= stickThreshold;
-    const isPastReleasePoint = targetRect.top >= releaseThreshold;
+    const hasReachedStickPoint = targetDocumentTop <= stickThreshold;
+    const isPastReleasePoint = targetDocumentTop >= releaseThreshold;
 
     let shouldStick = hasReachedStickPoint && isInsideWorkZone;
 
@@ -92,6 +100,7 @@ export function useSmartSticky(
     headerOffset,
     viewportOffsetTop,
     renderAllowed,
+    stickyViewportTop,
   ]);
 
   // --- ВОЗВРАЩАЕМЫЕ "КОМАНДЫ" ---
@@ -104,7 +113,7 @@ export function useSmartSticky(
       position: 'fixed',
       left: `${targetRect?.left ?? 0}px`,
       width: `${targetRect?.width ?? 0}px`,
-      top: `${Math.max(headerOffset + viewportOffsetTop, viewportOffsetTop, 0)}px`,
+      top: `${stickyViewportTop}px`,
     },
   };
 }
