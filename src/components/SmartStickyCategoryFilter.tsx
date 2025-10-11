@@ -185,7 +185,7 @@ export default function SmartStickyCategoryFilter({
     stickyStyles,
   } = useSmartSticky(filterRef, workZoneRef, {
     headerOffset: headerMetrics.offset,
-    headerVisible: headerMetrics.visible && !disableStickyClone,
+    renderAllowed: !disableStickyClone,
   });
 
   const [isMounted, setIsMounted] = useState(false);
