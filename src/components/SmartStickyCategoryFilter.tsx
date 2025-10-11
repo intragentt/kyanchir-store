@@ -27,20 +27,88 @@ export default function SmartStickyCategoryFilter({
   categories,
 }: SmartStickyCategoryFilterProps) {
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [stickyOffset, setStickyOffset] = useState(() => 64);
 
   const handleScroll = useCallback((scrollOffset: number) => {
     setScrollLeft(scrollOffset);
   }, []);
 
-  // --- НАЧАЛО ИЗМЕНЕНИЙ: Заменяем логику из контекста на временную константу ---
-  // Так как StickyHeaderContext удален, мы временно используем
-  // предполагаемую высоту шапки. Это позволит компоненту работать.
-  const topOffset = 64; // Примерная высота шапки в пикселях
+  // --- НАЧАЛО ИЗМЕНЕНИЙ: Управляем отступом от шапки динамически ---
+  const DEFAULT_HEADER_HEIGHT = 64;
+  const parsePxValue = (value: string | null | undefined, fallback: number) => {
+    if (!value) {
+      return fallback;
+    }
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    let resizeObserver: ResizeObserver | null = null;
+    let observedHeader: Element | null = null;
+
+    const computeOffset = () => {
+      const headerElement = document.querySelector<HTMLElement>(
+        '[data-site-header-root]',
+      );
+
+      if (
+        headerElement &&
+        headerElement !== observedHeader &&
+        typeof ResizeObserver !== 'undefined'
+      ) {
+        resizeObserver?.disconnect();
+        resizeObserver = new ResizeObserver(() => computeOffset());
+        resizeObserver.observe(headerElement);
+        observedHeader = headerElement;
+      }
+
+      const headerHeight = headerElement?.getBoundingClientRect().height;
+      const safeHeaderHeight =
+        Number.isFinite(headerHeight) && headerHeight
+          ? (headerHeight as number)
+          : DEFAULT_HEADER_HEIGHT;
+
+      const rootStyles = getComputedStyle(document.documentElement);
+      const bannerOffset = parsePxValue(
+        rootStyles.getPropertyValue('--site-mode-banner-offset'),
+        0,
+      );
+
+      const nextOffset = Math.max(0, safeHeaderHeight + bannerOffset);
+
+      setStickyOffset((current) =>
+        Math.abs(current - nextOffset) > 0.5 ? nextOffset : current,
+      );
+    };
+
+    const handleResize = () => computeOffset();
+    window.addEventListener('resize', handleResize);
+
+    const mutationObserver = new MutationObserver(() => computeOffset());
+    mutationObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
+
+    const rafId = window.requestAnimationFrame(computeOffset);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      mutationObserver.disconnect();
+      resizeObserver?.disconnect();
+      window.cancelAnimationFrame(rafId);
+    };
+  }, []);
   const filterRef = useRef<HTMLDivElement>(null);
   // --- КОНЕЦ ИЗМЕНЕНИЙ ---
 
   const { shouldRender, isTransitionEnabled, placeholderHeight, stickyStyles } =
-    useSmartSticky(filterRef, workZoneRef, { headerHeight: topOffset });
+    useSmartSticky(filterRef, workZoneRef, { headerHeight: stickyOffset });
 
   const [isMounted, setIsMounted] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
