@@ -29,7 +29,10 @@ export default function Header({
   const formattedCartCount = cartItemCount > 99 ? '99+' : cartItemCount.toString();
 
   return (
-    <header className={`w-full bg-white ${className}`}>
+    <header
+      data-site-header-root
+      className={`w-full bg-white ${className}`}
+    >
       {/* --- НАЧАЛО ИЗМЕНЕНИЙ: Уменьшаем верхний отступ с pt-3 до pt-2 --- */}
       <div
         className="container mx-auto flex h-full items-center justify-between px-4 pb-1.5 pt-2 sm:px-6 lg:px-8 xl:px-12"

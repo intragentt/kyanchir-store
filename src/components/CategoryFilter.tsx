@@ -76,10 +76,10 @@ export default function CategoryFilter({
         <div
           ref={containerRef}
           onScroll={handleScroll}
-          className="kyanchir-lg:justify-center -mx-4 flex items-center justify-start overflow-x-auto sm:-mx-6 lg:-mx-8"
+          className="-mx-4 flex items-center justify-start overflow-x-auto sm:-mx-6 lg:-mx-8"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          <div className="flex flex-none items-center pr-4 pl-2 sm:pr-6 sm:pl-4 lg:pr-8 lg:pl-6">
+          <div className="flex flex-none items-center pr-4 pl-4 sm:pr-6 sm:pl-6 lg:pr-8 lg:pl-8 xl:pr-12 xl:pl-12">
             {categories.map((category) => (
               <button
                 key={category.id}
