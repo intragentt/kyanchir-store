@@ -116,9 +116,9 @@ export default async function RootLayout({
                 Теперь /admin/layout.tsx и /(site)/layout.tsx могут работать независимо. */}
             {children}
             <SiteModeGlobalUI />
+            <VercelAnalyticsClient />
           </AuthProvider>
         </SiteModeProvider>
-        <VercelAnalyticsClient />
       </body>
     </html>
   );

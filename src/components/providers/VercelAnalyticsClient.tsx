@@ -14,7 +14,8 @@ function isAdminRole(role?: string | null): boolean {
 }
 
 export default function VercelAnalyticsClient() {
-  const { data: session } = useSession();
+  const sessionResult = useSession();
+  const session = sessionResult?.data;
 
   const normalizedRole =
     typeof session?.user?.role === 'string'
