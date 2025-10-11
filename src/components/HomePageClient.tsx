@@ -217,25 +217,17 @@ export default function HomePageClient({
         return;
       }
 
-      const { offset, visible, height, bannerOffset } = measureHeader();
+      const { offset, visible, bannerOffset } = measureHeader();
       setDisableStickyClone(!visible);
 
       const currentScroll = window.scrollY;
       const containerRect = container.getBoundingClientRect();
       const absoluteTop = currentScroll + containerRect.top;
-      const safeOffset = Math.max(0, offset);
-      const baseOffset = Math.max(0, bannerOffset);
 
-      let destination = Math.max(0, absoluteTop - safeOffset);
-
-      if (destination > currentScroll && visible) {
-        const safeHeight = Number.isFinite(height)
-          ? height
-          : DEFAULT_HEADER_HEIGHT;
-        const fallbackBaseline = Math.max(0, safeOffset - safeHeight);
-        const effectiveBaseline = Math.max(baseOffset, fallbackBaseline);
-        destination = Math.max(0, absoluteTop - effectiveBaseline);
-      }
+      const headerClearance = Math.max(0, offset);
+      const baselineClearance = Math.max(0, bannerOffset);
+      const effectiveClearance = Math.max(headerClearance, baselineClearance);
+      const destination = Math.max(0, absoluteTop - effectiveClearance);
 
       scrollingToFilter.current = true;
 
