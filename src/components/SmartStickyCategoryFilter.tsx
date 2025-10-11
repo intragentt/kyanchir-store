@@ -13,7 +13,7 @@ type Category = {
 
 interface SmartStickyCategoryFilterProps {
   onSelectCategory: (categoryId: string) => void;
-  initialCategory?: string;
+  activeCategory?: string;
   className?: string;
   workZoneRef: React.RefObject<HTMLElement | null>;
   categories: Category[];
@@ -21,7 +21,7 @@ interface SmartStickyCategoryFilterProps {
 
 export default function SmartStickyCategoryFilter({
   onSelectCategory,
-  initialCategory = 'all',
+  activeCategory = 'all',
   className = '',
   workZoneRef,
   categories,
@@ -146,7 +146,7 @@ export default function SmartStickyCategoryFilter({
       >
         <CategoryFilter
           onSelectCategory={onSelectCategory}
-          activeCategory={initialCategory}
+          activeCategory={activeCategory}
           categories={categories}
           scrollLeft={scrollLeft}
           onScroll={handleScroll}
@@ -162,7 +162,7 @@ export default function SmartStickyCategoryFilter({
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
             <CategoryFilter
               onSelectCategory={onSelectCategory}
-              activeCategory={initialCategory}
+              activeCategory={activeCategory}
               categories={categories}
               scrollLeft={scrollLeft}
               onScroll={handleScroll}
