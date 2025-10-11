@@ -1,5 +1,11 @@
 // Местоположение: src/components/SmartStickyCategoryFilter.tsx
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  type CSSProperties,
+} from 'react';
 import CategoryFilter from './CategoryFilter';
 import { useSmartSticky } from './hooks/useSmartSticky';
 // --- НАЧАЛО ИЗМЕНЕНИЙ: Удаляем мертвый импорт ---
@@ -142,14 +148,22 @@ export default function SmartStickyCategoryFilter({
     .filter(Boolean)
     .join(' ');
 
+  const shouldHideOriginal = shouldRender;
+
+  const originalWrapperStyle: CSSProperties = {
+    height: shouldRender || isMounted ? placeholderHeight : 'auto',
+    opacity: shouldHideOriginal ? 0 : 1,
+    pointerEvents: shouldHideOriginal ? 'none' : 'auto',
+    transition: 'opacity 0.2s ease',
+  };
+
   return (
     <>
       <div
         ref={filterRef}
-        style={{
-          height: shouldRender || isMounted ? placeholderHeight : 'auto',
-        }}
+        style={originalWrapperStyle}
         className={`w-full bg-white ${className}`}
+        aria-hidden={shouldHideOriginal || undefined}
       >
         <CategoryFilter
           onSelectCategory={onSelectCategory}
@@ -164,7 +178,7 @@ export default function SmartStickyCategoryFilter({
         <div
           style={stickyStyles}
           className={`${stickyWrapperClasses} py-3`}
-          aria-hidden="true"
+          aria-hidden={!shouldHideOriginal || undefined}
         >
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
             <CategoryFilter
