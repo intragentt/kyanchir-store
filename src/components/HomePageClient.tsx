@@ -8,9 +8,6 @@ import SmartStickyCategoryFilter from '@/components/SmartStickyCategoryFilter';
 import { ProductWithInfo } from '@/lib/types';
 
 const DEFAULT_HEADER_HEIGHT = 64;
-const SCROLL_ALIGNMENT_TOLERANCE = 2;
-const SCROLL_IDLE_DELAY = 140;
-const SCROLL_FALLBACK_DELAY = 900;
 
 const parsePxValue = (
   value: string | null | undefined,
@@ -48,8 +45,6 @@ export default function HomePageClient({
   const scrollingToFilter = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
   const scrollListenerRef = useRef<EventListener | null>(null);
-  const targetClearanceRef = useRef(0);
-  const alignmentModeRef = useRef<'top' | 'header'>('top');
   const loaderStartTimeRef = useRef<number | null>(null);
   const loaderMinDelayRef = useRef<NodeJS.Timeout | null>(null);
   const loaderMaxDelayRef = useRef<NodeJS.Timeout | null>(null);
@@ -222,27 +217,29 @@ export default function HomePageClient({
         return;
       }
 
-      const { visible, bannerOffset, height } = measureHeader();
-
-      const shouldAlignToHeader = containerRect.top < 0 && !visible;
-
-      alignmentModeRef.current = shouldAlignToHeader ? 'header' : 'top';
-      setDisableStickyClone(!shouldAlignToHeader);
-
-      const headerClearance = shouldAlignToHeader
-        ? Math.max(0, bannerOffset + height)
-        : 0;
-      targetClearanceRef.current = headerClearance;
+      const { offset, visible, height, bannerOffset } = measureHeader();
+      setDisableStickyClone(!visible);
 
       const currentScroll = window.scrollY;
       const containerRect = container.getBoundingClientRect();
       const absoluteTop = currentScroll + containerRect.top;
+      const safeOffset = Math.max(0, offset);
+      const baseOffset = Math.max(0, bannerOffset);
 
-      const destination = Math.max(0, absoluteTop - targetClearanceRef.current);
+      let destination = Math.max(0, absoluteTop - safeOffset);
+
+      if (destination > currentScroll && visible) {
+        const safeHeight = Number.isFinite(height)
+          ? height
+          : DEFAULT_HEADER_HEIGHT;
+        const fallbackBaseline = Math.max(0, safeOffset - safeHeight);
+        const effectiveBaseline = Math.max(baseOffset, fallbackBaseline);
+        destination = Math.max(0, absoluteTop - effectiveBaseline);
+      }
 
       scrollingToFilter.current = true;
 
-      const cleanupAfterScroll = () => {
+      function removeScrollHandling() {
         if (scrollTimeout.current) {
           clearTimeout(scrollTimeout.current);
           scrollTimeout.current = null;
@@ -253,55 +250,19 @@ export default function HomePageClient({
         }
         scrollingToFilter.current = false;
         setDisableStickyClone(false);
-      };
-
-      function finalizeScroll() {
-        const currentContainer = filterContainerRef.current;
-
-        if (!currentContainer) {
-          cleanupAfterScroll();
-          return;
-        }
-
-        const currentHeaderMetrics = measureHeader();
-        if (alignmentModeRef.current === 'header') {
-          targetClearanceRef.current = Math.max(
-            0,
-            currentHeaderMetrics.bannerOffset + currentHeaderMetrics.height,
-          );
-        } else {
-          targetClearanceRef.current = 0;
-        }
-
-        const desiredTop = targetClearanceRef.current;
-        const containerRect = currentContainer.getBoundingClientRect();
-        const adjustment = desiredTop - containerRect.top;
-
-        if (Math.abs(adjustment) > SCROLL_ALIGNMENT_TOLERANCE) {
-          const nextScrollTop = Math.max(0, window.scrollY + adjustment);
-          window.scrollTo({ top: nextScrollTop, behavior: 'auto' });
-        }
-
-        cleanupAfterScroll();
-      }
-
-      function scheduleFinalize(delay: number) {
-        if (scrollTimeout.current) {
-          clearTimeout(scrollTimeout.current);
-        }
-        scrollTimeout.current = setTimeout(() => {
-          finalizeScroll();
-        }, delay);
       }
 
       const handleScrollEvent: EventListener = () => {
-        scheduleFinalize(SCROLL_IDLE_DELAY);
+        if (scrollTimeout.current) {
+          clearTimeout(scrollTimeout.current);
+        }
+        scrollTimeout.current = setTimeout(removeScrollHandling, 100);
       };
 
       scrollListenerRef.current = handleScrollEvent;
-      window.addEventListener('scroll', handleScrollEvent, { passive: true });
+      window.addEventListener('scroll', handleScrollEvent);
       window.scrollTo({ top: destination, behavior: 'smooth' });
-      scheduleFinalize(SCROLL_FALLBACK_DELAY);
+      scrollTimeout.current = setTimeout(removeScrollHandling, 600);
     },
     [
       activeCategory,
