@@ -7,6 +7,19 @@ import CatalogContent from '@/components/CatalogContent';
 import SmartStickyCategoryFilter from '@/components/SmartStickyCategoryFilter';
 import { ProductWithInfo } from '@/lib/types';
 
+const DEFAULT_HEADER_HEIGHT = 64;
+
+const parsePxValue = (
+  value: string | null | undefined,
+  fallback: number,
+): number => {
+  if (!value) {
+    return fallback;
+  }
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
 type Category = {
   id: string;
   name: string;
@@ -35,6 +48,7 @@ export default function HomePageClient({
   const loaderStartTimeRef = useRef<number | null>(null);
   const loaderMinDelayRef = useRef<NodeJS.Timeout | null>(null);
   const loaderMaxDelayRef = useRef<NodeJS.Timeout | null>(null);
+  const [disableStickyClone, setDisableStickyClone] = useState(false);
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -118,6 +132,60 @@ export default function HomePageClient({
     isCatalogLoading,
   ]);
 
+  const measureHeader = useCallback(() => {
+    if (typeof window === 'undefined') {
+      return {
+        offset: 0,
+        visible: false,
+        height: DEFAULT_HEADER_HEIGHT,
+        bannerOffset: 0,
+      };
+    }
+
+    const rootStyles = getComputedStyle(document.documentElement);
+    const bannerOffset = parsePxValue(
+      rootStyles.getPropertyValue('--site-mode-banner-offset'),
+      0,
+    );
+    const fallbackHeight = parsePxValue(
+      rootStyles.getPropertyValue('--header-height'),
+      DEFAULT_HEADER_HEIGHT,
+    );
+
+    const headerElement = document.querySelector<HTMLElement>(
+      '[data-site-header-root]',
+    );
+
+    if (!headerElement) {
+      const fallbackOffset = bannerOffset + fallbackHeight;
+      return {
+        offset: fallbackOffset,
+        visible: fallbackOffset - bannerOffset > 0.5,
+        height: fallbackHeight,
+        bannerOffset,
+      };
+    }
+
+    const rect = headerElement.getBoundingClientRect();
+    const height = rect?.height;
+    const bottom = rect?.bottom;
+
+    const safeHeight =
+      typeof height === 'number' && Number.isFinite(height)
+        ? height
+        : fallbackHeight;
+    const safeBottom = Number.isFinite(bottom)
+      ? Math.max(bannerOffset, bottom as number)
+      : bannerOffset + safeHeight;
+
+    return {
+      offset: safeBottom,
+      visible: safeBottom - bannerOffset > 0.5,
+      height: safeHeight,
+      bannerOffset,
+    };
+  }, []);
+
   const handleSelectCategory = useCallback(
     (categoryId: string) => {
       if (activeCategory === categoryId || scrollingToFilter.current) return;
@@ -149,7 +217,26 @@ export default function HomePageClient({
         return;
       }
 
-      const destination = container.offsetTop;
+      const { offset, visible, height, bannerOffset } = measureHeader();
+      setDisableStickyClone(!visible);
+
+      const currentScroll = window.scrollY;
+      const containerRect = container.getBoundingClientRect();
+      const absoluteTop = currentScroll + containerRect.top;
+      const safeOffset = Math.max(0, offset);
+      const baseOffset = Math.max(0, bannerOffset);
+
+      let destination = Math.max(0, absoluteTop - safeOffset);
+
+      if (destination > currentScroll && visible) {
+        const safeHeight = Number.isFinite(height)
+          ? height
+          : DEFAULT_HEADER_HEIGHT;
+        const fallbackBaseline = Math.max(0, safeOffset - safeHeight);
+        const effectiveBaseline = Math.max(baseOffset, fallbackBaseline);
+        destination = Math.max(0, absoluteTop - effectiveBaseline);
+      }
+
       scrollingToFilter.current = true;
 
       function removeScrollHandling() {
@@ -162,6 +249,7 @@ export default function HomePageClient({
           scrollListenerRef.current = null;
         }
         scrollingToFilter.current = false;
+        setDisableStickyClone(false);
       }
 
       const handleScrollEvent: EventListener = () => {
@@ -176,7 +264,10 @@ export default function HomePageClient({
       window.scrollTo({ top: destination, behavior: 'smooth' });
       scrollTimeout.current = setTimeout(removeScrollHandling, 600);
     },
-    [activeCategory],
+    [
+      activeCategory,
+      measureHeader,
+    ],
   );
 
   useEffect(() => {
@@ -209,6 +300,7 @@ export default function HomePageClient({
           className="mb-4"
           workZoneRef={productGridRef}
           categories={categories}
+          disableStickyClone={disableStickyClone}
         />
       </div>
       <div ref={productGridRef} className="relative min-h-[200vh]">

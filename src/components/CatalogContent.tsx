@@ -31,7 +31,7 @@ export default function CatalogContent({
 
       {isLoading && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white">
-          <ShortLogo className="h-12 w-auto text-gray-200 animate-fade-pulse" aria-hidden />
+          <ShortLogo className="h-12 w-auto text-gray-200" aria-hidden />
         </div>
       )}
     </div>
