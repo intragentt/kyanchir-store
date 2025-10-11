@@ -76,7 +76,7 @@ export default function CategoryFilter({
         <div
           ref={containerRef}
           onScroll={handleScroll}
-          className="-mx-4 flex items-center justify-start overflow-x-auto sm:-mx-6 lg:-mx-8"
+          className="-mx-4 flex items-center justify-start overflow-x-auto sm:-mx-6 lg:-mx-8 xl:-mx-12"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <div className="flex flex-none items-center pr-4 pl-4 sm:pr-6 sm:pl-6 lg:pr-8 lg:pl-8 xl:pr-12 xl:pl-12">
@@ -109,8 +109,8 @@ export default function CategoryFilter({
             ))}
           </div>
         </div>
-        <div className="pointer-events-none absolute top-0 right-[-1rem] z-10 h-full w-6 bg-gradient-to-l from-white/90 to-transparent sm:right-[-1.5rem] lg:right-[-2rem]" />
-        <div className="pointer-events-none absolute top-0 left-[-1rem] z-10 h-full w-6 bg-gradient-to-r from-white to-transparent sm:left-[-1.5rem] lg:left-[-2rem]" />
+        <div className="pointer-events-none absolute top-0 right-[-1rem] z-10 h-full w-6 bg-gradient-to-l from-white/90 to-transparent sm:right-[-1.5rem] lg:right-[-2rem] xl:right-[-3rem]" />
+        <div className="pointer-events-none absolute top-0 left-[-1rem] z-10 h-full w-6 bg-gradient-to-r from-white to-transparent sm:left-[-1.5rem] lg:left-[-2rem] xl:left-[-3rem]" />
       </div>
     </div>
   );
