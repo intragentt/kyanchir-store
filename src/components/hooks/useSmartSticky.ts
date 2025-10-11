@@ -10,6 +10,7 @@ import { useScrollInfo } from './useScrollInfo';
 // "Контракты" хука: что он принимает и что возвращает.
 export interface SmartStickyOptions {
   headerOffset: number; // Текущий отступ от верхней границы окна до низа шапки/баннеров.
+  viewportOffsetTop: number; // Смещение visualViewport (особенно важно для iOS Safari с Adaptive Tab Bar).
   renderAllowed: boolean; // Разрешено ли отображение клона (например, при автоскролле мы его скрываем).
 }
 
@@ -26,7 +27,7 @@ export function useSmartSticky(
   workZoneRef: RefObject<HTMLElement | null>, // Ссылка на "рабочую зону".
   options: SmartStickyOptions,
 ): SmartStickyResult {
-  const { headerOffset, renderAllowed } = options;
+  const { headerOffset, viewportOffsetTop, renderAllowed } = options;
 
   // --- СБОР ДАННЫХ В РЕАЛЬНОМ ВРЕМЕНИ ---
   const targetRect = useElementRect(targetRef); // Размеры и позиция "оригинала".
@@ -52,13 +53,35 @@ export function useSmartSticky(
       return; // Ждем, пока все данные будут готовы.
     }
 
-    const hasReachedStickPoint = targetRect.top <= headerOffset + 0.5;
+    const STICK_EPSILON = 0.5;
+    const RELEASE_BUFFER = 8;
+
+    const stickThreshold = headerOffset + viewportOffsetTop + STICK_EPSILON;
+    const releaseThreshold = headerOffset + viewportOffsetTop + RELEASE_BUFFER;
+
     const workZoneBottom = workZoneRect.top + scrollY + workZoneRect.height;
-    const isInsideWorkZone = scrollY + Math.max(headerOffset, 0) < workZoneBottom - 0.5;
+    const stickyDocumentTop = scrollY + Math.max(headerOffset + viewportOffsetTop, viewportOffsetTop, 0);
+    const isInsideWorkZone = stickyDocumentTop < workZoneBottom - STICK_EPSILON;
 
-    const shouldStick = hasReachedStickPoint && isInsideWorkZone;
+    const hasReachedStickPoint = targetRect.top <= stickThreshold;
+    const isPastReleasePoint = targetRect.top >= releaseThreshold;
 
-    setShouldRender(shouldStick);
+    let shouldStick = hasReachedStickPoint && isInsideWorkZone;
+
+    setShouldRender((prev) => {
+      const wasStuck = prev;
+
+      if (wasStuck) {
+        if (!isInsideWorkZone) {
+          shouldStick = false;
+        } else if (!hasReachedStickPoint && !isPastReleasePoint) {
+          shouldStick = true;
+        }
+      }
+
+      return shouldStick;
+    });
+
     setIsVisible(shouldStick);
     setIsTransitionEnabled(shouldStick);
     // Этот массив зависимостей заставляет хук перепроверять обстановку при любом значимом изменении.
@@ -67,6 +90,7 @@ export function useSmartSticky(
     workZoneRect,
     scrollY,
     headerOffset,
+    viewportOffsetTop,
     renderAllowed,
   ]);
 
@@ -80,7 +104,7 @@ export function useSmartSticky(
       position: 'fixed',
       left: `${targetRect?.left ?? 0}px`,
       width: `${targetRect?.width ?? 0}px`,
-      top: `${Math.max(headerOffset, 0)}px`,
+      top: `${Math.max(headerOffset + viewportOffsetTop, viewportOffsetTop, 0)}px`,
     },
   };
 }
